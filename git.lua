@@ -48,6 +48,10 @@ local function hexToBin(cc)
   return string.char(tonumber(cc, 16))
 end
 
+-- Given a raw character, return two hex characters
+local function binToHex(c)
+  return string.format("%02x", string.byte(c, 1))
+end
 
 -- Remove illegal characters in things like emails and names
 local function safe(text)
@@ -55,6 +59,7 @@ local function safe(text)
              :gsub("[%.,:;\"']+$", "")
              :gsub("[%z\n<>]+", "")
 end
+exports.safe = safe
 
 local function formatDate(date)
   local seconds = date.seconds
@@ -73,21 +78,40 @@ local function formatPerson(person)
     formatDate(person.date)
 end
 
+local function parsePerson(raw)
+  local pattern = "^([^<]+) <([^>]+)> (%d+) ([-+])(%d%d)(%d%d)$"
+  local name, email, seconds, sign, hours, minutes = string.match(raw, pattern)
+  local offset = tonumber(hours) * 60 + tonumber(minutes)
+  if sign == "-" then offset = -offset end
+  return {
+    name = name,
+    email = email,
+    {
+      seconds = seconds,
+      offset = offset
+    }
+  }
+end
+
 function encoders.blob(blob)
   assert(type(blob) == "string", "blobs must be strings")
   return blob
 end
 
+function decoders.blob(raw)
+  return raw
+end
+
 function encoders.tree(tree)
   assert(type(tree) == "table", "trees must be tables")
   local parts = {}
-  for key, value in pairs(tree) do
-    local name = value.name or key
-    assert(type(name) == "string", "tree entries must have string name or key")
+  for i = 1, #tree do
+    local value = tree[i]
+    assert(type(value.name) == "string", "tree entries must have string name or key")
     assert(type(value.mode) == "number", "tree entry mode must be number")
     assert(type(value.hash) == "string", "tree entry hash must be string")
     parts[#parts + 1] = {
-      name = name,
+      name = value.name,
       mode = value.mode,
       hash = value.hash,
     }
@@ -103,6 +127,25 @@ function encoders.tree(tree)
   return table.concat(parts)
 end
 
+function decoders.tree(raw)
+  local start, length = 1, #raw
+  local tree = {}
+  while start <= length do
+    local pattern = "^([0-7]+) ([^%z]+)%z(....................)"
+    local s, e, mode, name, hash = string.find(raw, pattern, start)
+    assert(s, "Problem parsing tree")
+    hash = string.gsub(hash, ".", binToHex)
+    mode = tonumber(mode, 8)
+    tree[#tree + 1] = {
+      name = name,
+      mode = mode,
+      hash = hash
+    }
+    start = e + 1
+  end
+  return tree
+end
+
 function encoders.tag(tag)
   assert(type(tag) == "table", "annotated tags must be tables")
   assert(type(tag.object) == "string", "tag.object must be hash string")
@@ -114,6 +157,25 @@ function encoders.tag(tag)
     "object %s\ntype %s\ntag %s\ntagger %s\n\n%s",
     tag.object, tag.type, tag.tag, formatPerson(tag.tagger), tag.message)
 end
+
+function decoders.commit(raw)
+  local s, _, message = string.find(raw, "\n\n(.*)$", 1)
+  raw = string.sub(raw, 1, s)
+  local start = 1
+  local pattern = "^([^ ]+) ([^\n]+)\n"
+  local data = {message=message}
+  while true do
+    local s, e, name, value = string.find(raw, pattern, start)
+    if not s then break end
+    if name == "tagger" then
+      value = parsePerson(value)
+    end
+    data[name] = value
+    start = e + 1
+  end
+  return data
+end
+
 
 function encoders.commit(commit)
   assert(type(commit) == "table", "commits must be tables")
@@ -134,14 +196,52 @@ function encoders.commit(commit)
     formatPerson(commit.committer), commit.message)
 end
 
-function exports.frame(name, body)
-  assert(type(name) == "string", "type must be a string")
+function decoders.commit(raw)
+  local s, _, message = string.find(raw, "\n\n(.*)$", 1)
+  raw = string.sub(raw, 1, s)
+  local start = 1
+  local pattern = "^([^ ]+) ([^\n]+)\n"
+  local parents = {}
+  local data = {message=message,parents=parents}
+  while true do
+    local s, e, name, value = string.find(raw, pattern, start)
+    if not s then break end
+    if name == "author" or name == "committer" then
+      value = parsePerson(value)
+    end
+    if name == "parents" then
+      parents[#parents + 1] = value
+    else
+      data[name] = value
+    end
+    start = e + 1
+  end
+  return data
+end
+
+function exports.frame(body, kind)
+  p{body=body,kind=kind}
+  assert(type(kind) == "string", "type must be a string")
   assert(body, "missing body")
   if type(body) ~= "string" then
-    local encoder = encoders[name]
-    assert(encoder, "Unknown type: " .. name)
+    local encoder = encoders[kind]
+    assert(encoder, "Unknown type: " .. kind)
     body = encoder(body)
   end
-  body = string.format("%s %d\0", name, #body) .. body
+  body = string.format("%s %d\0", kind, #body) .. body
   return digest("sha1", body), body
+end
+
+function exports.deframe(raw, keepRaw)
+  local pattern = "^([^ ]+) (%d+)%z(.*)$"
+  local kind, size, body = string.match(raw, pattern)
+  assert(kind, "Problem parsing framed git data")
+  size = tonumber(size)
+  assert(size == #body, "Body size mismatch")
+  if keepRaw then
+    return body, kind
+  end
+  local decoder = decoders[kind]
+  assert(decoder, "Unknown git type: " .. kind)
+  return decoder(body), kind
 end
