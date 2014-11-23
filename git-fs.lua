@@ -1,23 +1,40 @@
 local digest = require('openssl').digest.digest
 local git = require('./git')
+local fs = require('./fs')
 local uv = require('uv')
-local fs = require('fs')
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
 local pathJoin = require('luvi').path.join
 
-local function mkdir(path)
-  local thread = coroutine.running()
-  local success, err = fs.mkdir(path, thread)
-  if err then
-    if string.match(err, "^ENOENT:") then
-      mkdir(pathJoin(path, ".."))
+
+local repo = {}
+local repoMeta = { __index = repo }
+
+
+function repo:fullPath(path)
+  -- Convert to a safe path by resolving internal special paths
+  -- And ensuring it's a relative path.
+  path = "./" .. pathJoin(path)
+  -- Then add in the base.  The two steps keeps paths inside base.
+  return pathJoin(self.base, path)
+end
+
+function repo:mkdir(path)
+  path = self:fullPath(path)
+  local err = fs.mkdir(path)
+  if not err then return end
+  if string.match(err, "^ENOENT:") then
+
+    mkdir(pathJoin(path, ".."))
       success, err = fs.mkdir(path, thread)
     elseif string.match(err, "^EEXIST") then
-      success, err = true, nil
+      return
+    else
+      error(err)
     end
   end
-  return success, err
+end
+local function mkdir(path)
 end
 
 local function writeFile(path, data)
@@ -33,8 +50,6 @@ local function readFile(path)
   return fs.readFile(path, coroutine.running())
 end
 
-local repo = {}
-local repoMeta = { __index = repo }
 
 function repo:hashToPath(hash)
   return pathJoin(self.base, "objects", string.sub(hash, 1, 2), string.sub(hash, 3))
@@ -68,8 +83,8 @@ function repo:save(value, kind)
   local hash, body = git.frame(value, kind)
   local path = self:hashToPath(hash)
   assert(mkdir(pathJoin(path, "..")))
-  -- 4095=Huffman+LZ (slowest/best compression)
   -- TDEFL_WRITE_ZLIB_HEADER             = 0x01000,
+  -- 4095=Huffman+LZ (slowest/best compression)
   body = deflate(body, 0x01000 + 4095)
   assert(writeFile(path, body))
   return hash
