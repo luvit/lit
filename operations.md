@@ -139,8 +139,9 @@ SEND - 1Mxxxxxx [Mxxxxxxx] data
        (M) is more flag, x is variable length unsigned int
 WANT - 01xxxxxx (groups of 20 bytes)
        (xxxxxx is number of wants)
-GIVE - 00110000 (20 raw byte hash)
-GOT  - 00110001 (20 raw byte hash)
+NOPE - 00110010 (20 raw byte hash) - a wanted hash isn't there
+GIVE - 00110000 (20 byte one-use auth token) (20 raw byte hash) - I want to give you a hash and it's dependencies
+GOT  - 00110001 (20 raw byte hash) - reply that give was completed recursivly
 
 WANT (4)
   edce9c4fce26d8123c001fa2626ced63216e0b25
@@ -153,8 +154,8 @@ WANT (4)
   f0711aadc333e9c86a8f18da76f0ea968f776bae
   781dafe7db0685aadfea89cc3656dfddec6db29f
 
-GIVE edce9c4fce26d8123c001fa2626ced63216e0b25
-00110000(30) edce9c4fce26d8123c001fa2626ced63216e0b25
+GIVE f0711aadc333e9c86a8f18da76f0ea968f776bae edce9c4fce26d8123c001fa2626ced63216e0b25
+00110000(30) f0711aadc333e9c86a8f18da76f0ea968f776bae edce9c4fce26d8123c001fa2626ced63216e0b25
 
 GOT edce9c4fce26d8123c001fa2626ced63216e0b25
 00110001(31) edce9c4fce26d8123c001fa2626ced63216e0b25

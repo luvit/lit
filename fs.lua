@@ -1,46 +1,85 @@
 local uv = require('uv')
 local fs = exports
 
-function fs.mkdir(path)
+local function noop() end
+
+local function makeCallback()
   local thread = coroutine.running()
-  uv.fs_mkdir(path, function (err)
-    return assert(coroutine.resume(thread, err))
-  end)
+  return function (...)
+    return assert(coroutine.resume(thread, ...))
+  end
+end
+
+function fs.mkdir(path)
+  uv.fs_mkdir(path, makeCallback())
   return coroutine.yield()
 end
 
 function fs.open(path, flags, mode)
-  local thread = coroutine.running()
-  uv.fs_open(path, flags, mode, function (err, fd)
-    return assert(coroutine.resume(thread, err, fd))
-  end)
+  uv.fs_open(path, flags, mode, makeCallback())
   return coroutine.yield()
 end
 function fs.fstat(fd)
-  local thread = coroutine.running()
-  uv.fs_fstat(fd, function (err, stat)
-    return assert(coroutine.resume(thread, err, stat))
-  end)
+  uv.fs_fstat(fd, makeCallback())
   return coroutine.yield()
 end
 function fs.read(fd, length, offset)
-  local thread = coroutine.running()
-  uv.fs_read(fd, length, offset, function (err, data)
-    return assert(coroutine.resume(thread, err, data))
-  end)
+  uv.fs_read(fd, length, offset, makeCallback())
   return coroutine.yield()
 end
 function fs.write(fd, data, offset)
-  local thread = coroutine.running()
-  uv.fs_write(fd, data, offset, function (err, written)
-    return assert(coroutine.resume(thread, err, written))
-  end)
+  uv.fs_write(fd, data, offset, makeCallback())
   return coroutine.yield()
 end
 function fs.close(fd)
-  local thread = coroutine.running()
-  uv.fs_close(fd, function (err)
-    return assert(coroutine.resume(thread, err))
-  end)
+  uv.fs_close(fd, makeCallback())
   return coroutine.yield()
+end
+function fs.readFile(path)
+  local callback = makeCallback()
+  local fd, stat, data, err
+  uv.fs_open(path, "r", 384, callback)
+  err, fd = coroutine.yield()
+  assert(not err, err)
+  uv.fs_fstat(fd, callback)
+  err, stat = coroutine.yield()
+  if stat then
+    uv.fs_read(fd, stat.size, 0, callback)
+    err, data = coroutine.yield()
+  end
+  uv.fs_close(fd, noop)
+  assert(not err, err)
+  return data
+end
+
+function fs.readFile2(path)
+  local callback = makeCallback()
+  local parts = {}
+  local fd, chunk, err
+  uv.fs_open(path, "r", 384, callback)
+  err, fd = coroutine.yield()
+  assert(not err, err)
+  repeat
+    uv.fs_read(fd, 4096, -1, callback)
+    err, chunk = coroutine.yield()
+    if err then break end
+    if #chunk > 0 then
+      parts[#parts + 1] = chunk
+    end
+  until #chunk < 4096
+  uv.fs_close(fd, noop)
+  assert(not err, err)
+  return table.concat(parts)
+end
+
+function fs.writeFile(path, data)
+  local callback = makeCallback()
+  local fd, err
+  uv.fs_open(path, "w", 438, callback)
+  err, fd = coroutine.yield()
+  assert(not err, err)
+  uv.fs_write(fd, data, 0, callback)
+  err = coroutine.yield()
+  uv.fs_close(fd, noop)
+  assert(not err, err)
 end
