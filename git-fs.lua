@@ -18,7 +18,6 @@ function repo:fullPath(path)
 end
 
 function repo:mkdir(path)
-  p("mkdir", path)
   local fullPath = self:fullPath(path)
   local err = fs.mkdir(fullPath)
   if not err or string.match(err, "^EEXIST") then
@@ -55,9 +54,9 @@ function repo:resolveHash(ref)
     ref = self:readFile("HEAD")
     ref = string.match(ref, "ref: ([^\n]+)")
   end
-  p({ref=ref})
   ref = self:readFile(ref)
   ref = string.match(ref, "%x+")
+  assert(#ref == 40, "Invalid hash in " .. ref)
   return ref
 end
 

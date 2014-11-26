@@ -220,7 +220,6 @@ function decoders.commit(raw)
 end
 
 function exports.frame(body, kind)
-  p{body=body,kind=kind}
   assert(type(kind) == "string", "type must be a string")
   assert(body, "missing body")
   if type(body) ~= "string" then
