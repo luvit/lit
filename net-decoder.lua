@@ -51,14 +51,10 @@ local function decoder(chunk)
   -- GIVE hash
   if head == 0x31 then
     if #chunk < 41 then return end
-    p{"give",
-      binToHex(string.sub(chunk, 2, 21)),
-      binToHex(string.sub(chunk, 22, 41)),
-    }
-    return {"give",
-      binToHex(string.sub(chunk, 2, 21)),
-      binToHex(string.sub(chunk, 22, 41)),
-    }, string.sub(chunk, 42)
+    return {"give", {
+      token = binToHex(string.sub(chunk, 2, 21)),
+      hash = binToHex(string.sub(chunk, 22, 41)),
+    }}, string.sub(chunk, 42)
   end
 
   -- GOT hash
@@ -72,18 +68,30 @@ local function decoder(chunk)
   error("Unknown data")
 end
 
--- assert(decoder(string.char(128 + 12) .. "Hello World") == nil)
--- assert(decoder(string.char(128 + 12) .. "Hello World\n")[2] == "Hello World\n")
--- assert(({decoder(string.char(128 + 12) .. "Hello World\nwith extra")})[2] == "with extra")
--- assert(#(decoder(string.char(128 + 64 + 7, 104) .. string.rep("0123456789", 100) .. "XX")[2]) == 1000)
--- assert(decoder(string.char(128 + 64, 128 + 78, 16) .. string.rep("0123456789", 500)) == nil)
--- assert(#(decoder(string.char(128 + 64, 128 + 78, 16) .. string.rep("0123456789", 1000) .. "XX")[2]) == 10000)
+assert(decoder(string.char(128 + 12) .. "Hello World") == nil)
+assert(decoder(string.char(128 + 12) .. "Hello World\n")[2] == "Hello World\n")
+assert(({decoder(string.char(128 + 12) .. "Hello World\nwith extra")})[2] == "with extra")
+assert(#(decoder(string.char(128 + 64 + 7, 104) .. string.rep("0123456789", 100) .. "XX")[2]) == 1000)
+assert(decoder(string.char(128 + 64, 128 + 78, 16) .. string.rep("0123456789", 500)) == nil)
+assert(#(decoder(string.char(128 + 64, 128 + 78, 16) .. string.rep("0123456789", 1000) .. "XX")[2]) == 10000)
 
--- p(decoder(string.char(64) .. "xx"))
--- p(decoder(string.char(64 + 1) ..
---   hexToBin("7a425358632475bd79c156ef09992191efbb7bb8") .. "xx"))
--- p(decoder(string.char(64 + 2) ..
---   hexToBin("7a425358632475bd79c156ef09992191efbb7bb8") ..
---   hexToBin("827cb45075be4381acd1c79f216cf5b860487775") .. "xx"))
+local e, x = decoder('BzBSXc$u\189y\193V\239\t\153!\145\239\187{\184\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
+assert(x == "xx")
+assert(e[1] == "wants")
+assert(#e[2] == 2)
+
+e, x = decoder('1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
+assert(x == 'xx')
+assert(e[1] == 'give')
+assert(#e == 2)
+assert(e[2].token)
+assert(e[2].hash)
+
+e, x = decoder('0\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
+assert(x == 'xx')
+assert(e[1] == 'nope')
+assert(e[2] == '827cb45075be4381acd1c79f216cf5b860487775')
+p(e)
+assert(#e == 2)
 
 return decoder

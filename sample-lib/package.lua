@@ -3,10 +3,11 @@
   version = "1.4.2",
 
   files = {
-    "**/*.lua",
-    "**/*.png",
-    "maps/**",
-    "!icons/store-icon.png"
+    "art/*",
+    "icons/*",
+    "!icons/store-icon.png",
+    "maps/*",
+    "*.lua",
   },
 
   deps = {

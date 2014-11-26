@@ -3,5 +3,6 @@ local function hexToBin(cc)
 end
 
 return function (hex)
-  return string.gsub(hex, "..", hexToBin)
+  local bin = string.gsub(hex, "..", hexToBin)
+  return bin
 end

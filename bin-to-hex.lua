@@ -3,5 +3,6 @@ local function binToHex(c)
 end
 
 return function(bin)
-  return string.gsub(bin, ".", binToHex)
+  local hex = string.gsub(bin, ".", binToHex)
+  return hex
 end

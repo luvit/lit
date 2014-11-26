@@ -19,6 +19,18 @@ function fs.open(path, flags, mode)
   uv.fs_open(path, flags or "r", mode or 438, makeCallback())
   return coroutine.yield()
 end
+function fs.stat(path)
+  uv.fs_stat(path, makeCallback())
+  return coroutine.yield()
+end
+function fs.lstat(path)
+  uv.fs_lstat(path, makeCallback())
+  return coroutine.yield()
+end
+function fs.readlink(path)
+  uv.fs_readlink(path, makeCallback())
+  return coroutine.yield()
+end
 function fs.fstat(fd)
   uv.fs_fstat(fd, makeCallback())
   return coroutine.yield()
@@ -35,6 +47,19 @@ function fs.close(fd)
   uv.fs_close(fd, makeCallback())
   return coroutine.yield()
 end
+
+function fs.scandir(path, iter)
+  local callback = makeCallback()
+  uv.fs_scandir(path, callback)
+  local err, req = coroutine.yield()
+  if err then return err end
+  while true do
+    local entry = uv.fs_scandir_next(req)
+    if not entry then return end
+    iter(entry)
+  end
+end
+
 function fs.readFile(path)
   local callback = makeCallback()
   local fd, stat, data, err

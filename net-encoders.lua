@@ -40,10 +40,13 @@ function encoders.nope(hash)
   return "0" .. hexToBin(hash)
 end
 
-function encoders.give(token, hash)
-  assert(#token == 40)
-  assert(#hash == 40)
-  return "1" .. hexToBin(token) .. hexToBin(hash)
+function encoders.give(give)
+  assert(type(give) == "table")
+  assert(type(give.token) == "string")
+  assert(type(give.hash) == "string")
+  assert(#give.token == 40)
+  assert(#give.hash == 40)
+  return "1" .. hexToBin(give.token) .. hexToBin(give.hash)
 end
 
 function encoders.got(hash)
@@ -51,6 +54,7 @@ function encoders.got(hash)
   return "2" .. hexToBin(hash)
 end
 
+-- Inline unit tests for sanity
 assert(encoders.send("Hello") == '\133Hello')
 assert(encoders.send(string.rep("1234", 100)) == '\195\016' .. string.rep("1234", 100))
 assert(encoders.send(string.rep("1234", 10000)) == '\194\184\064' .. string.rep("1234", 10000))
@@ -60,8 +64,8 @@ assert(encoders.wants({
   "827cb45075be4381acd1c79f216cf5b860487775",
 }) == 'BzBSXc$u\189y\193V\239\t\153!\145\239\187{\184\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
 assert(encoders.nope("827cb45075be4381acd1c79f216cf5b860487775") == '0\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
-assert(encoders.give(
-  "827cb45075be4381acd1c79f216cf5b860487775",
-  "827cb45075be4381acd1c79f216cf5b860487775"
-) == '1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
+assert(encoders.give({
+  token = "827cb45075be4381acd1c79f216cf5b860487775",
+  hash = "827cb45075be4381acd1c79f216cf5b860487775"
+}) == '1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
 assert(encoders.got("827cb45075be4381acd1c79f216cf5b860487775") == '2\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
