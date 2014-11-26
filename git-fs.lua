@@ -64,6 +64,7 @@ function repo:init()
   self:mkdir("objects")
   self:mkdir("refs/heads")
   self:mkdir("refs/tags")
+  self:writeFile("HEAD", "ref: refs/heads/master\n")
   self:writeFile("config", "[core]\n"
     .. "\trepositoryformatversion = 0\n"
     .. "\tfilemode = true\n"

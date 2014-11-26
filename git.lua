@@ -107,7 +107,7 @@ function encoders.tree(tree)
   local parts = {}
   for i = 1, #tree do
     local value = tree[i]
-    assert(type(value.name) == "string", "tree entries must have string name or key")
+    assert(type(value.name) == "string", "tree entry name must be string")
     assert(type(value.mode) == "number", "tree entry mode must be number")
     assert(type(value.hash) == "string", "tree entry hash must be string")
     parts[#parts + 1] = {
@@ -119,10 +119,10 @@ function encoders.tree(tree)
   table.sort(parts, treeSort)
   for i = 1, #parts do
     local entry = parts[i]
-    parts[i] = string.format("%o %s\0%s",
+    parts[i] = string.format("%o %s\0",
       entry.mode,
-      entry.name,
-      string.gsub(entry.hash, "..", hexToBin))
+      entry.name
+    ) .. string.gsub(entry.hash, "..", hexToBin)
   end
   return table.concat(parts)
 end
