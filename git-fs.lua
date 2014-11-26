@@ -1,5 +1,6 @@
 local digest = require('openssl').digest.digest
 local git = require('./git')
+local modes = git.modes
 local fs = require('./fs')
 local uv = require('uv')
 local deflate = require('miniz').deflate
@@ -105,6 +106,104 @@ function repo:load(hash)
   assert(hash == digest("sha1", body), "hash mismatch")
   return git.deframe(body)
 end
+
+function repo:import(base)
+  -- Load the package config
+  local configPath = pathJoin(base, "package.lua")
+  local err, config = fs.readFile(configPath)
+  assert(not err, err)
+  config = assert(loadstring("return " .. config, configPath))
+  config = assert(setfenv(config, {})())
+
+  -- Compile the rules
+  local rules
+  if config.files then
+    rules = {}
+    for i = 1, #config.files do
+      local file = config.files[i]
+      local include = true
+      if string.sub(file, 1, 1) == "!" then
+        file = string.sub(file, 2)
+        include = false
+      end
+      file = string.gsub(file, "[%^%$%(%)%.%[%]%+%-]", "%%%1")
+      file = string.gsub(file, "%*%*?", function (m)
+        return m == "**" and ".+"
+                         or "[^/]+"
+      end)
+      file = "^" .. file .. "$"
+      rules[i] = {
+        include = include,
+        pattern = file
+      }
+    end
+  else
+    -- Default to including only lua files
+    rules = {{true, "^.*%.lua$"}}
+  end
+
+  local function importTree(path)
+    local entries = {}
+    fs.scandir(pathJoin(base, path), function (entry)
+      local filename = pathJoin(path, entry.name)
+
+      -- Apply the rules to see if this file should be included
+      local include = entry.type == "DIR"
+      for i = 1, #rules do
+        if string.match(filename, rules[i].pattern) then
+          include = rules[i].include
+        end
+      end
+      if not include then return end
+
+      local hash, mode
+      if entry.type == "DIR" then
+        hash = importTree(filename)
+        mode = modes.tree
+      else
+        local fullPath = pathJoin(base, filename)
+        local err, stat, body
+        err, stat = fs.lstat(fullPath)
+        assert(not err, err)
+        if stat.type == "LINK" then
+          mode = modes.sym
+          err, body = fs.readlink(fullPath)
+        else
+          err, body = fs.readFile(fullPath)
+          mode = (bit.band(stat.mode, 73) > 0) and modes.exec or modes.blob
+        end
+        assert(not err, err)
+        hash = self:save(body, "blob")
+      end
+
+      -- Don't include empty trees
+      if hash == "4b825dc642cb6eb9a060e54bf8d69288fbee4904" then return end
+
+      entries[#entries + 1] = {
+        name = entry.name,
+        mode = mode,
+        hash = hash,
+      }
+    end)
+    return self:save(entries, "tree")
+  end
+
+  return importTree('.')
+end
+
+function repo:tag(name, version, hash)
+  -- TODO: create annotated tag and sign using SSH private key
+  local tagHash, body = git.frame({
+
+  }, "tag")
+  p{
+    hash = tagHash,
+    body = body
+  }
+end
+
+-- TODO: port https://github.com/dominictarr/ssh-key-to-pem/blob/master/index.js to luvit
+
 
 return function(base)
   return setmetatable({
