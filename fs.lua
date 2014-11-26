@@ -10,13 +10,13 @@ local function makeCallback()
   end
 end
 
-function fs.mkdir(path)
-  uv.fs_mkdir(path, makeCallback())
+function fs.mkdir(path, mode)
+  uv.fs_mkdir(path, mode or 511, makeCallback())
   return coroutine.yield()
 end
 
 function fs.open(path, flags, mode)
-  uv.fs_open(path, flags, mode, makeCallback())
+  uv.fs_open(path, flags or "r", mode or 438, makeCallback())
   return coroutine.yield()
 end
 function fs.fstat(fd)
@@ -24,11 +24,11 @@ function fs.fstat(fd)
   return coroutine.yield()
 end
 function fs.read(fd, length, offset)
-  uv.fs_read(fd, length, offset, makeCallback())
+  uv.fs_read(fd, length, offset or -1, makeCallback())
   return coroutine.yield()
 end
 function fs.write(fd, data, offset)
-  uv.fs_write(fd, data, offset, makeCallback())
+  uv.fs_write(fd, data, offset or -1, makeCallback())
   return coroutine.yield()
 end
 function fs.close(fd)
@@ -40,7 +40,7 @@ function fs.readFile(path)
   local fd, stat, data, err
   uv.fs_open(path, "r", 384, callback)
   err, fd = coroutine.yield()
-  assert(not err, err)
+  if err then return err end
   uv.fs_fstat(fd, callback)
   err, stat = coroutine.yield()
   if stat then
@@ -48,8 +48,7 @@ function fs.readFile(path)
     err, data = coroutine.yield()
   end
   uv.fs_close(fd, noop)
-  assert(not err, err)
-  return data
+  return err, data
 end
 
 function fs.readFile2(path)
@@ -58,7 +57,7 @@ function fs.readFile2(path)
   local fd, chunk, err
   uv.fs_open(path, "r", 384, callback)
   err, fd = coroutine.yield()
-  assert(not err, err)
+  if err then return err end
   repeat
     uv.fs_read(fd, 4096, -1, callback)
     err, chunk = coroutine.yield()
@@ -68,8 +67,7 @@ function fs.readFile2(path)
     end
   until #chunk < 4096
   uv.fs_close(fd, noop)
-  assert(not err, err)
-  return table.concat(parts)
+  return err, table.concat(parts)
 end
 
 function fs.writeFile(path, data)
@@ -77,9 +75,9 @@ function fs.writeFile(path, data)
   local fd, err
   uv.fs_open(path, "w", 438, callback)
   err, fd = coroutine.yield()
-  assert(not err, err)
+  if err then return err end
   uv.fs_write(fd, data, 0, callback)
   err = coroutine.yield()
   uv.fs_close(fd, noop)
-  assert(not err, err)
+  return err
 end

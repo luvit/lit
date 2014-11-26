@@ -30,7 +30,7 @@ coroutine.wrap(function ()
         mode = modes.file,
         hash = db:save("Hello World\n", "blob")
       },
-      stuff = {
+      { name = "stuff",
         mode = modes.exec,
         hash = db:save(string.rep("12345", 1042), "blob")
       }
