@@ -13,7 +13,6 @@ function Storage:initialize(dir)
   self.fs = fs
   if not fs.access("HEAD") then
     assert(fs.mkdirp("objects"))
-    assert(fs.mkdirp("refs/heads"))
     assert(fs.mkdirp("refs/tags"))
     assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))
     assert(fs.writeFile("config", "[core]\n"
@@ -66,12 +65,14 @@ function Storage:load(hash)
 end
 
 function Storage:read(key)
-  return self.fs:readFile(key)
+  return self.fs:readFile(pathJoin("refs/tags/", key))
 end
 
 function Storage:write(key, value)
-  self.fs.mkdir(pathJoin(key, ".."))
-  return self.fs.writeFile(key, value)
+  local path = pathJoin("refs/tags/", key)
+  self.fs.mkdirp(pathJoin(path, ".."))
+  p("write", key, value)
+  return self.fs.writeFile(path, value)
 end
 
 function Storage:begin()

@@ -1,4 +1,4 @@
-local digest = require('openssl').digest.digest
+local base64, sshRsa
 
 local modes = {
   tree   = 16384, --  040000
@@ -29,8 +29,6 @@ function modes.toType(mode)
       or bit.band(mode, 49152) == 32768 and "blob" or
          "unknown"
 end
-
-
 
 local encoders = {}
 exports.encoders = encoders
@@ -146,6 +144,40 @@ function decoders.tree(raw)
   return tree
 end
 
+
+local function prefixLength(string)
+  if string.byte(string, 1) >= 128 then
+    string = '\0' .. string
+  end
+  local len = #string
+  return string.char(bit.band(bit.rshift(len, 24), 0xff))
+      .. string.char(bit.band(bit.rshift(len, 16), 0xff))
+      .. string.char(bit.band(bit.rshift(len, 8), 0xff))
+      .. string.char(bit.band(len, 0xff))
+      .. string
+end
+
+local function sign(body, privateKey)
+  base64 = base64 or require('openssl').base64
+  sshRsa = sshRsa or require('ssh-rsa')
+
+  -- Extract e and n from the private RSA key to build the ssh public key
+  local rsa = privateKey:parse().rsa:parse()
+  -- Encode in ssh-rsa format
+  local data = sshRsa.encode(rsa.e, rsa.n)
+  -- And digest in ssh fingerprint format
+  local fingerprint = sshRsa.fingerprint(data)
+
+  -- Sign the message using a sha256 message digest
+  local sig = privateKey:sign(body, "sha256")
+  return body ..
+    "-----BEGIN RSA SIGNATURE-----\n" ..
+    "Format: sha256-ssh-rsa\n" ..
+    "Fingerprint: " .. fingerprint .. "\n\n" ..
+    base64(sig) ..
+    "-----END RSA SIGNATURE-----\n"
+end
+
 function encoders.tag(tag)
   assert(type(tag) == "table", "annotated tags must be tables")
   assert(type(tag.object) == "string", "tag.object must be hash string")
@@ -153,9 +185,14 @@ function encoders.tag(tag)
   assert(type(tag.tag) == "string", "tag.tag must be string")
   assert(type(tag.tagger) == "table", "tag.tagger must be table")
   assert(type(tag.message) == "string", "tag.message must be string")
-  return string.format(
+  if tag.message[#tag.message] ~= "\n" then
+    tag.message = tag.message .. "\n"
+  end
+  local body = string.format(
     "object %s\ntype %s\ntag %s\ntagger %s\n\n%s",
     tag.object, tag.type, tag.tag, formatPerson(tag.tagger), tag.message)
+  if not tag.key then return body end
+  return sign(body, tag.key)
 end
 
 function decoders.commit(raw)
@@ -190,10 +227,12 @@ function encoders.commit(commit)
     assert(type(parent) == "string", "commit.parents must be hash strings")
     parents[i] = string.format("parent %s\n", parent)
   end
-  return string.format(
+  local body = string.format(
     "tree %s\n%sauthor %s\ncommitter %s\n\n%s",
     commit.tree, table.concat(parents), formatPerson(commit.author),
     formatPerson(commit.committer), commit.message)
+  if not commit.key then return body end
+  return sign(body, commit.key)
 end
 
 function decoders.commit(raw)
@@ -219,7 +258,7 @@ function decoders.commit(raw)
   return data
 end
 
-function exports.frame(body, kind)
+function exports.frame(kind, body)
   assert(type(kind) == "string", "type must be a string")
   assert(body, "missing body")
   if type(body) ~= "string" then
@@ -228,7 +267,7 @@ function exports.frame(body, kind)
     body = encoder(body)
   end
   body = string.format("%s %d\0", kind, #body) .. body
-  return digest("sha1", body), body
+  return body
 end
 
 function exports.deframe(raw, keepRaw)
