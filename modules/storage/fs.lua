@@ -64,15 +64,15 @@ function Storage:load(hash)
   return value
 end
 
-function Storage:read(key)
-  return self.fs:readFile(pathJoin("refs/tags/", key))
+function Storage:read(tag)
+  local raw = self.fs.readFile(pathJoin("refs/tags/", tag))
+  return string.match(raw, "%x+")
 end
 
-function Storage:write(key, value)
-  local path = pathJoin("refs/tags/", key)
+function Storage:write(tag, hash)
+  local path = pathJoin("refs/tags/", tag)
   self.fs.mkdirp(pathJoin(path, ".."))
-  p("write", key, value)
-  return self.fs.writeFile(path, value)
+  return self.fs.writeFile(path, hash .. "\n")
 end
 
 function Storage:begin()
