@@ -6,8 +6,10 @@ local binToHex = require('./bin-to-hex')
 -- WANT - 01xxxxxx (groups of 20 bytes)
 --        (xxxxxx is number of wants)
 -- NOPE - 00110000 (20 raw byte hash) - a wanted hash isn't there
--- GIVE - 00110001 (20 byte one-use auth token) (20 raw byte hash) - I want to give you a hash and it's dependencies
--- GOT  - 00110010 (20 raw byte hash) - reply that give was completed recursivly
+-- GOT  - 00110001 (20 raw byte hash) - reply that a tag was completed recursivly
+
+-- QUERY - 00110010 cstring - username/packagename
+-- REPLY - 00110011 (20 raw byte hash) - hash to tree containing response
 local function decoder(chunk)
   local head = string.byte(chunk, 1)
 
@@ -48,19 +50,31 @@ local function decoder(chunk)
     }, string.sub(chunk, 22)
   end
 
-  -- GIVE hash
-  if head == 0x31 then
-    if #chunk < 41 then return end
-    return {"give", {
-      token = binToHex(string.sub(chunk, 2, 21)),
-      hash = binToHex(string.sub(chunk, 22, 41)),
-    }}, string.sub(chunk, 42)
-  end
-
   -- GOT hash
-  if head == 0x32 then
+  if head == 0x31 then
     if #chunk < 21 then return end
     return {"got",
+      binToHex(string.sub(chunk, 2, 21)),
+    }, string.sub(chunk, 22)
+  end
+
+  -- QUERY user/package
+  if head == 0x32 then
+
+    local n = string.find(chunk, "\0")
+    if not n then
+      if #chunk < 4096 then return end
+      error("query too long")
+    end
+    return {"query",
+      string.sub(chunk, 2, n - 1)
+    }, string.sub(chunk, n + 1)
+  end
+
+  -- REPLY hash
+  if head == 0x33 then
+    if #chunk < 21 then return end
+    return {"reply",
       binToHex(string.sub(chunk, 2, 21)),
     }, string.sub(chunk, 22)
   end
@@ -80,18 +94,29 @@ assert(x == "xx")
 assert(e[1] == "wants")
 assert(#e[2] == 2)
 
-e, x = decoder('1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
-assert(x == 'xx')
-assert(e[1] == 'give')
-assert(#e == 2)
-assert(e[2].token)
-assert(e[2].hash)
-
 e, x = decoder('0\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
 assert(x == 'xx')
 assert(e[1] == 'nope')
 assert(e[2] == '827cb45075be4381acd1c79f216cf5b860487775')
-p(e)
+assert(#e == 2)
+
+e, x = decoder('1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
+assert(x == 'xx')
+assert(e[1] == 'got')
+assert(e[2] == '827cb45075be4381acd1c79f216cf5b860487775')
+assert(#e == 2)
+
+e, x = decoder('2creationix/greeting\000xx')
+assert(x == 'xx')
+assert(e[1] == 'query')
+assert(e[2] == 'creationix/greeting')
+assert(#e == 2)
+
+e, x = decoder('3\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwuxx')
+assert(x == 'xx')
+assert(e[1] == 'reply')
+assert(e[2] == '827cb45075be4381acd1c79f216cf5b860487775')
 assert(#e == 2)
 
 return decoder
+

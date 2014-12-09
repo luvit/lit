@@ -6,8 +6,10 @@ local hexToBin = require('./hex-to-bin')
 -- WANT - 01xxxxxx (groups of 20 bytes)
 --        (xxxxxx is number of wants)
 -- NOPE - 00110000 (20 raw byte hash) - a wanted hash isn't there
--- GIVE - 00110001 (20 byte one-use auth token) (20 raw byte hash) - I want to give you a hash and it's dependencies
--- GOT  - 00110010 (20 raw byte hash) - reply that give was completed recursivly
+-- GOT  - 00110001 (20 raw byte hash) - reply that a tag was completed recursivly
+
+-- QUERY - 00110010 cstring - username/packagename
+-- REPLY - 00110011 (20 raw byte hash) - hash to tree containing response
 local encoders = exports
 
 function encoders.send(data)
@@ -40,18 +42,19 @@ function encoders.nope(hash)
   return "0" .. hexToBin(hash)
 end
 
-function encoders.give(give)
-  assert(type(give) == "table")
-  assert(type(give.token) == "string")
-  assert(type(give.hash) == "string")
-  assert(#give.token == 40)
-  assert(#give.hash == 40)
-  return "1" .. hexToBin(give.token) .. hexToBin(give.hash)
-end
-
 function encoders.got(hash)
   assert(#hash == 40)
-  return "2" .. hexToBin(hash)
+  return "1" .. hexToBin(hash)
+end
+
+function encoders.query(name)
+  return "2" .. name .. "\0"
+end
+
+
+function encoders.reply(hash)
+  assert(#hash == 40)
+  return "3" .. hexToBin(hash)
 end
 
 -- Inline unit tests for sanity
@@ -64,8 +67,6 @@ assert(encoders.wants({
   "827cb45075be4381acd1c79f216cf5b860487775",
 }) == 'BzBSXc$u\189y\193V\239\t\153!\145\239\187{\184\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
 assert(encoders.nope("827cb45075be4381acd1c79f216cf5b860487775") == '0\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
-assert(encoders.give({
-  token = "827cb45075be4381acd1c79f216cf5b860487775",
-  hash = "827cb45075be4381acd1c79f216cf5b860487775"
-}) == '1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
-assert(encoders.got("827cb45075be4381acd1c79f216cf5b860487775") == '2\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
+assert(encoders.got("827cb45075be4381acd1c79f216cf5b860487775") == '1\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
+assert(encoders.query("creationix/greeting") == '2creationix/greeting\0')
+assert(encoders.reply("827cb45075be4381acd1c79f216cf5b860487775") == '3\130|\180Pu\190C\129\172\209\199\159!l\245\184`Hwu')
