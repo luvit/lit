@@ -125,3 +125,65 @@ newest version will be returned.
 
 Other queries can be added later like package name searches or metadata
 searches.
+
+## Storage
+
+There are two storage backends.  One is implemented in pure lua and is
+compatable with the git client.  This allows using tools like `git fsck` to
+verify the sanift of the local database and allows storing mirrors on github.
+
+This will create a tree structure like the following:
+
+```
+.
+├── config
+├── HEAD
+├── objects
+│   ├── 10
+│   │   └── bda14b5d345a1a98ecfeed2d2478cb4b3d9ec4
+│   ├── 3f
+│   │   └── 34a3a73291a7ed72b9726a2ffc891419f3ff18
+│   ├── 55
+│   │   └── 7db03de997c86a4a028e1ebd3a1ceb225be238
+│   ├── 8e
+│   │   └── 7e2858b1734a9a846eb8b9ed91382dd290baed
+│   ├── 94
+│   │   └── acb2e4b9bf8b7a99e63b830de5d610af2e8d49
+│   ├── ab
+│   │   └── 626a6a7a67563e08486369d3eee0aba0ff47f8
+│   ├── c9
+│   │   └── ac958dae3e2f27af843956e64e6f37ec53f523
+│   └── f5
+│       └── 96188cbe1506da3e05626f6e25eee8a68b73cf
+└── refs
+    └── tags
+        └── creationix
+            └── greetings
+                └── v0.0.1
+```
+
+This is a tiny repo containing a single small package, "creationix/greetings"
+version 0.0.1.
+
+This works great for small databases and interop with git, but it's slow and
+ineffecient for large databases.  A second backend is available if you have
+sophia db bindings available.
+
+That simply stores objects in sophia with the 20-byte key as key and the raw
+value as value for objects.  The refs will be stored as string keys pointing to
+the raw 20-byte hashes.
+
+This same database would have the following keys: (square brackets mean binary
+data, quotes mean string data.)
+
+```
+[10bda14b5d345a1a98ecfeed2d2478cb4b3d9ec4]
+[3f34a3a73291a7ed72b9726a2ffc891419f3ff18]
+[557db03de997c86a4a028e1ebd3a1ceb225be238]
+[8e7e2858b1734a9a846eb8b9ed91382dd290baed]
+[94acb2e4b9bf8b7a99e63b830de5d610af2e8d49]
+[ab626a6a7a67563e08486369d3eee0aba0ff47f8]
+[c9ac958dae3e2f27af843956e64e6f37ec53f523]
+[f596188cbe1506da3e05626f6e25eee8a68b73cf]
+"creationix/greetings/v0.0.1"
+```
