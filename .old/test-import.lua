@@ -50,3 +50,4 @@ coroutine.wrap(function ()
     test(SophiaStorage:new(pathJoin(uv.cwd(), "db.sophia")))
   end
 end)()
+
