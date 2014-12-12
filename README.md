@@ -130,7 +130,7 @@ searches.
 
 There are two storage backends.  One is implemented in pure lua and is
 compatable with the git client.  This allows using tools like `git fsck` to
-verify the sanift of the local database and allows storing mirrors on github.
+verify the sanity of the local database and allows storing mirrors on github.
 
 This will create a tree structure like the following:
 
@@ -187,3 +187,122 @@ data, quotes mean string data.)
 [f596188cbe1506da3e05626f6e25eee8a68b73cf]
 "creationix/greetings/v0.0.1"
 ```
+
+## CLI Interface
+
+The main interface users will see is the command-line `lit` tool.
+
+### Install
+
+Normally, you use lit to install third-party modules into your app.
+
+```sh
+> lit install creationix/gamepad
+lit version: 0.0.1
+command: install creationix/gamepad
+modules folder: /home/tim/Code/conquest/modules
+cache version: none
+remote version: 1.0.2
+fetching: c9ac958dae3e2f27af843956e64e6f37ec53f523 creationix/gamepad@1.0.2
+verifying signature: 0e:f3:5c:a2:9f:27:5e:ec:78:cc:a4:c7:a0:8b:a2:83
+fetching: 10bda14b5d345a1a98ecfeed2d2478cb4b3d9ec4 /
+fetching: 557db03de997c86a4a028e1ebd3a1ceb225be238 /main.lua
+fetching: 94acb2e4b9bf8b7a99e63b830de5d610af2e8d49 /parser.lua
+exporting: /home/tim/Code/conquest/modules/creationix/gamepad
+done: success
+```
+
+This will search for a modules folder, check the local cache for a version that
+matches, if not, it will use the remote repo to get a version.  Once found, it
+will download the tag and verify the signature (caching the public key).
+
+Once the package is verified, it will sync down all the missing objects the
+local database doesn't have yet by sending the server WANT commands.
+
+Once the local version has the entire graph for the tag, it will export the
+files to the filesystem.
+
+### Add
+
+Before you can share a package with others, you need to first add it to your
+local database.  This enables testing the install cycle without actually
+sharing with the world yet.
+
+```sh
+> cd gamepad
+> lit add
+lit version: 0.0.1
+command: add
+package name: gamepad
+package version: 0.5.4
+importing: /home/tim/Code/gamepad
+signing: 0e:f3:5c:a2:9f:27:5e:ec:78:cc:a4:c7:a0:8b:a2:83
+done: success
+```
+
+The name is guessed based on the folder name, the git remote name, or the `name`
+field in the local `package.lua` file.
+
+The version is guessed based on the result of `git describe` or the `version`
+field of `package.lua`.
+
+The tree is imported recursivly into the local database, a tag is created
+containing the name and version.  This tag is then signed using the local
+identity.
+
+You can now install this package from any machine that uses this machine as the
+upstream or any other project on the local machine.
+
+### Setup
+
+This command will create a `$HOME/.litconfig` file containing your author
+information.  Currently this will be your github username and the path to a
+local private rsa key that you have in your public github profile.  It will
+verify the local key and make sure it matches one of your keys online.
+
+```sh
+> lit setup creationix
+lit version: 0.0.1
+command: setup creationix
+key: /home/tim/.ssh/id_rsa
+verifying key: 0e:f3:5c:a2:9f:27:5e:ec:78:cc:a4:c7:a0:8b:a2:83
+done: success
+
+> cat ~/.litconfig
+github name: creationix
+private key: /home/tim/.ssh/id_rsa
+upstream: lit.luvit.io
+```
+
+### Publish
+
+Once you've run setup, you can publish packages to your upstream database.
+
+```sh
+> lit publish gamepad
+lit version: 0.0.1
+command: publish gamepad
+cache version: 0.5.4
+remote version: 0.5.3
+sending: c9ac958dae3e2f27af843956e64e6f37ec53f523 creationix/gamepad@0.5.4
+sending: 10bda14b5d345a1a98ecfeed2d2478cb4b3d9ec4 /
+sending: 557db03de997c86a4a028e1ebd3a1ceb225be238 /main.lua
+sending: 94acb2e4b9bf8b7a99e63b830de5d610af2e8d49 /parser.lua
+done: success
+```
+
+You can only publish packages that you're already added to your local database.
+But once it's added to your local database, you can publish any local packaged
+you own.
+
+### Sync
+
+Once you've stored a package in your local database, future installs will look
+there first and not bother checking online if a match is found locally.
+
+This makes the offline experience much better, but it means you have to manually
+run sync when you're online if you want to get updates.
+
+Running a sync will grab the latest versions and latest semver matches of all
+local packages in the db.
+
