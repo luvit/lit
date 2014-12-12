@@ -93,13 +93,13 @@ For example the binary message `"Hello World\n"`, would be encoded as:
 
     11001100 48 65 6c 6c 6f 20 57 6f 72 6c 64 0a
 
-#### QUERY - '?' query '\n\n'
+### QUERY - '?' query '\n\n'
 
-A query is simply a '?' byte followed by double newline..  The
+A query is simply a '?' byte followed a query ending with double newlines.  The
 string is assumed to be UTF-8 encoded. and has it's whitespace trimmed off both
 ends before processing.
 
-#### REPLY - '!' reply '\n\n'
+### REPLY - '!' reply '\n\n'
 
 Reply looks just query, but with a '!' byte prefix.
 
