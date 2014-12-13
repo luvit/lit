@@ -255,10 +255,11 @@ upstream or any other project on the local machine.
 
 ### Init
 
-This command will create a `$HOME/.litconfig` file containing your author
-information.  Currently this will be your github username and the path to a
-local private rsa key that you have in your public github profile.  It will
-verify the local key and make sure it matches one of your keys online.
+This command will create a `$HOME/.litconfig` (or `$APPDATA\litconfig` on
+windows) file containing your author information.  Currently this will be your
+github username and the path to a local private rsa key that you have in your
+public github profile.  It will verify the local key and make sure it matches
+one of your keys online.
 
 ```sh
 > lit init creationix
