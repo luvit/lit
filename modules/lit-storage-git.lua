@@ -4,6 +4,7 @@ local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
+local log = require('lit-log')
 
 local Storage = Object:extend()
 
@@ -40,6 +41,7 @@ function Storage:save(value)
     if not string.match(err, "^ENOENT:") then return nil, err end
     self.fs.mkdirp(pathJoin(path, ".."))
   end
+  log("save", hash)
   -- TDEFL_WRITE_ZLIB_HEADER             = 0x01000,
   -- 4095=Huffman+LZ (slowest/best compression)
   value = deflate(value, 0x01000 + 4095)
@@ -71,19 +73,25 @@ end
 
 function Storage:write(tag, hash)
   local path = pathJoin("refs/tags/", tag)
+  local data = hash .. "\n"
+  if self.fs.readFile(path) == data then return end
+  log("write", tag)
   self.fs.mkdirp(pathJoin(path, ".."))
-  return self.fs.writeFile(path, hash .. "\n")
+  return self.fs.writeFile(path, data)
 end
 
 function Storage:begin()
+  log("transaction", "begin")
   -- TODO: Implement
 end
 
 function Storage:commit()
+  log("transaction", "commit", "success")
   -- TODO: Implement
 end
 
 function Storage:rollback()
+  log("transaction", "rollback", "failure")
   -- TODO: Implement
 end
 

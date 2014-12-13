@@ -1,6 +1,7 @@
 local Object = require('core').Object
 local Sophia = require('sophia.so')
 local digest = require('openssl').digest.digest
+local log = require('lit-log')
 
 local Storage = Object:extend()
 
@@ -45,14 +46,17 @@ function Storage:write(key, value)
 end
 
 function Storage:begin()
+  log("transaction", "begin")
   return self.db:begin()
 end
 
 function Storage:commit()
+  log("transaction", "commit", "success")
   return self.db:commit()
 end
 
 function Storage:rollback()
+  log("transaction", "rollback", "failure")
   return self.db:rollback()
 end
 

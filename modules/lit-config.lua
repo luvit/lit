@@ -51,8 +51,15 @@ end
 
 if dirty then save() end
 
+local key
+if config["private key"] then
+  local keyData = assert(fs.readFile(config["private key"]))
+  key = require('openssl').pkey.read(keyData, true)
+end
+
 return setmetatable(config, {
   __index = {
-    save = save
+    save = save,
+    key = key
   }
 })

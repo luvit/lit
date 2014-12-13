@@ -8,10 +8,6 @@ local storage = require('lit-storage')
 
 -- TODO: guess
 
-if not (config["github name"] and config.name and config.email) then
-  error("Please run `lit auth` to configure your username")
-end
-
 local path = pathJoin(uv.cwd(), args[2] or prompt("package path"))
 
 local name = args[3] or prompt("package name")
