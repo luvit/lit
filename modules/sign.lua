@@ -1,10 +1,7 @@
 local base64 = require('openssl').base64
 local sshRsa = require('ssh-rsa')
 
-
-local function sign(body, privateKey)
-  base64 = base64 or
-  sshRsa = sshRsa or require('ssh-rsa')
+return function (body, privateKey)
 
   -- Extract e and n from the private RSA key to build the ssh public key
   local rsa = privateKey:parse().rsa:parse()

@@ -8,7 +8,7 @@ local storage = require('lit-storage')
 
 -- TODO: guess
 
-if not config["github name"] then
+if not (config["github name"] and config.name and config.email) then
   error("Please run `lit auth` to configure your username")
 end
 
@@ -19,10 +19,11 @@ assert(string.match(name, "^[^ /\\][^ ]*[^ /\\]$"), "invalid package name")
 local version = args[4] or prompt("semantic version")
 version = string.match(version, "%d+%.%d+%.%d+$")
 assert(version, "invalid version number")
+local message = args[5] or prompt("release notes")
 
 local tag = config["github name"] .. '/' .. name .. '/v' .. version
 
 log("path", path)
 log("tag", tag)
 
-import(config, storage, path, tag)
+import(config, storage, path, tag, message)

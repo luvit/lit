@@ -15,6 +15,10 @@ local function confirm(name, value)
 end
 
 confirm("github name", args[2])
+-- TODO: preload with: git config --get user.name
+confirm("name", args[3])
+-- TODO: preload with: git config --get user.email
+confirm("email", args[4])
 
 if not config["private key"] then
   local path = env.get("HOME") .. '/.ssh/id_rsa'
