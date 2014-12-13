@@ -35,8 +35,6 @@ end
 local fingerprint = sshRsa.fingerprint(
   sshRsa.loadPrivate(fs.readFile(config["private key"]))
 )
-
-config["ssh fingerprint"] = fingerprint
 log("ssh fingerprint", fingerprint)
 
 -- TODO: verify ownership of username using key

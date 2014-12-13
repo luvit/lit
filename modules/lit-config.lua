@@ -2,12 +2,14 @@ local log = require('lit-log')
 local fs = require('coro-fs')
 local env = require('env')
 
-local configFile
+local prefix
 if require('ffi').os == "Windows" then
-  configFile = env.get("APPDATA") .. "\\litconfig"
+  prefix = env.get("APPDATA") .. "\\"
 else
-  configFile = env.get("HOME") .. "/.litconfig"
+  prefix = env.get("HOME") .. "/."
 end
+
+local configFile = prefix .. "litconfig"
 
 local loaded = false
 local config = {}
@@ -34,10 +36,20 @@ local function save()
   fs.writeFile(configFile, table.concat(lines, "\n") .. '\n')
 end
 
+local dirty = false
 if not config.upstream then
   config.upstream = "lit.luvit.io"
-  save()
+  dirty = true
 end
+
+if not config.database or not config.storage then
+  local sophia = pcall(require, 'sophia.so')
+  config.storage = sophia and "sophia" or "git"
+  config.database = prefix .. "litdb." .. config.storage
+  dirty = true
+end
+
+if dirty then save() end
 
 return setmetatable(config, {
   __index = {

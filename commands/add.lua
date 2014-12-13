@@ -1,1 +1,3 @@
-error("TODO: Implement add command")
+local storage = require('lit-storage')
+
+p(storage)

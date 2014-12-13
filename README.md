@@ -272,10 +272,11 @@ update config: /Users/tim/.litconfig
 done: success
 
 > cat ~/.litconfig
-ssh fingerprint: 8b:70:91:a9:39:02:68:c5:4b:b8:80:fe:b3:78:ec:3f
+database: /Users/tim/.litdb.sophia
+github name: creationix
 upstream: lit.luvit.io
 private key: /Users/tim/.ssh/id_rsa
-github name: creationix
+storage: sophia
 ```
 
 ### Publish

@@ -1,5 +1,5 @@
 local Object = require('core').Object
-local makeChroot = require('fs').chroot
+local makeChroot = require('coro-fs').chroot
 local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate
@@ -87,4 +87,6 @@ function Storage:rollback()
   -- TODO: Implement
 end
 
-return Storage
+return function (dir)
+  return Storage:new(dir)
+end

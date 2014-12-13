@@ -56,4 +56,6 @@ function Storage:rollback()
   return self.db:rollback()
 end
 
-return Storage
+return function (dir)
+  return Storage:new(dir)
+end
