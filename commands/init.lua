@@ -4,9 +4,19 @@ local env = require('env')
 local config = require('lit-config')
 
 local function check(name)
+  local message = name .. ": "
+  local original = config[name]
+  if original then
+    message = message .. "(" .. original .. ") "
+  end
+  local value = config[name]
   repeat
-    config[name] = assert(prompt(name .. ': ', config[name]))
-  until #config[name] > 0
+    value = assert(prompt(message))
+    if original and #value == 0 then
+      value = original
+    end
+  until #value > 0
+  config[name] = value
 end
 
 local home = env.get("HOME")

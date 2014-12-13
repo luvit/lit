@@ -253,7 +253,7 @@ identity.
 You can now install this package from any machine that uses this machine as the
 upstream or any other project on the local machine.
 
-### Setup
+### Init
 
 This command will create a `$HOME/.litconfig` file containing your author
 information.  Currently this will be your github username and the path to a
@@ -261,9 +261,9 @@ local private rsa key that you have in your public github profile.  It will
 verify the local key and make sure it matches one of your keys online.
 
 ```sh
-> lit setup creationix
+> lit init creationix
 lit version: 0.0.1
-command: setup creationix
+command: init creationix
 key: /home/tim/.ssh/id_rsa
 verifying key: 0e:f3:5c:a2:9f:27:5e:ec:78:cc:a4:c7:a0:8b:a2:83
 done: success
@@ -276,7 +276,7 @@ upstream: lit.luvit.io
 
 ### Publish
 
-Once you've run setup, you can publish packages to your upstream database.
+Once you've run init, you can publish packages to your upstream database.
 
 ```sh
 > lit publish gamepad

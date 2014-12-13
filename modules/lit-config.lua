@@ -12,7 +12,7 @@ end
 local config = {}
 local data = fs.readFile(configFile)
 if data then
-  log("config file", configFile)
+  log("load config", configFile)
   for key, value in string.gmatch(data, "([^:\n]+): *([^\n]+)") do
     config[key] = value
   end
@@ -24,6 +24,7 @@ local function save()
     lines[#lines + 1] = key .. ": " .. value
   end
   fs.writeFile(configFile, table.concat(lines, "\n"))
+  log("save config", configFile)
 end
 
 return setmetatable(config, {
