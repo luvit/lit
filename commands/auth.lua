@@ -2,6 +2,8 @@ local prompt = require('prompt')
 local fs = require('coro-fs')
 local env = require('env')
 local config = require('lit-config')
+local log = require('lit-log')
+local sshRsa = require('ssh-rsa')
 
 local function check(name)
   local message = name .. ": "
@@ -19,23 +21,25 @@ local function check(name)
   config[name] = value
 end
 
-local home = env.get("HOME")
-if home and not config["private key"] then
-  local keypath = home .. '/.ssh/id_rsa'
-  if fs.access(keypath, "r") then
-    config["private key"] = keypath
+check("github name")
+
+if not config["private key"] then
+  local path = env.get("HOME") .. '/.ssh/id_rsa'
+  if fs.access(path, "r") then
+    config["private key"] = path
+  else
+    check("private key")
   end
 end
-if not config.upstream then
-  config.upstream = "lit.luvit.io"
-end
 
-check("upstream")
-check("github name")
-check("private key")
+local fingerprint = sshRsa.fingerprint(
+  sshRsa.loadPrivate(fs.readFile(config["private key"]))
+)
 
--- TODO: verify private key matches with github name
--- Store fingerprint in config
+config["ssh fingerprint"] = fingerprint
+log("ssh fingerprint", fingerprint)
+
+-- TODO: verify ownership of username using key
 
 config.save()
 

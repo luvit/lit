@@ -9,9 +9,11 @@ else
   configFile = env.get("HOME") .. "/.litconfig"
 end
 
+local loaded = false
 local config = {}
 local data = fs.readFile(configFile)
 if data then
+  loaded = true
   log("load config", configFile)
   for key, value in string.gmatch(data, "([^:\n]+): *([^\n]+)") do
     config[key] = value
@@ -19,12 +21,22 @@ if data then
 end
 
 local function save()
+  if loaded then
+    log("update config", configFile)
+  else
+    log("create config", configFile)
+    loaded = true
+  end
   local lines = {}
   for key, value in pairs(config) do
     lines[#lines + 1] = key .. ": " .. value
   end
-  fs.writeFile(configFile, table.concat(lines, "\n"))
-  log("save config", configFile)
+  fs.writeFile(configFile, table.concat(lines, "\n") .. '\n')
+end
+
+if not config.upstream then
+  config.upstream = "lit.luvit.io"
+  save()
 end
 
 return setmetatable(config, {

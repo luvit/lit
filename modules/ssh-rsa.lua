@@ -1,3 +1,4 @@
+local pkey = require('openssl').pkey
 local bn = require('openssl').bn
 local digest = require('openssl').digest.digest
 
@@ -41,6 +42,7 @@ function exports.decode(input)
   return bn.text(e), bn.text(n)
 end
 
+-- Calculate an ssh style fingerprint from raw public data
 function exports.fingerprint(data)
   local parts = {}
   local hash = digest("md5", data, true)
@@ -48,4 +50,16 @@ function exports.fingerprint(data)
     parts[i] = string.format("%02x", string.byte(hash, i))
   end
   return table.concat(parts, ":")
+end
+
+-- Calculate the public key data from an rsa private key file
+function exports.loadPrivate(data)
+  local key = pkey.read(data, true)
+  local rsa = key:parse().rsa:parse()
+  return exports.encode(rsa.e, rsa.n)
+end
+
+-- Extract the raw data from a public key file.
+function exports.loadPublic(data)
+  error("TODO: Implement")
 end
