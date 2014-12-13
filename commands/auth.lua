@@ -5,30 +5,23 @@ local config = require('lit-config')
 local log = require('lit-log')
 local sshRsa = require('ssh-rsa')
 
-local function check(name)
-  local message = name .. ": "
-  local original = config[name]
-  if original then
-    message = message .. "(" .. original .. ") "
+local function confirm(name, value)
+  if value then
+    config[name] = value
+    log(name, value)
+  else
+    config[name] = prompt(name, config[name])
   end
-  local value = config[name]
-  repeat
-    value = assert(prompt(message))
-    if original and #value == 0 then
-      value = original
-    end
-  until #value > 0
-  config[name] = value
 end
 
-check("github name")
+confirm("github name", args[2])
 
 if not config["private key"] then
   local path = env.get("HOME") .. '/.ssh/id_rsa'
   if fs.access(path, "r") then
     config["private key"] = path
   else
-    check("private key")
+    confirm("private key")
   end
 end
 
