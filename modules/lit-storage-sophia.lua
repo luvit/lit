@@ -2,6 +2,8 @@ local Object = require('core').Object
 local Sophia = require('sophia.so')
 local digest = require('openssl').digest.digest
 local log = require('lit-log')
+local hexToBin = require('hex-to-bin')
+local binToHex = require('bin-to-hex')
 
 local Storage = Object:extend()
 
@@ -17,10 +19,12 @@ end
 -- value is a string.
 function Storage:save(value)
   local hash = digest("sha1", value)
-  if self.db:get(hash) then
+  local key = hexToBin(hash)
+  if self.db:get(key) then
     return hash
   end
-  local success, err = self.db:set(hash, value)
+  log("save", hash)
+  local success, err = self.db:set(key, value)
   if success then
     return hash
   end
@@ -28,7 +32,8 @@ function Storage:save(value)
 end
 
 function Storage:load(hash)
-  local value, err = self.db:get(hash)
+  local key = hexToBin(hash)
+  local value, err = self.db:get(key)
   if err then return nil, err end
   if not value then return end
   if hash ~= digest("sha1", value) then
@@ -38,10 +43,13 @@ function Storage:load(hash)
 end
 
 function Storage:read(key)
-  return self.db:get(key)
+  return binToHex(self.db:get(key))
 end
 
-function Storage:write(key, value)
+function Storage:write(key, hash)
+  local value = hexToBin(hash)
+  if self.db:get(key) == value then return end
+  log("write", key)
   return self.db:set(key, value)
 end
 

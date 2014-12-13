@@ -13,6 +13,7 @@ function Storage:initialize(dir)
   local fs = makeChroot(dir)
   self.fs = fs
   if not fs.access("HEAD") then
+    log("initialize git db", dir)
     assert(fs.mkdirp("objects"))
     assert(fs.mkdirp("refs/tags"))
     assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))

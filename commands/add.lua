@@ -6,6 +6,10 @@ local prompt = require('prompt')
 local import = require('import')
 local storage = require('lit-storage')
 
+if not (config.key and config.name and config.email) then
+  error("Please run `lit auth` to configure your username")
+end
+
 -- TODO: guess
 
 local path = pathJoin(uv.cwd(), args[2] or prompt("package path"))
