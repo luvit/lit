@@ -1,9 +1,9 @@
-local log = require('lit-log')
-local makeChroot = require('coro-fs').chroot
-local gitFrame = require('git').frame
-local encodeTag = require('git').encoders.tag
-local modes = require('git').modes
-local sign = require('sign')
+local log = require('./lit-log')
+local makeChroot = require('./coro-fs').chroot
+local gitFrame = require('./git').frame
+local encodeTag = require('./git').encoders.tag
+local modes = require('./git').modes
+local sign = require('./sign')
 local pathJoin = require('luvi').path.join
 
 

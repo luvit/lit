@@ -1,5 +1,5 @@
-local log = require('lit-log')
-local fs = require('coro-fs')
+local log = require('./lit-log')
+local fs = require('./coro-fs')
 local env = require('env')
 
 local prefix

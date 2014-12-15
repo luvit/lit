@@ -1,10 +1,10 @@
-local log = require('lit-log')
-local config = require('lit-config')
+local log = require('../lib/lit-log')
+local config = require('../lib/lit-config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
-local prompt = require('prompt')
-local import = require('import')
-local storage = require('lit-storage')
+local prompt = require('../lib/prompt')
+local import = require('../lib/import')
+local storage = require('../lib/lit-storage')
 
 if not (config.key and config.name and config.email) then
   error("Please run `lit auth` to configure your username")

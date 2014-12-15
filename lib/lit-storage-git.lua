@@ -1,10 +1,10 @@
 local Object = require('core').Object
-local makeChroot = require('coro-fs').chroot
+local makeChroot = require('./coro-fs').chroot
 local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
-local log = require('lit-log')
+local log = require('./lit-log')
 
 local Storage = Object:extend()
 

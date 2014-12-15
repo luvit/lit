@@ -104,7 +104,7 @@ function fs.mkdirp(path, mode)
     return true
   end
   if string.match(err, "^ENOENT:") then
-    success, err = fs.mkdir(pathJoin(path, ".."), mode)
+    success, err = fs.mkdirp(pathJoin(path, ".."), mode)
     if not success then return nil, err end
     return fs.mkdir(path, mode)
   end

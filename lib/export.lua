@@ -1,9 +1,9 @@
-local log = require('lit-log')
-local makeChroot = require('coro-fs').chroot
-local gitDeframe = require('git').deframe
-local decodeTag = require('git').decoders.tag
-local modes = require('git').modes
-local verify = require('verify')
+local log = require('./lit-log')
+local makeChroot = require('./coro-fs').chroot
+local gitDeframe = require('./git').deframe
+local decodeTag = require('./git').decoders.tag
+local modes = require('./git').modes
+local verify = require('./verify')
 local pathJoin = require('luvi').path.join
 
 return function (config, storage, base, tag)

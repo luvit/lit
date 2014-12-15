@@ -1,9 +1,9 @@
-local prompt = require('prompt')
-local fs = require('coro-fs')
+local prompt = require('../lib/prompt')
+local fs = require('../lib/coro-fs')
 local env = require('env')
-local config = require('lit-config')
-local log = require('lit-log')
-local sshRsa = require('ssh-rsa')
+local config = require('../lib/lit-config')
+local log = require('../lib/lit-log')
+local sshRsa = require('../lib/ssh-rsa')
 
 local function confirm(name, value)
   if value then

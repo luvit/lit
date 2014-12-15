@@ -1,5 +1,5 @@
 local base64 = require('openssl').base64
-local sshRsa = require('ssh-rsa')
+local sshRsa = require('./ssh-rsa')
 
 return function (body, privateKey)
 
