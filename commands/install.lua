@@ -2,14 +2,20 @@ local log = require('../lib/log')
 local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
-local prompt = require('creationix/prompt')
 local semverMatch = require('creationix/semver')
 local export = require('../lib/export')
 local storage = require('../lib/storage')
+local readPackage = require('../lib/read-package')
 
+local list = {}
 
-local name = args[2] or prompt("package name")
-
+if #args == 1 then
+  local meta = assert(readPackage(pathJoin(uv.cwd(), "package.lua")))
+  p(meta)
+  error("TODO: install deps in local package.lua")
+end
+for i = 2, #args do
+  local name = args[i]
 if not string.find(name, "/") then
   if not config["github name"] then
     error("Please speficy a full package name including username")
@@ -34,3 +40,6 @@ log("package", tag)
 log("target", target)
 
 export(config, storage, target, tag)
+
+
+end

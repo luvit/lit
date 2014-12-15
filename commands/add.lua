@@ -6,6 +6,7 @@ local prompt = require('creationix/prompt')
 local import = require('../lib/import')
 local storage = require('../lib/storage')
 local fs = require('creationix/coro-fs')
+local readPackage = require('../lib/read-package')
 
 if not (config.key and config.name and config.email) then
   error("Please run `lit auth` to configure your username")
@@ -16,29 +17,13 @@ local path = pathJoin(uv.cwd(), args[2] or prompt("package path"))
 local stat = fs.stat(path)
 
 -- Guess some stuff from the
-local meta = {}
 local packagePath
 if stat.type == "file" then
   packagePath = path
 else
   packagePath = pathJoin(path, "package.lua")
 end
-do
-  local contents = fs.readFile(packagePath)
-  local function noop() end
-  pcall(function ()
-    local container = {exports=meta}
-    local fn = assert(loadstring(contents, path))
-    setfenv(fn, {
-      setmetatable = setmetatable,
-      require = noop,
-      module = container,
-      exports = meta,
-    })
-    local out = fn()
-    meta = out or container.exports
-  end)
-end
+local meta = readPackage(packagePath)
 meta = type(meta) == "table" and meta or {}
 
 local name = args[3] or meta.name or prompt("package name")
