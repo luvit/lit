@@ -67,6 +67,16 @@ function Storage:load(hash)
   return value
 end
 
+function Storage:versions(name)
+  local results = {}
+  self.fs.scandir(pathJoin("refs/tags", name), function (entry)
+    if entry.type == "file" then
+      results[#results + 1] = string.match(entry.name, "%d+%.%d+%.%d+[^/]*$")
+    end
+  end)
+  return results
+end
+
 function Storage:read(tag)
   local raw = self.fs.readFile(pathJoin("refs/tags/", tag))
   return string.match(raw, "%x+")

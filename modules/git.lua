@@ -157,7 +157,7 @@ function encoders.tag(tag)
     tag.object, tag.type, tag.tag, formatPerson(tag.tagger), tag.message)
 end
 
-function decoders.commit(raw)
+function decoders.tag(raw)
   local s, _, message = string.find(raw, "\n\n(.*)$", 1)
   raw = string.sub(raw, 1, s)
   local start = 1

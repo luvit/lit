@@ -9,9 +9,11 @@ local Storage = Object:extend()
 
 function Storage:initialize(dir)
   local env = Sophia.env()
-  self.env = env
-  env:ctl("dir", dir)
-  self.db = assert(env:open())
+  env:ctl("dir", dir .. "-objects")
+  self.object_db = assert(env:open())
+  env = Sophia.env()
+  env:ctl("dir", dir .. "-tags")
+  self.tag_db = assert(env:open())
   self.dir = dir
 end
 
@@ -20,11 +22,11 @@ end
 function Storage:save(value)
   local hash = digest("sha1", value)
   local key = hexToBin(hash)
-  if self.db:get(key) then
+  if self.object_db:get(key) then
     return hash
   end
   log("save", hash)
-  local success, err = self.db:set(key, value)
+  local success, err = self.object_db:set(key, value)
   if success then
     return hash
   end
@@ -33,7 +35,7 @@ end
 
 function Storage:load(hash)
   local key = hexToBin(hash)
-  local value, err = self.db:get(key)
+  local value, err = self.object_db:get(key)
   if err then return nil, err end
   if not value then return end
   if hash ~= digest("sha1", value) then
@@ -42,30 +44,49 @@ function Storage:load(hash)
   return value
 end
 
+local function escape(c)
+  return "%" .. c
+end
+
+function Storage:versions(name)
+  local results = {}
+  local pattern = "^" .. name:gsub("[%^%$%(%)%%%.%[%]%*%+%-%?]", escape) .. "/[^/%d]*(%d+%.%d+%.%d+[^/]*)$"
+  for tag in self.tag_db:cursor() do
+    local version = string.match(tag, pattern)
+    if version then
+      results[#results + 1] = version
+    end
+  end
+  return results
+end
+
 function Storage:read(key)
-  return binToHex(self.db:get(key))
+  return binToHex(self.tag_db:get(key))
 end
 
 function Storage:write(key, hash)
   local value = hexToBin(hash)
-  if self.db:get(key) == value then return end
+  if self.tag_db:get(key) == value then return end
   log("write", key)
-  return self.db:set(key, value)
+  return self.tag_db:set(key, value)
 end
 
 function Storage:begin()
   log("transaction", "begin")
-  return self.db:begin()
+  self.object_db:begin()
+  self.tag_db:begin()
 end
 
 function Storage:commit()
   log("transaction", "commit", "success")
-  return self.db:commit()
+  self.object_db:commit()
+  self.tag_db:commit()
 end
 
 function Storage:rollback()
   log("transaction", "rollback", "failure")
-  return self.db:rollback()
+  self.object_db:rollback()
+  self.tag_db:rollback()
 end
 
 return function (dir)
