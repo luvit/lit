@@ -1,10 +1,10 @@
 local Object = require('core').Object
-local makeChroot = require('./coro-fs').chroot
+local makeChroot = require('creationix/coro-fs').chroot
 local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
-local log = require('./lit-log')
+local log = require('./log')
 
 local Storage = Object:extend()
 
@@ -69,7 +69,9 @@ end
 
 function Storage:versions(name)
   local results = {}
+  p(pathJoin("refs/tags", name))
   self.fs.scandir(pathJoin("refs/tags", name), function (entry)
+    p(entry)
     if entry.type == "file" then
       results[#results + 1] = string.match(entry.name, "%d+%.%d+%.%d+[^/]*$")
     end
@@ -79,7 +81,7 @@ end
 
 function Storage:read(tag)
   local raw = self.fs.readFile(pathJoin("refs/tags/", tag))
-  return string.match(raw, "%x+")
+  return raw and string.match(raw, "%x+")
 end
 
 function Storage:write(tag, hash)

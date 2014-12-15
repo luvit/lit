@@ -1,3 +1,6 @@
+exports.name = "creationix/prompt"
+exports.version = "0.1.0"
+
 local readLine = require('readline').readLine
 
 -- Wrapper around readline to provide a nice blocking version for coroutines

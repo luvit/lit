@@ -1,3 +1,11 @@
+exports.name = "creationix/semver"
+exports.version = "1.0.0"
+-- Make the module itself callable
+setmetatable(exports, {
+  __call = function (_, ...)
+    return exports.match(...)
+  end
+})
 
 local function parse(version)
   local major, minor, patch = string.match(version, "(%d+)%.(%d+)%.(%d+)")
@@ -8,7 +16,7 @@ end
 -- same format, return the newest version that is compatable. This means for
 -- 0.b.c versions, 0.b.(>= c) will match, and for a.b.c, versions a.(>=b).*
 -- will match.
-return function(version, versions)
+function exports.match(version, versions)
   if #versions == 0 then return end
   local found
   if version == "*" then

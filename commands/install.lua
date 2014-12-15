@@ -1,11 +1,11 @@
-local log = require('../lib/lit-log')
-local config = require('../lib/lit-config')
+local log = require('../lib/log')
+local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
-local prompt = require('../lib/prompt')
-local semverMatch = require('../lib/semver')
+local prompt = require('creationix/prompt')
+local semverMatch = require('creationix/semver')
 local export = require('../lib/export')
-local storage = require('../lib/lit-storage')
+local storage = require('../lib/storage')
 
 
 local name = args[2] or prompt("package name")

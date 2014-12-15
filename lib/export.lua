@@ -1,16 +1,17 @@
-local log = require('./lit-log')
-local makeChroot = require('./coro-fs').chroot
-local gitDeframe = require('./git').deframe
-local decodeTag = require('./git').decoders.tag
-local modes = require('./git').modes
-local verify = require('./verify')
+local log = require('./log')
+local makeChroot = require('creationix/coro-fs').chroot
+local mkdirp = require('creationix/coro-fs').mkdirp
+local git = require('creationix/git')
+local decodeTag = git.decoders.tag
+local modes = git.modes
+local verify = require('creationix/ssh-rsa').verify
 local pathJoin = require('luvi').path.join
 
 return function (config, storage, base, tag)
-  local fs = makeChroot(base)
+  local fs
 
   local function loadAs(typ, hash)
-    local value, actualType = gitDeframe(assert(storage:load(hash)))
+    local value, actualType = git.deframe(assert(storage:load(hash)))
     assert(typ == actualType, "type mistmatch")
     return value
   end
@@ -43,7 +44,7 @@ return function (config, storage, base, tag)
   log("tag hash", hash)
   local raw = assert(storage:load(hash))
   local typ
-  raw, typ = gitDeframe(raw, true)
+  raw, typ = git.deframe(raw, true)
   assert(typ == "tag")
   local signature
   raw, signature = string.match(raw, "^(.*)(%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-.*)$")
@@ -55,8 +56,11 @@ return function (config, storage, base, tag)
   tagData.signature = signature
 
   if tagData.type == "tree" then
+    fs = makeChroot(base)
     exportTree(".", tagData.object)
   else
+    mkdirp(pathJoin(base, ".."))
+    fs = makeChroot(base .. ".lua")
     exportBlob(".", tagData.object)
   end
 

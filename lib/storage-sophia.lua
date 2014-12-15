@@ -1,9 +1,9 @@
 local Object = require('core').Object
 local Sophia = require('sophia.so')
 local digest = require('openssl').digest.digest
-local log = require('./lit-log')
-local hexToBin = require('./hex-to-bin')
-local binToHex = require('./bin-to-hex')
+local log = require('./log')
+local hexToBin = require('creationix/hex-bin').hexToBin
+local binToHex = require('creationix/hex-bin').binToHex
 
 local Storage = Object:extend()
 

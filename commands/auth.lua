@@ -1,9 +1,10 @@
-local prompt = require('../lib/prompt')
-local fs = require('../lib/coro-fs')
+local prompt = require('creationix/prompt')
+local fs = require('creationix/coro-fs')
 local env = require('env')
-local config = require('../lib/lit-config')
-local log = require('../lib/lit-log')
-local sshRsa = require('../lib/ssh-rsa')
+local config = require('../lib/config')
+local log = require('../lib/log')
+local exec = require('../lib/exec')
+local sshRsa = require('creationix/ssh-rsa')
 
 local function confirm(name, value)
   if value then
@@ -14,11 +15,18 @@ local function confirm(name, value)
   end
 end
 
+local function run(...)
+  local stdout, stderr, code, signal = exec(...)
+  if code == 0 and signal == 0 then
+    return string.gsub(stdout, "%s*$", "")
+  else
+    return nil, string.gsub(stderr, "%s*$", "")
+  end
+end
+
 confirm("github name", args[2])
--- TODO: preload with: git config --get user.name
-confirm("name", args[3])
--- TODO: preload with: git config --get user.email
-confirm("email", args[4])
+confirm("name", run("git", "config", "--get", "user.name") or args[3])
+confirm("email", run("git", "config", "--get", "user.email") or args[4])
 
 if not config["private key"] then
   local path = env.get("HOME") .. '/.ssh/id_rsa'

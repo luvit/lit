@@ -1,27 +1,60 @@
-local log = require('../lib/lit-log')
-local config = require('../lib/lit-config')
+local log = require('../lib/log')
+local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
-local prompt = require('../lib/prompt')
+local prompt = require('creationix/prompt')
 local import = require('../lib/import')
-local storage = require('../lib/lit-storage')
+local storage = require('../lib/storage')
+local fs = require('creationix/coro-fs')
 
 if not (config.key and config.name and config.email) then
   error("Please run `lit auth` to configure your username")
 end
 
--- TODO: guess
-
 local path = pathJoin(uv.cwd(), args[2] or prompt("package path"))
 
-local name = args[3] or prompt("package name")
+local stat = fs.stat(path)
+
+-- Guess some stuff from the
+local meta = {}
+local packagePath
+if stat.type == "file" then
+  packagePath = path
+else
+  packagePath = pathJoin(path, "package.lua")
+end
+do
+  local contents = fs.readFile(packagePath)
+  local function noop() end
+  pcall(function ()
+    local container = {exports=meta}
+    local fn = assert(loadstring(contents, path))
+    setfenv(fn, {
+      setmetatable = setmetatable,
+      require = noop,
+      module = container,
+      exports = meta,
+    })
+    local out = fn()
+    meta = out or container.exports
+  end)
+end
+meta = type(meta) == "table" and meta or {}
+
+local name = args[3] or meta.name or prompt("package name")
 assert(string.match(name, "^[^ /\\][^ ]*[^ /\\]$"), "invalid package name")
-local version = args[4] or prompt("semantic version")
+if not string.match(name, "/") then
+  name = config["github name"] .. '/' .. name
+end
+local version = args[4] or meta.version or prompt("semantic version")
 version = string.match(version, "%d+%.%d+%.%d+$")
 assert(version, "invalid version number")
-local message = args[5] or prompt("release notes")
+local message = args[5] or ""
 
-local tag = config["github name"] .. '/' .. name .. '/v' .. version
+local tag = name .. '/v' .. version
+if storage:read(tag) then
+  error("Tag already exists: " .. tag)
+end
 
 log("path", path)
 log("tag", tag)

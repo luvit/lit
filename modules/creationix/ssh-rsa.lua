@@ -1,6 +1,12 @@
-local pkey = require('openssl').pkey
-local bn = require('openssl').bn
-local digest = require('openssl').digest.digest
+exports.name = "creationix/ssh-rsa"
+exports.version = "0.1.0"
+
+local openssl = require('openssl')
+
+local pkey = openssl.pkey
+local bn = openssl.bn
+local digest = openssl.digest.digest
+local base64 = openssl.base64
 
 local function encodePrefix(body)
   if string.byte(body, 1) >= 128 then
@@ -62,4 +68,30 @@ end
 -- Extract the raw data from a public key file.
 function exports.loadPublic(data)
   error("TODO: Implement")
+end
+
+function exports.sign(body, privateKey)
+
+  -- Extract e and n from the private RSA key to build the ssh public key
+  local rsa = privateKey:parse().rsa:parse()
+  -- Encode in ssh-rsa format
+  local data = exports.encode(rsa.e, rsa.n)
+  -- And digest in ssh fingerprint format
+  local fingerprint = exports.fingerprint(data)
+
+  -- Sign the message using a sha256 message digest
+  local sig = privateKey:sign(body, "sha256")
+  return body ..
+    "-----BEGIN RSA SIGNATURE-----\n" ..
+    "Format: sha256-ssh-rsa\n" ..
+    "Fingerprint: " .. fingerprint .. "\n\n" ..
+    base64(sig) ..
+    "-----END RSA SIGNATURE-----\n"
+end
+
+-- Given a raw body, a raw signature (PEM encoded with metadata), and a
+-- publicKey instance, verify a signature.
+function exports.verify(body, signature, publicKey)
+  -- TODO: really verify
+  return true
 end

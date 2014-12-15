@@ -1,3 +1,6 @@
+exports.name = "creationix/git"
+exports.version = "0.1.0"
+
 local modes = {
   tree   = 16384, --  040000
   blob   = 33188, -- 0100644

@@ -1,9 +1,10 @@
-local log = require('./lit-log')
-local makeChroot = require('./coro-fs').chroot
-local gitFrame = require('./git').frame
-local encodeTag = require('./git').encoders.tag
-local modes = require('./git').modes
-local sign = require('./sign')
+local log = require('./log')
+local makeChroot = require('creationix/coro-fs').chroot
+local git = require('creationix/git')
+local gitFrame = git.frame
+local encodeTag = git.encoders.tag
+local modes = git.modes
+local sign = require('creationix/ssh-rsa').sign
 local pathJoin = require('luvi').path.join
 
 
@@ -88,6 +89,7 @@ return function (config, storage, base, tag, message)
       typ = "blob"
     end
 
+    log("signing tag", tag)
     hash = saveAs("tag", sign(encodeTag({
       object = hash,
       type = typ,
