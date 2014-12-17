@@ -19,7 +19,7 @@ end
 function exports.match(version, versions)
   if #versions == 0 then return end
   local found
-  if version == "*" then
+  if not version or version == "*" then
     -- With a * match, simply grab the newest version
     for i = 1, #versions do
       local match = {parse(versions[i])}
@@ -37,7 +37,7 @@ function exports.match(version, versions)
         local match = {parse(versions[i])}
         if match[1] == wanted[1] and (
           found and match[2] > found[2]
-                or match[2] > wanted[2]) then
+                or match[2] >= wanted[2]) then
           found = match
         end
       end

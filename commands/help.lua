@@ -3,7 +3,8 @@ Lit - Package Manager for Luvit
 
 Available commands:
 
-  lit install [username/package] [version]
+  lit install
+  lit install packages...
   lit sync [upstream]
   lit auth [username] [name] [email]
   lit add [path] [package] [version] [release message]

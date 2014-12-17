@@ -4,10 +4,16 @@ local luvit = require('luvit')
 luvit.init()
 coroutine.wrap(function ()
   local log = require('./lib/log')
-  log("lit version", "0.0.1")
-  args[1] = args[1] or "help"
-  log("command", table.concat(args, " "))
-  require("./commands/" .. args[1] .. ".lua")
-  log("done", "success", "success")
+  local success, err = xpcall(function ()
+    log("lit version", "0.0.1")
+    args[1] = args[1] or "help"
+    log("command", table.concat(args, " "))
+    require("./commands/" .. args[1] .. ".lua")
+  end, debug.traceback)
+  if success then
+    log("done", "success", "success")
+  else
+    log("fail", err, "failure")
+  end
 end)()
 luvit.run()
