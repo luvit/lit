@@ -45,13 +45,13 @@ When a client makes a connection to a server, the following handshake is made:
 
 Client sends:
 
-    lit?0,1\n
+    LIT?0,1\n\n
 
 meaning "Do you speak lit protocol versions 0 or 1?"
 
 At which point the server will respond with:
 
-    lit!0\n
+    LIT!0\n\n
 
 meaning "Yes I do, Let's speak version 0!"
 
