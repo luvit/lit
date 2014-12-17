@@ -1,118 +1,166 @@
 local binToHex = require('creationix/hex-bin').binToHex
 
--- Binary Encoding
--- "LIT?" versions "\n\n" - Client handshake
---        (versions) is comma separated list of protocol versions
--- "LIT!" version  "\n\n" - Server response
--- WANT - 10xxxxxx (groups of 20 bytes)
--- SEND - 11Mxxxxx [Mxxxxxxx] data
---        (M) is more flag, x is variable length unsigned int
--- QUERY - "?" query "\n\n"
--- REPLY - "!" reply "\n\n"
-local function decoder(chunk)
-  local head = string.byte(chunk, 1)
+local function decoder(isServer)
+  local mode, handshakeDecode, agreementDecode, bodyDecode
 
-  -- Binary frame when high bit is set
-  if bit.band(head, 0x80) > 0 then
-
-    -- WANT - 10xxxxxx (groups of 20 bytes)
-    if bit.band(head, 0x40) == 0 then
-      -- Make sure we have all the wants buffered before moving on.
-      local size = (bit.band(head, 0x3f) + 1) * 20 + 1
-      if #chunk < size then return nil end
-      local wants = {}
-      for i = 2, size, 20 do
-        wants[#wants + 1] = binToHex(string.sub(chunk, i, i + 19))
-      end
-      return {"wants", wants}, string.sub(chunk, size + 1)
+  -- "LIT?" versions "\n" - Client handshake
+  --        (versions) is comma separated list of protocol versions
+  function handshakeDecode(chunk)
+    local term = string.find(chunk, "\n", 1, true)
+    if not term then
+      if #chunk > 100 then error("handshake too long") end
+      return
     end
+    local line = string.sub(chunk, 1, term - 1)
+    chunk = string.sub(chunk, term + 1)
 
-    -- SEND - 11Mxxxxx [Mxxxxxxx] data
-    local length = bit.band(head, 0x1f)
-    local i = 2
-    if bit.band(head, 0x20) > 0 then
-      repeat
-        if i > #chunk then return end
-        head = string.byte(chunk, i)
-        i = i + 1
-        length = bit.bor(bit.lshift(length, 7), bit.band(head, 0x7f))
-      until bit.band(head, 0x80) == 0
-    end
-    if #chunk < i + length - 1 then return end
-    return {
-      "send", string.sub(chunk, i, i + length - 1)
-    }, string.sub(chunk, i + length)
-
-  end
-
-  -- Text frame with \n\n terminator
-  local term = string.find(chunk, "\n\n", 1, true)
-  -- Make sure we have all data up to the terminator
-  if not term then return end
-  local line = string.sub(chunk, 1, term - 1)
-  chunk = string.sub(chunk, term + 2)
-  head = string.byte(line, 1)
-
-  if head == 63 then -- '?'
-    return {"query", string.sub(line, 2)}, chunk
-  end
-  if head == 33 then -- '!'
-    return {"reply", string.sub(line, 2)}, chunk
-  end
-
-  if head == 76 then -- 'L'
-    local form, version = string.match(line, "^LIT([%?%!])(.*)$")
-    if form == "!" then
-      return {"accept", version}, chunk
+    local list = string.match(line, "^LIT%?(.*)$")
+    if not list then
+      error("Invalid lit handshake")
     end
     local versions = {}
-    for v in string.gmatch(version, "[^,]+") do
-      versions[#versions + 1] = v
+    for v in string.gmatch(list, "[^,]+") do
+      versions[tonumber(v)] = true
     end
-    return {"init", versions}, chunk
+    mode = bodyDecode
+    return chunk, "handshake", versions
   end
 
-  return line, chunk
+  -- "LIT!" version  "\n" - Server agreement
+  function agreementDecode(chunk)
+    local term = string.find(chunk, "\n", 1, true)
+    if not term then
+      if #chunk > 100 then error("agreement too long") end
+      return
+    end
+    local line = string.sub(chunk, 1, term - 1)
+    chunk = string.sub(chunk, term + 1)
+
+    local version = string.match(line, "^LIT%!(.*)$")
+    if not version then
+      error("Invalid lit agreement")
+    end
+    mode = bodyDecode
+    return chunk, "agreement", tonumber(version)
+  end
+
+  -- Binary Encoding
+  -- WANT - 10xxxxxx (groups of 20 bytes)
+  -- SEND - 11Mxxxxx [Mxxxxxxx] data
+  --        (M) is more flag, x is variable length unsigned int
+  -- Text Encoding
+  -- QUERY - "?" query "\n\n"
+  -- REPLY - "!" reply "\n\n"
+  function bodyDecode(chunk)
+    local head = string.byte(chunk, 1)
+
+    -- Binary frame when high bit is set
+    if bit.band(head, 0x80) > 0 then
+
+      -- WANT - 10xxxxxx (groups of 20 bytes)
+      if bit.band(head, 0x40) == 0 then
+        -- Make sure we have all the wants buffered before moving on.
+        local size = (bit.band(head, 0x3f) + 1) * 20 + 1
+        if #chunk < size then return nil end
+        local wants = {}
+        for i = 2, size, 20 do
+          wants[#wants + 1] = binToHex(string.sub(chunk, i, i + 19))
+        end
+        return string.sub(chunk, size + 1), "wants", wants
+      end
+
+      -- SEND - 11Mxxxxx [Mxxxxxxx] data
+      local length = bit.band(head, 0x1f)
+      local i = 2
+      if bit.band(head, 0x20) > 0 then
+        repeat
+          if i > #chunk then return end
+          head = string.byte(chunk, i)
+          i = i + 1
+          length = bit.bor(bit.lshift(length, 7), bit.band(head, 0x7f))
+        until bit.band(head, 0x80) == 0
+      end
+      if #chunk < i + length - 1 then return end
+      return string.sub(chunk, i + length), "send", string.sub(chunk, i, i + length - 1)
+
+    end
+
+    -- Text frame with \n\n terminator
+    local term = string.find(chunk, "\n\n", 1, true)
+    -- Make sure we have all data up to the terminator
+    if not term then return end
+    local line = string.sub(chunk, 1, term - 1)
+    chunk = string.sub(chunk, term + 2)
+    head = string.byte(line, 1)
+
+    if head == 63 then -- '?'
+      return chunk, "query", string.sub(line, 2)
+    end
+    if head == 33 then -- '!'
+      return chunk, "reply", string.sub(line, 2)
+    end
+
+    error("Invalid query or reply line.");
+  end
+
+  mode = isServer and handshakeDecode or agreementDecode
+  return function (chunk)
+    return mode(chunk)
+  end
 end
 
--- Sanity tests for decoding of binary SEND frames
-assert(decoder(string.char(128 + 64 + 12) .. "Hello World") == nil)
-assert(decoder(string.char(128 + 64 + 12) .. "Hello World\n")[2] == "Hello World\n")
-assert(({decoder(string.char(128 + 64 + 12) .. "Hello World\nwith extra")})[2] == "with extra")
-assert(#(decoder(string.char(128 + 64 + 32 + 7, 104) .. string.rep("0123456789", 100) .. "XX")[2]) == 1000)
-assert(decoder(string.char(128 + 64 + 32, 128 + 78, 16) .. string.rep("0123456789", 500)) == nil)
-assert(#(decoder(string.char(128 + 64 + 32, 128 + 78, 16) .. string.rep("0123456789", 1000) .. "XX")[2]) == 10000)
+local large = string.rep("0123456789", 100)
+local huge = string.rep("0123456789", 1000)
 
--- Sanity tests for decoding of binary WANTS frames
-local e, x = decoder('\129[---20-byte-hash---]<== 20 byte hash ==>xx')
-assert(x == "xx")
-assert(e[1] == "wants")
-assert(#e[2] == 2)
-assert(e[2][1] == '5b2d2d2d32302d627974652d686173682d2d2d5d')
-assert(e[2][2] == '3c3d3d20323020627974652068617368203d3d3e')
+-- Sanity test server side
+local input = "LIT?0,1\n"
+           .. string.char(128 + 64 + 12) .. "Hello World\n"
+           .. string.char(128 + 64 + 32 + 7, 104) .. large
+           .. string.char(128 + 64 + 32, 128 + 78, 16) .. huge
+           .. '\129[---20-byte-hash---]<== 20 byte hash ==>'
+           .. "XX"
+local decode = decoder(true)
+local t, e
+input, t, e = decode(input)
+assert(t == "handshake")
+assert(e[0])
+assert(e[1])
+input, t, e = decode(input)
+assert(t == "send" and e == "Hello World\n")
+input, t, e = decode(input)
+assert(t == "send" and e == large)
+input, t, e = decode(input)
+assert(t == "send" and e == huge)
+input, t, e = decode(input)
+assert(t == "wants")
+assert(#e == 2)
+assert(e[1] == '5b2d2d2d32302d627974652d686173682d2d2d5d')
+assert(e[2] == '3c3d3d20323020627974652068617368203d3d3e')
+assert(input == "XX")
+assert(decode(input) == nil)
 
 -- Sanity tests for decoding ASCII frames
-local input = "LIT?0,1\n\nLIT!0\n\n?Who are you?\n\n!There are those who call me Tim!\n\nthis is a line\nwith data\n\nand more data\nthat goes on for a while\n\nxx\n"
-e, input = decoder(input)
-assert(e[1] == "init")
-assert(#e[2] == 2)
-assert(e[2][1] == "0")
-assert(e[2][2] == "1")
-e, input = decoder(input)
-assert(e[1] == "accept")
-assert(e[2] == "0")
-e, input = decoder(input)
-assert(e[1] == "query")
-assert(e[2] == "Who are you?")
-e, input = decoder(input)
-assert(e[1] == "reply")
-assert(e[2] == "There are those who call me Tim!")
-e, input = decoder(input)
-assert(e == "this is a line\nwith data")
-e, input = decoder(input)
-assert(e == "and more data\nthat goes on for a while")
+decode = decoder(true)
+input = "LIT?0\n?Who are you?\n\nXX\n"
+input, t, e = decode(input)
+assert(t == "handshake")
+assert(e[0])
+assert(not e[1])
+input, t, e = decode(input)
+assert(t == "query")
+assert(e == "Who are you?")
+assert(input == 'XX\n')
+assert(decode(input) == nil)
+
+decode = decoder(false)
+input = "LIT!0\n!There are those who call me Tim!\n\nxx\n"
+input, t, e = decode(input)
+assert(t == "agreement")
+assert(e == 0)
+input, t, e = decode(input)
+assert(t == "reply")
+assert(e == "There are those who call me Tim!")
 assert(input == 'xx\n')
-assert(decoder(input) == nil)
+assert(decode(input) == nil)
 
 return decoder
-

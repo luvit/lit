@@ -1,5 +1,13 @@
 local hexToBin = require('creationix/hex-bin').hexToBin
 
+function exports.handshake(versions)
+  return "LIT?" .. table.concat(versions, ",") .. "\n"
+end
+
+function exports.agreement(version)
+  return "LIT!" .. version .. "\n"
+end
+
 -- WANT - 10xxxxxx (groups of 20 bytes)
 function exports.wants(wants)
   assert(type(wants) == "table")
