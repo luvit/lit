@@ -3,7 +3,7 @@ local binToHex = require('creationix/hex-bin').binToHex
 local function decoder(isServer)
   local mode, handshakeDecode, agreementDecode, bodyDecode
 
-  -- "LIT?" versions "\n" - Client handshake
+  -- "LIT/" versions "\n" - Client handshake
   --        (versions) is comma separated list of protocol versions
   function handshakeDecode(chunk)
     local term = string.find(chunk, "\n", 1, true)
@@ -14,7 +14,7 @@ local function decoder(isServer)
     local line = string.sub(chunk, 1, term - 1)
     chunk = string.sub(chunk, term + 1)
 
-    local list = string.match(line, "^LIT%?(.*)$")
+    local list = string.match(line, "^LIT/(.*)$")
     if not list then
       error("Invalid lit handshake")
     end
@@ -26,7 +26,7 @@ local function decoder(isServer)
     return chunk, "handshake", versions
   end
 
-  -- "LIT!" version  "\n" - Server agreement
+  -- "LIT/" version  "\n" - Server agreement
   function agreementDecode(chunk)
     local term = string.find(chunk, "\n", 1, true)
     if not term then
@@ -36,7 +36,7 @@ local function decoder(isServer)
     local line = string.sub(chunk, 1, term - 1)
     chunk = string.sub(chunk, term + 1)
 
-    local version = string.match(line, "^LIT%!(.*)$")
+    local version = string.match(line, "^LIT/(.*)$")
     if not version then
       error("Invalid lit agreement")
     end
@@ -49,8 +49,8 @@ local function decoder(isServer)
   -- SEND - 11Mxxxxx [Mxxxxxxx] data
   --        (M) is more flag, x is variable length unsigned int
   -- Text Encoding
-  -- QUERY - "?" query "\n\n"
-  -- REPLY - "!" reply "\n\n"
+  -- QUERY - COMMAND data '\n' - sent by client to server
+  -- REPLY - reply "\n\n" - sent by server to client
   function bodyDecode(chunk)
     local head = string.byte(chunk, 1)
 
@@ -85,22 +85,24 @@ local function decoder(isServer)
 
     end
 
-    -- Text frame with \n\n terminator
-    local term = string.find(chunk, "\n\n", 1, true)
+    -- Text frame with \n or \n\n terminator
+    local term, tend = string.find(chunk, isServer and "\n" or "\n\n", 1, true)
     -- Make sure we have all data up to the terminator
     if not term then return end
+
     local line = string.sub(chunk, 1, term - 1)
-    chunk = string.sub(chunk, term + 2)
-    head = string.byte(line, 1)
+    chunk = string.sub(chunk, tend + 1)
+    line = string.gsub(line, "^%s+", "")
+    line = string.gsub(line, "%s+$", "")
 
-    if head == 63 then -- '?'
-      return chunk, "query", string.sub(line, 2)
-    end
-    if head == 33 then -- '!'
-      return chunk, "reply", string.sub(line, 2)
+    if not isServer then
+      return chunk, "reply", line
     end
 
-    error("Invalid query or reply line.");
+    local command, query = string.match(line, "^(%u+) +(.*)")
+    if not command then error("Invalid query") end
+    return chunk, string.lower(command), query
+
   end
 
   mode = isServer and handshakeDecode or agreementDecode
@@ -113,7 +115,7 @@ local large = string.rep("0123456789", 100)
 local huge = string.rep("0123456789", 1000)
 
 -- Sanity test server side
-local input = "LIT?0,1\n"
+local input = "LIT/0,1\n"
            .. string.char(128 + 64 + 12) .. "Hello World\n"
            .. string.char(128 + 64 + 32 + 7, 104) .. large
            .. string.char(128 + 64 + 32, 128 + 78, 16) .. huge
@@ -141,19 +143,19 @@ assert(decode(input) == nil)
 
 -- Sanity tests for decoding ASCII frames
 decode = decoder(true)
-input = "LIT?0\n?Who are you?\n\nXX\n"
+input = "LIT/0\n WHO are you? \nXX"
 input, t, e = decode(input)
 assert(t == "handshake")
 assert(e[0])
 assert(not e[1])
 input, t, e = decode(input)
-assert(t == "query")
-assert(e == "Who are you?")
-assert(input == 'XX\n')
+assert(t == "who")
+assert(e == "are you?")
+assert(input == 'XX')
 assert(decode(input) == nil)
 
 decode = decoder(false)
-input = "LIT!0\n!There are those who call me Tim!\n\nxx\n"
+input = "LIT/0\n\nThere are those who call me Tim! \n\nxx\n"
 input, t, e = decode(input)
 assert(t == "agreement")
 assert(e == 0)

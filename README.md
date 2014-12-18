@@ -45,13 +45,13 @@ When a client makes a connection to a server, the following handshake is made:
 
 Client sends:
 
-    LIT?0,1\n\n
+    LIT0,1\n
 
 meaning "Do you speak lit protocol versions 0 or 1?"
 
 At which point the server will respond with:
 
-    LIT!0\n\n
+    LIT0\n
 
 meaning "Yes I do, Let's speak version 0!"
 
@@ -93,15 +93,16 @@ For example the binary message `"Hello World\n"`, would be encoded as:
 
     11001100 48 65 6c 6c 6f 20 57 6f 72 6c 64 0a
 
-### QUERY - '?' query '\n\n'
+### QUERY - COMMAND data '\n'
 
-A query is simply a '?' byte followed a query ending with double newlines.  The
-string is assumed to be UTF-8 encoded. and has it's whitespace trimmed off both
-ends before processing.
+A query is simply an UPPERCASE query string followed by query text ending with
+a newline.  The string is assumed to be UTF-8 encoded. and has it's
+whitespace trimmed off both ends before processing.
 
-### REPLY - '!' reply '\n\n'
+### REPLY - reply '\n\n'
 
-Reply looks just query, but with a '!' byte prefix.
+Reply looks just query, but is sent by the server and without the command prefix.
+Also it ends in double newlines to allow multi-line responses.
 
 ## Query System
 
@@ -116,12 +117,12 @@ and the server will reply with `"0.1.2
 didn't match anything, the reply would be empty.  If the version is omitted, the
 newest version will be returned.
 
-    > ? match creationix/jack 0.1.2
+    > MATCH creationix/jack 0.1.2
     >>
-    !0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
-    > ? match creationix/jack
+    0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
+    > MATCH creationix/jack
     >>
-    !0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
+    0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
 
 Other queries can be added later like package name searches or metadata
 searches.

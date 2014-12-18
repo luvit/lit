@@ -1,83 +1,120 @@
 local uv = require('uv')
 local log = require('../lib/log')
 
-local encoder = require('../lib/encoder')
-local decoder = require('../lib/decoder')
-local config = require('../lib/config')
-local thread = coroutine.running()
+local storage = require('../lib/storage')
+local semver = require('creationix/semver')
+local git = require('creationix/git')
+local digest = require('openssl').digest.digest
+
+local codec = require('../lib/codec')
 
 
-local function handleClient(client)
-  local peerName = client:getpeername()
-  peerName = peerName.ip .. ':' .. peerName.port
-  local sockName = client:getsockname()
-  sockName = sockName.ip .. ':' .. sockName.port
-  log("client connect", sockName .. " <- " .. peerName)
+
+local function handleClient(peerName, read, write)
+  log("client connect", peerName)
 
   local commands = {}
 
-  -- Setup a protocol decoder for the server
-  local decode = decoder(true)
-  local buffer = ""
-  local function onRead(err, chunk)
-    local success, message = xpcall(function ()
-      assert(not err, err)
-      if not chunk then
-        log("client disconnect", peerName)
-        return client:close()
-      end
-      buffer = buffer .. chunk
-      repeat
-        local extra, type, data = decode(buffer)
-        if extra then
-          buffer = extra
-          commands[type](data)
-        end
-      until not extra or #buffer == 0
-    end, debug.traceback or function (message)
-      return string.match(message, "%][^ ]* (.*)") or message
-    end)
-    if not success then
-      log("client error", peerName .. ' ' .. message)
-      client:write(message .. "\n")
-      return client:close()
-    end
-  end
+  coroutine.wrap(xpcall)(function ()
 
-  local function send(type, value)
-    client:write(encoder[type](value))
-  end
-
-  function commands.handshake(versions)
+    -- Process the protocol handshake
+    local command, versions = read()
+    assert(command == "handshake", "Expected handshake")
     if not versions[0] then
       error("Server only supports lit protocol version 0")
     end
-    send("agreement", 0)
+    write("agreement", 0)
+
+    log("client handshake", peerName)
+
+    -- Process commands till the client disconnects
+    for command, value in read do
+      local fn = commands[command]
+      if not fn then error("Unsupported command: " .. command) end
+      if command == "send" or command == "wants" then
+        fn(value)
+      else
+        local parts = {}
+        for part in string.gmatch(value, "[^ ]+") do
+          parts[#parts + 1] = part
+        end
+        local ret = fn(unpack(parts))
+        if ret then
+          write("reply", ret)
+        end
+      end
+    end
+
+    write()
+    log("client disconnect", peerName)
+
+  end, function (err)
+    log("client error", peerName .. "\n" .. debug.traceback(err), "failure")
+    write("error", (string.match(err, "%][^ ]+ (.*)") or err) .. "\n")
+    write()
+  end)
+
+  function commands.match(name, version)
+    version = semver.normalize(version)
+    local list = storage:versions(name)
+    version = semver(version, list)
+    if not version then return '' end
+    local hash = storage:read(name .. '/v' .. version)
+    return version .. ' ' .. hash
   end
 
-  function commands.query(query)
-    p("query", query)
+  function commands.versions(name)
+    local list = storage:versions(name)
+    for i = 1, #list do
+      local version = list[i]
+      local hash = storage:read(name .. '/v' .. version)
+      list[i] = version .. ' ' .. hash
+    end
+    return table.concat(list, "\n")
   end
 
-  client:read_start(onRead)
+  local authorized = {}
+  function commands.send(data)
+    local hash = digest("sha1", data)
+    local valid = authorized[hash]
+    if not valid then
+      local raw, kind = git.deframe(data, true)
+      if kind == "tag" then
+        valid = true
+        -- TODO: verify signature
+      end
+    end
+    if valid then
+      return assert(hash == storage:save(data))
+    end
+    error("Unauthorized send")
+  end
+
+  function commands.wants(hashes)
+    for i = 1, #hashes do
+      local data = storage:load(hashes[i])
+      write("send", data)
+    end
+  end
+
 end
 
 local function makeServer(name, ip, port)
   local server = uv.new_tcp()
   server:bind(ip, port)
   local address = server:getsockname()
-  log(name .. " ip", address.ip)
-  log(name .. " port", address.port)
+  log(name .. " bind", address.ip .. ':' .. address.port)
   server:listen(256, function (err)
     if err then return log(name .. " connect error", err, "err") end
     local client = uv.new_tcp()
     server:accept(client)
-    handleClient(client)
+    local peerName = client:getpeername()
+    peerName = peerName.ip .. ':' .. peerName.port
+    handleClient(peerName, codec(true, client))
   end)
   return server
 end
 
-makeServer("external", "0.0.0.0", 4821)
-makeServer("internal", "::", 4822)
+makeServer("server", "::", 4821)
 
 coroutine.yield()

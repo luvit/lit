@@ -69,9 +69,7 @@ end
 
 function Storage:versions(name)
   local results = {}
-  p(pathJoin("refs/tags", name))
   self.fs.scandir(pathJoin("refs/tags", name), function (entry)
-    p(entry)
     if entry.type == "file" then
       results[#results + 1] = string.match(entry.name, "%d+%.%d+%.%d+[^/]*$")
     end

@@ -2,7 +2,7 @@ local log = require('../lib/log')
 local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
-local semverMatch = require('creationix/semver')
+local semver = require('creationix/semver')
 local export = require('../lib/export')
 local storage = require('../lib/storage')
 local readPackage = require('../lib/read-package')
@@ -46,10 +46,7 @@ for i = 1, #list do
   if #version == 0 then
     version = nil
   else
-    version = string.match(version, "(%d+%.%d+%.%d+%-(.*))") or
-              string.match(version, "(%d+%.%d+%.%d+)") or
-              string.match(version, "(%d+%.%d+)") or
-              string.match(version, "(%d+)")
+    version = semver.normalize(version)
   end
   list[i] = {name, version}
 
@@ -63,7 +60,7 @@ for i = 1, #list do
 
   local target = pathJoin(uv.cwd(), "modules", name)
 
-  local match = semverMatch(version, storage:versions(name))
+  local match = semver.match(version, storage:versions(name))
   if not match then
     -- TODO: check upstream if no match can be found locally
     error("No such package in local database matching: " .. name .. ' ' .. version)

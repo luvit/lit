@@ -1,22 +1,34 @@
 exports.name = "creationix/semver"
 exports.version = "1.0.0"
+local parse, normalize, match
 -- Make the module itself callable
 setmetatable(exports, {
   __call = function (_, ...)
-    return exports.match(...)
+    return match(...)
   end
 })
 
-local function parse(version)
-  local major, minor, patch = string.match(version, "(%d+)%.(%d+)%.(%d+)")
-  return tonumber(major), tonumber(minor), tonumber(patch)
+function parse(version)
+  if not version then return end
+  return
+    assert(tonumber(string.match(version, "^v?(%d+)")), "Not a semver"),
+    tonumber(string.match(version, "^v?%d+%.(%d+)") or 0),
+    tonumber(string.match(version, "^v?%d+%.%d+%.(%d+)") or 0)
 end
+exports.parse = parse
+
+function normalize(version)
+  if not version then return "*" end
+  return table.concat({parse(version)}, ".")
+end
+exports.normalize = normalize
+
 
 -- Given a semver string in the format a.b.c, and a list of versions in the
 -- same format, return the newest version that is compatable. This means for
 -- 0.b.c versions, 0.b.(>= c) will match, and for a.b.c, versions a.(>=b).*
 -- will match.
-function exports.match(version, versions)
+function match(version, versions)
   if #versions == 0 then return end
   local found
   if not version or version == "*" then
@@ -56,3 +68,4 @@ function exports.match(version, versions)
   end
   return found and table.concat(found, '.')
 end
+exports.match = match

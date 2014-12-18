@@ -4,6 +4,7 @@ exports.version = "1.0.0"
 local uv = require('uv')
 
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
+-- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 function exports.wrapStream(socket)
   local paused = true
   local queue = {}
@@ -67,6 +68,8 @@ function exports.wrapStream(socket)
 
   return read, write
 end
+
+
 function exports.chain(...)
   local args = {...}
   local nargs = select("#", ...)

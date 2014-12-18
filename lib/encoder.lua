@@ -1,11 +1,15 @@
 local hexToBin = require('creationix/hex-bin').hexToBin
 
+function exports.error(message)
+  return "\000" .. message .. "\n\n"
+end
+
 function exports.handshake(versions)
-  return "LIT?" .. table.concat(versions, ",") .. "\n"
+  return "LIT/" .. table.concat(versions, ",") .. "\n"
 end
 
 function exports.agreement(version)
-  return "LIT!" .. version .. "\n"
+  return "LIT/" .. version .. "\n"
 end
 
 -- WANT - 10xxxxxx (groups of 20 bytes)
@@ -37,16 +41,16 @@ function exports.send(data)
   return head .. data
 end
 
--- QUERY - "?" query "\n\n"
+-- QUERY - query "\n\n"
+-- REPLY - reply "\n\n"
 function exports.query(line)
-  assert(not string.match(line, "\n\n", 1, true), "Line cannot contain \n\n")
-  return "?" .. line .. "\n\n"
+  assert(not string.match(line, "\n", 1, true), "Query cannot contain \n")
+  return line .. "\n"
 end
 
--- REPLY - "!" reply "\n\n"
-function exports.reply(line)
-  assert(not string.match(line, "\n\n", 1, true), "Line cannot contain \n\n")
-  return "!" .. line .. "\n\n"
+function exports.reply(data)
+  assert(not string.match(data, "\n\n", 1, true), "Reply cannot contain \n\n")
+  return data .. "\n\n"
 end
 
 assert(exports.wants({
@@ -59,5 +63,5 @@ local data = string.rep("0123456789", 100)
 assert(exports.send(data) == string.char(128 + 64 + 32 + 7, 104) .. data)
 data = string.rep("0123456789", 1000)
 assert(exports.send(data) == string.char(128 + 64 + 32, 128 + 78, 16) .. data)
-assert(exports.query("Who are you?") == "?Who are you?\n\n")
-assert(exports.reply("There are those who call me Tim!") == "!There are those who call me Tim!\n\n")
+assert(exports.query("Who are you?") == "Who are you?\n")
+assert(exports.reply("There are those who call me Tim!") == "There are those who call me Tim!\n\n")
