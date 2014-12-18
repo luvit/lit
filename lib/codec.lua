@@ -29,6 +29,7 @@ return function (isServer, client)
     if not encode then
       error("Unknown encoding: " .. command)
     end
-    return write(encode(data))
+    local encoded = encode(data)
+    return write(encoded)
   end
 end

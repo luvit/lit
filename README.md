@@ -95,14 +95,25 @@ For example the binary message `"Hello World\n"`, would be encoded as:
 
 ### QUERY - COMMAND data '\n'
 
-A query is simply an UPPERCASE query string followed by query text ending with
-a newline.  The string is assumed to be UTF-8 encoded. and has it's
-whitespace trimmed off both ends before processing.
+A query is simply an UPPERCASE query string followed by query text (any number
+of space separated string arguments) ending with a newline.  The string is
+assumed to be UTF-8 encoded. and has it's whitespace trimmed off both ends
+before processing.  This is designed to be easily typed by a human in a netcat
+terminal for manual testing.
 
-### REPLY - reply '\n\n'
+Example:
 
-Reply looks just query, but is sent by the server and without the command prefix.
-Also it ends in double newlines to allow multi-line responses.
+    MATCH creationix/git 1.2.3\n
+
+### REPLY - reply-json '\n'
+
+A reply is sent by servers.  It's a newline terminated JSON value.
+
+Example:
+
+    [1,2]\n
+    true\n
+    false\n
 
 ## Query System
 

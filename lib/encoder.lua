@@ -1,4 +1,5 @@
 local hexToBin = require('creationix/hex-bin').hexToBin
+local JSON = require('json')
 
 function exports.error(message)
   return "\000" .. message .. "\n\n"
@@ -49,8 +50,7 @@ function exports.query(line)
 end
 
 function exports.reply(data)
-  assert(not string.match(data, "\n\n", 1, true), "Reply cannot contain \n\n")
-  return data .. "\n\n"
+  return JSON.stringify(data) .. "\n"
 end
 
 assert(exports.wants({
@@ -64,4 +64,5 @@ assert(exports.send(data) == string.char(128 + 64 + 32 + 7, 104) .. data)
 data = string.rep("0123456789", 1000)
 assert(exports.send(data) == string.char(128 + 64 + 32, 128 + 78, 16) .. data)
 assert(exports.query("Who are you?") == "Who are you?\n")
-assert(exports.reply("There are those who call me Tim!") == "There are those who call me Tim!\n\n")
+assert(exports.reply("There are those who call me Tim!") == '"There are those who call me Tim!"\n')
+assert(exports.reply({{1,2,3},true,false}) == '[[1,2,3],true,false]\n')

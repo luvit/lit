@@ -1,4 +1,5 @@
 local binToHex = require('creationix/hex-bin').binToHex
+local JSON = require('json')
 
 local function decoder(isServer)
   local mode, handshakeDecode, agreementDecode, bodyDecode
@@ -86,22 +87,26 @@ local function decoder(isServer)
     end
 
     -- Text frame with \n or \n\n terminator
-    local term, tend = string.find(chunk, isServer and "\n" or "\n\n", 1, true)
+    local term, tend = string.find(chunk, "\n", 1, true)
     -- Make sure we have all data up to the terminator
     if not term then return end
 
     local line = string.sub(chunk, 1, term - 1)
     chunk = string.sub(chunk, tend + 1)
+
+    if not isServer then
+      local data, _, err = JSON.parse(line)
+      assert(not err, err)
+      return chunk, "reply", data
+    end
+
+    -- Trim whitespace on both ends
     line = string.gsub(line, "^%s+", "")
     line = string.gsub(line, "%s+$", "")
 
-    if not isServer then
-      return chunk, "reply", line
-    end
-
     local command, query = string.match(line, "^(%u+) +(.*)")
     if not command then error("Invalid query") end
-    return chunk, string.lower(command), query
+    return chunk, command, query
 
   end
 
@@ -149,20 +154,29 @@ assert(t == "handshake")
 assert(e[0])
 assert(not e[1])
 input, t, e = decode(input)
-assert(t == "who")
+assert(t == "WHO")
 assert(e == "are you?")
 assert(input == 'XX')
 assert(decode(input) == nil)
 
 decode = decoder(false)
-input = "LIT/0\n\nThere are those who call me Tim! \n\nxx\n"
+input = 'LIT/0\n"There are those who call me Tim!"\n[true,false]\n42\nxx'
 input, t, e = decode(input)
 assert(t == "agreement")
 assert(e == 0)
 input, t, e = decode(input)
 assert(t == "reply")
 assert(e == "There are those who call me Tim!")
-assert(input == 'xx\n')
+input, t, e = decode(input)
+assert(t == "reply")
+assert(#e == 2)
+assert(e[1] == true)
+assert(e[2] == false)
+input, t, e = decode(input)
+assert(t == "reply")
+assert(e == 42)
+assert(input == 'xx')
+p(decode(input))
 assert(decode(input) == nil)
 
 return decoder

@@ -5,13 +5,14 @@ local storage = require('../lib/storage')
 local semver = require('creationix/semver')
 local git = require('creationix/git')
 local digest = require('openssl').digest.digest
+local JSON = require('json')
 
 local codec = require('../lib/codec')
 
 
 
 local function handleClient(peerName, read, write)
-  log("client connect", peerName)
+  -- log("client connect", peerName)
 
   local commands = {}
 
@@ -25,10 +26,11 @@ local function handleClient(peerName, read, write)
     end
     write("agreement", 0)
 
-    log("client handshake", peerName)
+    -- log("client handshake", peerName)
 
     -- Process commands till the client disconnects
     for command, value in read do
+      log("request", command .. ' ' .. tostring(value))
       local fn = commands[command]
       if not fn then error("Unsupported command: " .. command) end
       if command == "send" or command == "wants" then
@@ -38,10 +40,7 @@ local function handleClient(peerName, read, write)
         for part in string.gmatch(value, "[^ ]+") do
           parts[#parts + 1] = part
         end
-        local ret = fn(unpack(parts))
-        if ret then
-          write("reply", ret)
-        end
+        write("reply", fn(unpack(parts)))
       end
     end
 
@@ -54,23 +53,23 @@ local function handleClient(peerName, read, write)
     write()
   end)
 
-  function commands.match(name, version)
+  function commands.MATCH(name, version)
     version = semver.normalize(version)
     local list = storage:versions(name)
     version = semver(version, list)
-    if not version then return '' end
+    if not version then return end
     local hash = storage:read(name .. '/v' .. version)
-    return version .. ' ' .. hash
+    return {version, hash}
   end
 
-  function commands.versions(name)
+  function commands.VERSIONS(name)
     local list = storage:versions(name)
     for i = 1, #list do
       local version = list[i]
       local hash = storage:read(name .. '/v' .. version)
-      list[i] = version .. ' ' .. hash
+      list[i] = {version,hash}
     end
-    return table.concat(list, "\n")
+    return list
   end
 
   local authorized = {}
