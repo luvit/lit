@@ -43,7 +43,7 @@ if not config.upstream then
 end
 
 if not config.database or not config.storage then
-  local sophia = pcall(require, 'sophia.so')
+  local sophia = pcall(require, './sophia.so')
   config.storage = sophia and "sophia" or "git"
   config.database = prefix .. "litdb." .. config.storage
   dirty = true

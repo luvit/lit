@@ -1,5 +1,5 @@
 local Object = require('core').Object
-local Sophia = require('sophia.so')
+local Sophia = require('./sophia.so')
 local digest = require('openssl').digest.digest
 local log = require('./log')
 local hexToBin = require('creationix/hex-bin').hexToBin
@@ -61,7 +61,8 @@ function Storage:versions(name)
 end
 
 function Storage:read(key)
-  return binToHex(self.tag_db:get(key))
+  local raw = self.tag_db:get(key)
+  return raw and binToHex(raw)
 end
 
 function Storage:write(key, hash)
