@@ -1,7 +1,7 @@
 local git = require('creationix/git')
 local remoteStorage = require('../lib/storage-remote')
 
-local storage = remoteStorage("localhost")
+local storage = remoteStorage("lit.luvit.io")
 
 local function loadAs(kind, hash, raw)
   local value, actualKind = git.deframe(storage:load(hash), raw)

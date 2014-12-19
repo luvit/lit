@@ -37,8 +37,8 @@ local function save()
 end
 
 local dirty = false
-if not config.upstream then
-  config.upstream = "lit.luvit.io"
+if not config.defaultUpstream then
+  config.defaultUpstream = "lit.luvit.io"
   dirty = true
 end
 

@@ -72,7 +72,7 @@ for i = 1, #list do
 
   log("target", target)
 
-  export(config, storage, target, tag)
+  export(storage, target, tag)
 
 end
 

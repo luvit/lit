@@ -7,7 +7,7 @@ local modes = git.modes
 local verify = require('creationix/ssh-rsa').verify
 local pathJoin = require('luvi').path.join
 
-return function (config, storage, base, tag)
+return function (storage, base, tag)
   local fs
 
   local function loadAs(typ, hash)
