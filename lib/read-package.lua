@@ -1,24 +1,30 @@
-local fs = require('creationix/coro-fs')
 local git = require('creationix/git')
 
 local function makeAny()
   return setmetatable({},{
-    __index = makeAny
+    __index = makeAny,
+    __call = makeAny,
+    __newindex = function () end,
   })
 end
+
+local sandbox = {
+  __index = _G
+}
 
 function exports.eval(data, name)
   local fn = assert(loadstring(data, name))
   local exports = {}
   local module = { exports = exports }
-  setfenv(fn, {
+  setfenv(fn, setmetatable({
     module = module,
     exports = exports,
     require = makeAny,
-  })
+  }, sandbox))
   local success, ret = pcall(fn)
   assert(success, ret)
-  local meta = ret or module.exports
+  local meta = type(ret) == "table" and ret or module.exports
+  assert(meta, "Missing exports")
   assert(meta.name, "Missing name in package description")
   assert(meta.version, "Missing version in package description")
   return meta
@@ -52,26 +58,3 @@ function exports.readStorage(storage, hash)
 
   return kind, exports.eval(data, "package:" .. hash)
 end
-
-function exports.readFs(path)
-  error("TODO: implement package.readFs")
--- return function (path)
---   local exports = {}
---   local module = {exports=exports}
---   local contents, fn, err
---   contents, err = fs.readFile(path)
---   if not contents then return nil, err end
---   fn = assert(loadstring(contents, path))
---   if not fn then return nil, err end
---   setfenv(fn, {
---     setmetatable = setmetatable,
---     require = makeAny,
---     module = module,
---     exports = exports,
---   })
---   local out = fn()
---   return type(out) == "table" and out or module.exports
--- end
-
-end
-

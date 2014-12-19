@@ -7,7 +7,7 @@ Available commands:
   lit install packages...
   lit sync [upstream]
   lit auth [username] [name] [email]
-  lit add [path] [package] [version] [release message]
+  lit add [path] [release message]
   lit publish [package] [upstream]
   lit serve
 ]]

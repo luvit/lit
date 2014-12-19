@@ -1,67 +1,45 @@
-local log = require('./log')
-local makeChroot = require('creationix/coro-fs').chroot
-local mkdirp = require('creationix/coro-fs').mkdirp
 local git = require('creationix/git')
-local decodeTag = git.decoders.tag
 local modes = git.modes
-local verify = require('creationix/ssh-rsa').verify
 local pathJoin = require('luvi').path.join
+local fs = require('creationix/coro-fs')
 
-return function (storage, base, tag)
-  local fs
-
-  local function loadAs(typ, hash)
-    local value, actualType = git.deframe(assert(storage:load(hash)))
-    assert(typ == actualType, "type mistmatch")
-    return value
-  end
-
-  local function exportBlob(path, hash)
-    log("export blob", path)
-    return assert(fs.writeFile(path, loadAs("blob", hash)))
-  end
-
-  local function exportLink(path, hash)
-    log("export link", path)
-    return assert(fs.symlink(path, loadAs("blob", hash)))
-  end
-
-  local function exportTree(path, hash)
-    log("export tree", path)
-    fs.mkdirp(path)
-    local items = loadAs("tree", hash)
-    for i = 1, #items do
-      local item = items[i]
-      local exporter = modes.isFile(item.mode) and exportBlob
-                    or item.mode == modes.sym and exportLink
-                    or item.mode == modes.tree and exportTree
-                    or nil
-      exporter(pathJoin(path, item.name), item.hash)
+local function exportBlob(db, path, hash, mode)
+  p("export blob", path, hash)
+  mode = mode or modes.file
+  -- TODO: preserve exec attr on files
+  local data = assert(db.loadAs("blob", hash))
+  local fd, success, err
+  fd, err = fs.open(path, "w", mode)
+  if not fd then
+    if string.match(err, "^ENOENT:") then
+      fs.mkdirp(pathJoin(path, ".."))
+      fd, err = fs.open(path, "w")
     end
+    assert(fd, err)
   end
-
-  local hash = assert(storage:read(tag))
-  log("tag hash", hash)
-  local raw = assert(storage:load(hash))
-  local typ
-  raw, typ = git.deframe(raw, true)
-  assert(typ == "tag")
-  local signature
-  raw, signature = string.match(raw, "^(.*)(%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-.*)$")
-  -- TODO: get public key and verify
-  -- local publicKey = string.match(tag, "^[^/]+")
-  -- verify(raw, signature, publicKey)
-  local tagData = decodeTag(raw)
-  assert(tagData.tag == tag)
-  tagData.signature = signature
-
-  if tagData.type == "tree" then
-    fs = makeChroot(base)
-    exportTree(".", tagData.object)
-  else
-    mkdirp(pathJoin(base, ".."))
-    fs = makeChroot(base .. ".lua")
-    exportBlob(".", tagData.object)
-  end
-
+  success, err = fs.write(fd, data, 0)
+  fs.close(fd)
+  return assert(success, err)
 end
+exports.blob = exportBlob
+
+local function exportLink(db, path, hash)
+  p("export link", path, hash)
+  return fs.symlink(path, db.loadAs("blob", hash))
+end
+exports.link = exportLink
+
+local function exportTree(db, path, hash)
+  p("export tree", path, hash)
+  fs.mkdirp(path)
+  local tree = db.loadAs("tree", hash)
+  for i = 1, #tree do
+    local entry = tree[i]
+    local exporter = modes.isFile(entry.mode) and exportBlob
+                  or entry.mode == modes.sym and exportLink
+                  or entry.mode == modes.tree and exportTree
+                  or nil
+    exporter(db, pathJoin(path, entry.name), entry.hash, entry.mode)
+  end
+end
+exports.Tree = exportTree

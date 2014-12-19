@@ -4,16 +4,17 @@ local uv = require('uv')
 local pathJoin = require('luvi').path.join
 local semver = require('creationix/semver')
 local export = require('../lib/export')
-local storage = require('../lib/storage')
-local readPackage = require('../lib/read-package')
+local evalPackage = require('../lib/read-package').eval
+local fs = require('creationix/coro-fs')
 
 local list
 if #args == 1 then
   local packagePath = pathJoin(uv.cwd(), "package.lua")
-  local meta = assert(readPackage(packagePath))
-  if meta.dependencies then
+  local data = fs.readFile(packagePath)
+  local meta = data and evalPackage(data, packagePath)
+  list = meta and meta.dependencies
+  if list then
     log("install deps", packagePath)
-    list = meta.dependencies
   else
     log("abort", "Nothing to install")
     return
@@ -55,24 +56,20 @@ for i = 1, #list do
   --       newer version and print a warning.
 end
 
+local db = config.db
+
 for i = 1, #list do
   local name, version = unpack(list[i])
 
   local target = pathJoin(uv.cwd(), "modules", name)
 
-  local match = semver.match(version, storage:versions(name))
+  local match = db.match(name, version)
   if not match then
     -- TODO: check upstream if no match can be found locally
     error("No such package in local database matching: " .. name .. ' ' .. version)
   end
-  version = match
 
-  local tag = name .. '/v' .. version
-  log("package", tag)
-
-  log("target", target)
-
-  export(storage, target, tag)
+  db.export(target, name, version)
 
 end
 

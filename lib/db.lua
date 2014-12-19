@@ -1,8 +1,11 @@
 local semver = require('creationix/semver')
 local git = require('creationix/git')
 local sshRsa = require('creationix/ssh-rsa')
+local fs = require('creationix/coro-fs')
 local readStorage = require('./read-package').readStorage
 local fetch = require('./fetch')
+local import = require('./import')
+local export = require('./export')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -188,6 +191,33 @@ return function (storage, upstream)
     local hash, err = storage.read(tag)
     if not hash then return nil, err or "No such tag to push" end
     return upstream.fetch(storage, hash)
+  end
+
+
+  --[[
+  db.import(path) -> hash
+  -----------------------
+
+  Import a file or tree from the filesystem and return the hash
+  ]]--
+  function db.import(path)
+    local stat = fs.lstat(path)
+    if stat.type == "file" then
+      return import.blob(db, path)
+    elseif stat.type == "directory" then
+      return import.tree(db, path)
+    else
+      error("Unsupported type " .. stat.type)
+    end
+  end
+
+  function db.export(path, name, version)
+    local hash = assert(db.read(name, version))
+    local tag = assert(db.loadAs("tag", hash))
+    if tag.type == "blob" then
+      path = path .. ".lua"
+    end
+    return export[tag.type](db, path, tag.object)
   end
 
   return db
