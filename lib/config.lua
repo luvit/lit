@@ -2,7 +2,6 @@ local log = require('./log')
 local fs = require('creationix/coro-fs')
 local env = require('env')
 local makeDb = require('../lib/db')
-local makeStorage = require('../lib/storage-git')
 
 local prefix
 if require('ffi').os == "Windows" then
@@ -61,7 +60,7 @@ end
 
 local storage = require('../lib/storage-' .. config.storage)(config.database)
 local upstream = config.upstream and require('../lib/upstream')(config.upstream)
-local db = require('../lib/db')(storage, upstream)
+local db = makeDb(storage, upstream)
 
 return setmetatable(config, {
   __index = {

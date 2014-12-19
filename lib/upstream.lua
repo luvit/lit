@@ -1,3 +1,11 @@
+return function (url)
+
+  local upstream = {}
+
+  return upstream
+
+end
+--[[
 local uv = require('uv')
 local Object = require('core').Object
 local digest = require('openssl').digest.digest
@@ -130,3 +138,4 @@ end
 return function (host, port)
   return Storage:new(host, port)
 end
+]]
