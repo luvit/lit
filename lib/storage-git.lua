@@ -1,19 +1,23 @@
-local Object = require('core').Object
 local makeChroot = require('creationix/coro-fs').chroot
+local semver = require('creationix/semver')
 local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
-local log = require('./log')
 
-local Storage = Object:extend()
+local function hashToPath(hash)
+  assert(#hash == 40 and string.match(hash, "^%x+$"))
+  return pathJoin("objects", string.sub(hash, 1, 2), string.sub(hash, 3))
+end
 
-function Storage:initialize(dir)
-  self.dir = dir
+return function (dir)
+
+  local storage = {}
+
   local fs = makeChroot(dir)
-  self.fs = fs
+
+  -- Initialize the git file storage tree if it does't exist yet
   if not fs.access("HEAD") then
-    log("initialize git db", dir)
     assert(fs.mkdirp("objects"))
     assert(fs.mkdirp("refs/tags"))
     assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))
@@ -22,90 +26,132 @@ function Storage:initialize(dir)
       .. "\tfilemode = true\n"
       .. "\tbare = true\n"))
   end
-end
 
-local function hashToPath(hash)
-  assert(#hash == 40 and string.match(hash, "^%x+$"))
-  return pathJoin("objects", string.sub(hash, 1, 2), string.sub(hash, 3))
-end
+  --[[
+  storage.has(hash) -> boolean
+  ----------------------------
 
--- Save a binary blob to disk, returns the sha1 hash of the value
--- value is a string.
-function Storage:save(value)
-  local hash = digest("sha1", value)
-  local path = hashToPath(hash)
-  local fd, success, err
-  while true do
-    fd, err = self.fs.open(path, "wx")
-    if fd then break end
-    if string.match(err, "^EEXIST:") then return hash end
-    if not string.match(err, "^ENOENT:") then return nil, err end
-    self.fs.mkdirp(pathJoin(path, ".."))
+  Quick check to see if a hash is in the database already.
+  ]]
+  function storage.has(hash)
+    local path = hashToPath(hash)
+    return fs.access(path, "r")
   end
-  log("save", hash)
-  -- TDEFL_WRITE_ZLIB_HEADER             = 0x01000,
-  -- 4095=Huffman+LZ (slowest/best compression)
-  value = deflate(value, 0x01000 + 4095)
-  success, err = self.fs.write(fd, value)
-  self.fs.fchmod(fd, 256)
-  self.fs.close(fd)
-  if success then
-    return hash
-  end
-  return nil, err
-end
 
-function Storage:load(hash)
-  local path = hashToPath(hash)
-  local value, err = self.fs.readFile(path)
-  if err then return nil, err end
-  if not value then return end
-  value = inflate(value, 1)
-  if hash ~= digest("sha1", value) then
-    return nil, "value doesn't match hash: " .. hash
-  end
-  return value
-end
+  --[[
+  storage.load(hash) -> data
+  --------------------------
 
-function Storage:versions(name)
-  local results = {}
-  self.fs.scandir(pathJoin("refs/tags", name), function (entry)
-    if entry.type == "file" then
-      results[#results + 1] = string.match(entry.name, "%d+%.%d+%.%d+[^/]*$")
+  Load raw data by hash, verify hash before returning.
+  ]]
+  function storage.load(hash)
+    local path = hashToPath(hash)
+    local data, err = fs.readFile(path)
+    if err then
+      if string.match(err, "^ENOENT:") then return end
+      return nil, err
     end
-  end)
-  return results
-end
+    if not data then return end
+    data = inflate(data, 1)
+    if hash ~= digest("sha1", data) then
+      return nil, "hash mismatch"
+    end
+    return data
+  end
 
-function Storage:read(tag)
-  local raw = self.fs.readFile(pathJoin("refs/tags/", tag))
-  return raw and string.match(raw, "%x+")
-end
+  --[[
+  storage.save(data) -> hash
+  --------------------------
 
-function Storage:write(tag, hash)
-  local path = pathJoin("refs/tags/", tag)
-  local data = hash .. "\n"
-  if self.fs.readFile(path) == data then return end
-  log("write", tag)
-  self.fs.mkdirp(pathJoin(path, ".."))
-  return self.fs.writeFile(path, data)
-end
+  Save raw data and return hash
+  ]]--
+  function storage.save(data)
+    local hash = digest("sha1", data)
+    local path = hashToPath(hash)
+    local fd, success, err
+    while true do
+      fd, err = fs.open(path, "wx")
+      if fd then break end
+      if string.match(err, "^EEXIST:") then return hash end
+      if not string.match(err, "^ENOENT:") then return nil, err end
+      fs.mkdirp(pathJoin(path, ".."))
+    end
+    -- TDEFL_WRITE_ZLIB_HEADER             = 0x01000,
+    -- 4095=Huffman+LZ (slowest/best compression)
+    data = deflate(data, 0x01000 + 4095)
+    success, err = fs.write(fd, data)
+    fs.fchmod(fd, 256)
+    fs.close(fd)
+    if success then
+      return hash
+    end
+    return nil, err
+  end
 
-function Storage:begin()
-  log("transaction", "begin")
-  -- TODO: Implement
-end
+  --[[
+  storage.read(tag) -> hash
+  -------------------------
 
-function Storage:commit()
-  log("transaction", "commit", "success")
-  -- TODO: Implement
-end
+  Given a full tag (name and version), return the hash or nil for no such match.
+  ]]--
+  function storage.read(tag)
+    local raw, err = fs.readFile(pathJoin("refs/tags/", tag))
+    if not raw then
+      if string.match(err, "^ENOENT:") then return end
+      return nil, err
+    end
+    return raw and string.match(raw, "%x+")
+  end
 
-function Storage:rollback()
-  log("transaction", "rollback", "failure")
-  -- TODO: Implement
-end
+  --[[
+  storage.write(tag, hash)
+  ------------------------
 
-return function (dir)
-  return Storage:new(dir)
+  Write the hash for a full tag (name and version). Fails if the tag already
+  exists.
+  ]]--
+  function storage.write(tag, hash)
+    local path = pathJoin("refs/tags/", tag)
+    local fd, success, err
+    while true do
+      fd, err = fs.open(path, "wx")
+      if fd then break end
+      if string.match(err, "^ENOENT:") then
+        fs.mkdirp(pathJoin(path, ".."))
+      else
+       return nil, err
+      end
+    end
+    local data = hash .. "\n"
+    success, err = fs.write(fd, data)
+    fs.fchmod(fd, 256)
+    fs.close(fd)
+    return success, err
+  end
+
+  --[[
+  storage.versions(name) -> iterator<version>
+  -------------------------------------------
+
+  Given a package name, return an iterator of versions or nil if no such
+  package.
+  ]]
+  function storage.versions(name)
+    local iter, err = fs.scandir(pathJoin("refs/tags", name))
+    if not iter then
+      if string.match(err, "^ENOENT:") then return end
+      return nil, err
+    end
+    return function ()
+      repeat
+        local entry = iter()
+        if entry and entry.type == "file" then
+          return semver.normalize(entry.name)
+        end
+      until not entry
+    end
+  end
+
+  return storage
+
 end

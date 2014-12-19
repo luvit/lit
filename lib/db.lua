@@ -1,6 +1,8 @@
 local semver = require('creationix/semver')
 local git = require('creationix/git')
 local sshRsa = require('creationix/ssh-rsa')
+local readStorage = require('./read-package').readStorage
+local fetch = require('./fetch')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -47,14 +49,43 @@ return function (storage, upstream)
   If online, combine remote versions list.
   ]]--
   function db.match(name, version)
-    version = semver.match(version, storage.versions(name))
+    local iter, err = storage.versions(name)
+    if err then return nil, err end
+    local match = iter and semver.match(version, iter)
+    local upMatch
     if upstream then
-      version = semver.max(version, semver.match(version, upstream.versions(name)))
+      iter, err = upstream.versions(name)
+      if err then return nil, err end
+      upMatch = iter and semver.match(version, iter)
     end
-    if not version then return end
-    local hash = storage.read(formatTag(name, version))
+    local s = storage
+    -- If the upstream version is better, use it instead
+    if not semver.gte(match, upMatch) then
+      s = upstream
+      match = upMatch
+    end
+    if not match then return end
+    local hash = s.read(formatTag(name, match))
     if not hash then return end
-    return version, hash
+    return match, hash
+  end
+
+  --[[
+  db.read(name, version) -> hash
+
+  Read hash directly without doing match
+  ]]--
+  function db.read(name, version)
+    assert(version, "version required for direct read")
+    version = semver.normalize(version)
+    local tag = formatTag(name, version)
+    local hash, err = storage.read(tag)
+    if err then return nil, err end
+    if hash then return hash end
+    if upstream then
+      p("remote read")
+      return upstream.read(tag)
+    end
   end
 
   --[[
@@ -64,28 +95,25 @@ return function (storage, upstream)
   Given a git kind and hash, return the pre-parsed value.  Verifies the kind is
   the kind expected.
 
-  If missing locally and online, load from upstream and cache locally before
-  returning.
+  If missing locally and there is an upstream, load from upstream and cache
+  locally before returning.
 
-  If it's a tag or a tree when caching locally, pre-fetch all child objects till
-  the object's entire sub-graph is cached locally.
-
-  If it's a tag, verify the signature before continuing.
+  When fetching from upstream, pre-fetch all child objects till the object's
+  entire sub-graph is cached locally.
   ]]--
   function db.loadAs(kind, hash)
     local data, err = storage.load(hash)
     assert(not err, err)
-    if data then
-      local actualKind
-      data, actualKind = git.deframe(data)
-      assert(kind == actualKind, "kind mistmatch")
-      return git.decoders[kind](data)
+    if not data and upstream then
+      p("REMOTE LOAD", hash)
+      data, err = fetch(storage, upstream, hash)
     end
-    if kind == "tag" then
-      data, err = upstream.fetch(storage, hash)
-      assert(not err, err)
-      return data
-    end
+    if not data then return nil, err end
+
+    local actualKind
+    actualKind, data = git.deframe(data)
+    assert(kind == actualKind, "kind mistmatch")
+    return git.decoders[kind](data)
   end
 
   --[[
@@ -99,28 +127,38 @@ return function (storage, upstream)
     if type(value) ~= "string" then
       value = git.encoders[kind](value)
     end
+    value = git.frame(kind, value)
     return storage.save(value)
   end
 
   --[[
-  db.tag(config, hash, kind, tag, message) -> hash
+  db.tag(config, hash, message) -> tag, hash
   ------------------------------------------------
-
-  If the tag with version already exists, it will error.
 
   Create an annotated tag for a package, sign using the config data and save to
   storage returning the hash.
+
+  The tag name and version are pulled from the data itself. If it's a blob, it's
+  run as lua code in a sandbox and exports.name and exports.version are looked
+  for. If it's a tree, the entry `package.lua` is looked for and same eval is
+  done looking for name and version.
+
+  If the tag with version already exists, it will error.
   ]]--
-  function db.tag(config, hash, kind, name, version, message)
-    assert(config.key, "need ssh key to sign tag")
-    version = semver.normalize(version)
+  function db.tag(config, hash, message)
+    assert(config.key, "need ssh key to sign tag, setup with `lit auth`")
+
+    local kind, meta = readStorage(storage, hash)
+    local version = semver.normalize(meta.version)
+    local name = meta.name
     local tag = formatTag(name, version)
+
     assert(not storage.read(tag), "tag already exists")
     if string.sub(message, #message) ~= "\n" then
       message = message .. "\n"
     end
 
-    return db.saveAs("tag", sshRsa.sign(git.encoders.tag({
+    hash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
       object = hash,
       type = kind,
       tag = tag,
@@ -131,7 +169,10 @@ return function (storage, upstream)
       },
       message = message
     }), config.key))
+    storage.write(tag, hash)
+    return tag, hash
   end
+
 
   --[[
   db.push(tag, version)
@@ -140,15 +181,15 @@ return function (storage, upstream)
   Given a tag and concrete version, push to upstream.  Can only be done for tags
   the user has personally signed.  Will conflict if upstream has tag already
   ]]--
-  function db.push(config, name, version)
+  function db.push(name, version)
     assert(upstream, "upstream required to push")
     version = semver.normalize(version)
     local tag = formatTag(name, version)
-    local prefix = config.username .. "/"
-    assert(prefix == string.sub(tag, 1, #prefix), "not own package")
-    assert(not upstream.read(tag), "tag conflict in upstream")
-    local hash = assert(storage.read(tag), "no such local tag")
-    upstream.send(storage, hash)
+    local hash, err = storage.read(tag)
+    if not hash then return nil, err or "No such tag to push" end
+    return upstream.fetch(storage, hash)
   end
+
+  return db
 
 end

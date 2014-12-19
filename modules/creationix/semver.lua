@@ -24,16 +24,27 @@ function normalize(version)
 end
 exports.normalize = normalize
 
-function exports.max(first, second)
-  if not first then return second end
-  local a, b, c = parse(first)
-  local d, e, f = parse(second)
-  if (d > a) or (d == a and (e > b or (e == b and f > c))) then
-    return d .. '.' .. e .. '.' .. f
-  else
-    return a .. '.' .. b .. '.' .. c
-  end
+-- Return true is first is greater than ot equal to the second
+-- nil counts as lowest value in this case
+function exports.gte(first, second)
+  if not second or first == second then return true end
+  if not first then return false end
+  local a, b, c = parse(second)
+  local d, e, f = parse(first)
+  return (d > a) or (d == a and (e > b or (e == b and f > c)))
 end
+
+-- Sanity check for gte code
+assert(exports.gte(nil, nil))
+assert(exports.gte("0.0.0", nil))
+assert(exports.gte("9.9.9", "9.9.9"))
+assert(exports.gte("9.9.10", "9.9.9"))
+assert(exports.gte("9.10.0", "9.9.99"))
+assert(exports.gte("10.0.0", "9.99.99"))
+assert(not exports.gte(nil, "0.0.0"))
+assert(not exports.gte("9.9.9", "9.9.10"))
+assert(not exports.gte("9.9.99", "9.10.0"))
+assert(not exports.gte("9.99.99", "10.0.0"))
 
 -- Given a semver string in the format a.b.c, and a list of versions in the
 -- same format, return the newest version that is compatable. This means for

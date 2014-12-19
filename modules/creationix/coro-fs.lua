@@ -62,16 +62,13 @@ function fs.access(path, flags)
   uv.fs_access(path, flags or "", makeCallback())
   return coroutine.yield()
 end
-function fs.scandir(path, iter)
+function fs.scandir(path)
   uv.fs_scandir(path, makeCallback())
   local req, err = coroutine.yield()
   if not req then return nil, err end
-  while true do
-    local entry = uv.fs_scandir_next(req)
-    if not entry then return end
-    iter(entry)
+  return function ()
+    return uv.fs_scandir_next(req)
   end
-  return true
 end
 
 function fs.readFile(path)

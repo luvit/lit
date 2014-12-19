@@ -221,28 +221,34 @@ function decoders.commit(raw)
   return data
 end
 
-function exports.frame(kind, body)
-  assert(type(kind) == "string", "type must be a string")
-  assert(body, "missing body")
-  if type(body) ~= "string" then
-    local encoder = encoders[kind]
-    assert(encoder, "Unknown type: " .. kind)
-    body = encoder(body)
-  end
-  body = string.format("%s %d\0", kind, #body) .. body
-  return body
+function exports.frame(kind, data)
+  assert(type(data) == "string", "data must be pre-encoded string")
+  data = string.format("%s %d\0", kind, #data) .. data
+  return data
 end
 
-function exports.deframe(raw, keepRaw)
+function exports.deframe(raw)
   local pattern = "^([^ ]+) (%d+)%z(.*)$"
   local kind, size, body = string.match(raw, pattern)
   assert(kind, "Problem parsing framed git data")
   size = tonumber(size)
   assert(size == #body, "Body size mismatch")
-  if keepRaw then
-    return body, kind
+  return kind, body
+end
+
+function exports.listToMap(list)
+  local map = {}
+  for i = 1, #list do
+    local entry = list[i]
+    map[entry.name] = {mode = entry.mode, hash = entry.hash}
   end
-  local decoder = decoders[kind]
-  assert(decoder, "Unknown git type: " .. kind)
-  return decoder(body), kind
+  return map
+end
+
+function exports.mapToList(map)
+  local list = {}
+  for name, entry in pairs(map) do
+    list[#list + 1] = {name = name, mode = entry.mode, hash = entry.hash}
+  end
+  return list
 end

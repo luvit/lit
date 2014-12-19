@@ -10,17 +10,14 @@ Load raw data by hash, verify hash before returning.
 
 Save raw data and return hash
 
-## storage.versions(name) -> iterator<version>
-
-Given a package name, return an iterator of versions or nil if no such package.
-
-## storage.read(tag) -> hash
-
-Given a full tag (name and version), return the hash or nil for no such match.
 
 ## storage.write(tag, hash)
 
-Write the hash for a full tag (name and version).
+Write the hash for a full tag (name and version). Fails if the tag already exists.
+
+## storage.versions(name) -> iterator<version>
+
+Given a package name, return an iterator of versions or nil if no such package.
 
 # Upstream interface
 
