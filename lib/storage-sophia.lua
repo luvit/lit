@@ -26,7 +26,9 @@ return function (dir)
   Quick check to see if a hash is in the database already.
   ]]
   function storage.has(hash)
-    error("TODO: Implement has")
+    local key = hexToBin(hash)
+    local value, err = object_db:get(key)
+    return not not value, err
   end
 
   --[[
@@ -114,28 +116,3 @@ return function (dir)
   return storage
 
 end
-
-
-
-
--- function Storage:begin()
---   log("transaction", "begin")
---   self.object_db:begin()
---   self.tag_db:begin()
--- end
-
--- function Storage:commit()
---   log("transaction", "commit", "success")
---   self.object_db:commit()
---   self.tag_db:commit()
--- end
-
--- function Storage:rollback()
---   log("transaction", "rollback", "failure")
---   self.object_db:rollback()
---   self.tag_db:rollback()
--- end
-
--- return function (dir)
---   return Storage:new(dir)
--- end
