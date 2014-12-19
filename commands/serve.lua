@@ -1,7 +1,6 @@
 local uv = require('uv')
 local log = require('../lib/log')
 
-local storage = require('../lib/storage')
 local semver = require('creationix/semver')
 local git = require('creationix/git')
 local digest = require('openssl').digest.digest

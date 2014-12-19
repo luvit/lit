@@ -1,7 +1,8 @@
-local git = require('creationix/git')
-local remoteStorage = require('../lib/storage-remote')
+local config = require('../lib/config')
 
-local storage = remoteStorage("lit.luvit.io")
+local git = require('creationix/git')
+
+assert(config.upstream, "Must have upstream to test network")
 
 local function loadAs(kind, hash, raw)
   local value, actualKind = git.deframe(storage:load(hash), raw)

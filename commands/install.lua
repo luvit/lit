@@ -3,7 +3,6 @@ local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
 local semver = require('creationix/semver')
-local export = require('../lib/export')
 local evalPackage = require('../lib/read-package').eval
 local fs = require('creationix/coro-fs')
 

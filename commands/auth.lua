@@ -25,8 +25,8 @@ local function run(...)
 end
 
 confirm("username", args[2])
-confirm("name", run("git", "config", "--get", "user.name") or args[3])
-confirm("email", run("git", "config", "--get", "user.email") or args[4])
+confirm("name", args[3] or run("git", "config", "--get", "user.name"))
+confirm("email", args[4] or run("git", "config", "--get", "user.email"))
 
 if not config.privateKey then
   local path = env.get("HOME") .. '/.ssh/id_rsa'
