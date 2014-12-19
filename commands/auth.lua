@@ -24,21 +24,21 @@ local function run(...)
   end
 end
 
-confirm("github name", args[2])
+confirm("username", args[2])
 confirm("name", run("git", "config", "--get", "user.name") or args[3])
 confirm("email", run("git", "config", "--get", "user.email") or args[4])
 
-if not config["private key"] then
+if not config.privateKey then
   local path = env.get("HOME") .. '/.ssh/id_rsa'
   if fs.access(path, "r") then
-    config["private key"] = path
+    config.privateKey = path
   else
-    confirm("private key")
+    confirm("privateKey")
   end
 end
 
 local fingerprint = sshRsa.fingerprint(
-  sshRsa.loadPrivate(fs.readFile(config["private key"]))
+  sshRsa.loadPrivate(fs.readFile(config.privateKey))
 )
 log("ssh fingerprint", fingerprint)
 

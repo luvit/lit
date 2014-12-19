@@ -7,12 +7,12 @@ else
   return storage
 end
 
-local db = {}
-db.save = storage.save
+local combined = {}
+combined.save = storage.save
 
 -- Try to load locally first, if it fails, load from remote
 -- and cache locally.
-function db.load(_, hash)
+function combined.load(_, hash)
   local data, err = storage:load(hash)
   if data or err then return data, err end
   data, err = upstream:load(hash)
@@ -21,15 +21,12 @@ function db.load(_, hash)
   return data
 end
 
-db.versions = storage.versions
+combined.versions = upstream.versions
 
-function db.read(_, tag)
+function combined.read(_, tag)
   local hash, err = storage:read(tag)
   if hash or err then return hash, err end
-  hash, err = upstream:read(tag)
-  if not hash then return hash, err end
-  assert(storage:write(tag, hash))
-  return hash
+  return upstream:read(tag)
 end
 
-db.write = storage.write
+combined.write = storage.write

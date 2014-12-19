@@ -8,21 +8,6 @@ local sign = require('creationix/ssh-rsa').sign
 local pathJoin = require('luvi').path.join
 
 
--- Takes a time struct with a date and time in UTC and converts it into
--- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
--- Trickier than you'd think because os.time assumes the struct is in local time.
-local function now()
-  local t_secs = os.time() -- get seconds if t was in local time.
-  local t = os.date("*t", t_secs) -- find out if daylight savings was applied.
-  local t_UTC = os.date("!*t", t_secs) -- find out what UTC t was converted to.
-  t_UTC.isdst = t.isdst -- apply DST to this time if necessary.
-  local UTC_secs = os.time(t_UTC) -- find out the converted time in seconds.
-  return {
-    seconds = t_secs,
-    offset = os.difftime(t_secs, UTC_secs) / 60
-  }
-end
-
 return function (config, storage, base, tag, message)
   if not (config.key and config.name and config.email) then
     error("Please run `lit auth` to configure your username")

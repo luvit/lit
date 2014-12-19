@@ -19,53 +19,62 @@ exports.parse = parse
 
 function normalize(version)
   if not version then return "*" end
-  return table.concat({parse(version)}, ".")
+  local a, b, c = parse(version)
+  return a .. '.' .. b .. '.' .. c
 end
 exports.normalize = normalize
 
+function exports.max(first, second)
+  if not first then return second end
+  local a, b, c = parse(first)
+  local d, e, f = parse(second)
+  if (d > a) or (d == a and (e > b or (e == b and f > c))) then
+    return d .. '.' .. e .. '.' .. f
+  else
+    return a .. '.' .. b .. '.' .. c
+  end
+end
 
 -- Given a semver string in the format a.b.c, and a list of versions in the
 -- same format, return the newest version that is compatable. This means for
 -- 0.b.c versions, 0.b.(>= c) will match, and for a.b.c, versions a.(>=b).*
 -- will match.
-function match(version, versions)
-  if #versions == 0 then return end
-  local found
-  if not version or version == "*" then
-    -- With a * match, simply grab the newest version
-    for i = 1, #versions do
-      local match = {parse(versions[i])}
-      if not found or match[1] > found[1] then
-        found = match
+function match(version, iterator)
+  --           Major Minor Patch
+  -- found     a     b     c
+  -- possible  d     e     f
+  -- minimum   g     h     i
+  local a, b, c
+  if not version then
+    -- With a n empty match, simply grab the newest version
+    for possible in iterator do
+      local d, e, f = parse(possible)
+      if (not a) or (d > a) or (d == a and (e > b or (e == b and f > c))) then
+        a, b, c = d, e, f
       end
     end
   else
-    local wanted = {parse(version)}
-    if not wanted[1] then return end
-    if wanted[1] > 0 then
+    local g, h, i = parse(version)
+    if g > 0 then
       -- From 1.0.0 and onward, minor updates are allowed since they mean non-
       -- breaking changes or additons.
-      for i = 1, #versions do
-        local match = {parse(versions[i])}
-        if match[1] == wanted[1] and (
-          found and match[2] > found[2]
-                or match[2] >= wanted[2]) then
-          found = match
+      for possible in iterator do
+        local d, e, f = parse(possible)
+        if d == g and e >= h and ((not a) or e > b or (e == b and f > c)) then
+          a, b, c = d, e, f
         end
       end
     else
       -- Before 1.0.0 we only allow patch updates assuming less stability at
       -- this period.
-      for i = 1, #versions do
-        local match = {parse(versions[i])}
-        if match[2] == wanted[2] and (
-          found and match[3] > found[3]
-                or match[3] >= wanted[3]) then
-          found = match
+      for possible in iterator do
+        local d, e, f = parse(possible)
+        if d == g and e == h and f >= i and ((not a) or f > c) then
+          a, b, c = d, e, f
         end
       end
     end
   end
-  return found and table.concat(found, '.')
+  return a and (a .. '.' .. b .. '.' .. c)
 end
 exports.match = match
