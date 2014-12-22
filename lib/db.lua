@@ -136,6 +136,8 @@ return function (storage, host, port)
     return git.decoders[kind](data)
   end
 
+  db.load = storage.load
+
   --[[
   db.saveAs(kind, value) -> hash
   ------------------------------

@@ -55,7 +55,7 @@ local function handleClient(peerName, read, write)
   end)
 
   function commands.MATCH(name, version)
-    return db.match(name, version)
+    return {db.match(name, version)}
   end
 
   function commands.READ(name, version)
@@ -114,6 +114,6 @@ local function makeServer(name, ip, port)
   return server
 end
 
-makeServer("server", "::", 4821)
+makeServer("server", "0.0.0.0", 4821)
 
 coroutine.yield()
