@@ -2,7 +2,7 @@ local hexToBin = require('creationix/hex-bin').hexToBin
 local JSON = require('json')
 
 function exports.error(message)
-  return "\000" .. message .. "\n\n"
+  return "\000" .. message .. "\n"
 end
 
 function exports.handshake(versions)
@@ -14,15 +14,8 @@ function exports.agreement(version)
 end
 
 -- WANT - 10xxxxxx (groups of 20 bytes)
-function exports.wants(wants)
-  assert(type(wants) == "table")
-  local num = #wants
-  assert(num > 0 and num <= 0x40, "Must have between 1 and 0x40 wants")
-  local parts = {}
-  for i = 1, num do
-    parts[i] = hexToBin(wants[i])
-  end
-  return string.char(0x80 + num - 1) .. table.concat(parts)
+function exports.want(hash)
+  return '\128' .. hexToBin(hash)
 end
 
 -- SEND - 11Mxxxxx [Mxxxxxxx] data
@@ -53,10 +46,7 @@ function exports.reply(data)
   return JSON.stringify(data) .. "\n"
 end
 
-assert(exports.wants({
-  "5b2d2d2d32302d627974652d686173682d2d2d5d",
-  "3c3d3d20323020627974652068617368203d3d3e"
-}) == '\129[---20-byte-hash---]<== 20 byte hash ==>')
+assert(exports.want("5b2d2d2d32302d627974652d686173682d2d2d5d") == '\128[---20-byte-hash---]')
 
 assert(exports.send("Hello World\n") == "\204Hello World\n")
 local data = string.rep("0123456789", 100)

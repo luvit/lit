@@ -1,35 +1,90 @@
-# Storage Interface
-
-Low level interface for actual storage and retrieval of objects and tags.
-
-## storage.load(hash) -> data
-
-Load raw data by hash, verify hash before returning.
-
-## storage.save(data) -> hash
-
-Save raw data and return hash
-
-
-## storage.write(tag, hash)
-
-Write the hash for a full tag (name and version). Fails if the tag already exists.
-
-## storage.versions(name) -> iterator<version>
-
-Given a package name, return an iterator of versions or nil if no such package.
 
 # Upstream interface
 
-Same as storage with some extra stuff
+Upstream has access to storage so it can read to and write from it.
 
-## upstream.send(storage, hash)
+## upstream.push(hash) -> ref
 
-Sync a hash and dependents to the upstream server
+Push a hash and dependents recursivly to upstream server.
 
-## upstream.fetch(storage, hash) -> tag
+Internally this does the following:
 
-Sync a hash to a tag and dependents down from upstream server
+    Client: SEND tagObject
 
-Also verify signature before importing tag locally.
+    Server: WANT objectHash
+
+    Client: SEND object
+
+    Server: WANT ...
+    Server: WANT ...
+    Server: WANT ...
+
+    Client: SEND ...
+    Client: SEND ...
+    Client: SEND ...
+
+    Server: CONF tag
+
+The client sends an unwanted tag which will trigger a sync from the server.
+The client, without waiting also sends a VERIFY request requesting the server
+tell it when it has the tag and it's children.  The server then fetches and
+objects it's missing.  When done, server confirms tagHash to the client.
+
+If a server already has an object when receiving a graph, it will scan it's
+children for missing bits from previous failed attemps and resume there.
+
+Only after confirming the entire tree saved will the server write the tag and
+seal the package.
+
+## upstream.pull(ref) -> hash
+
+Pull a hash and dependents recursivly from upstream server.
+
+This is essentially the same command, but reversed.
+
+    Client: PULL tag
+
+    Server: SEND tagObject
+
+    Client: WANT objectHash
+
+    Server: SEND object
+
+    Client: WANT ...
+    Client: WANT ...
+    Client: WANT ...
+
+    Server: SEND ...
+    Server: SEND ...
+    Server: SEND ...
+
+The client knows locally when it has the entire tree and creates the local tag
+sealing the package.  The client will also check deep for missing objects
+before confirming a tree as complete.
+
+## upstream.match(name, version) -> version, hash
+
+Query a server for the best match to a semver
+
+    Client: MATCH name version
+
+    Server: REPLY version
+
+----------------
+
+
+11Mxxxxx Mxxxxxxx* SEND variable length binary data
+10000000 WANT 20-bytes binary data
+
+PULL name version
+CONF name version
+MATCH name version
+REPLY version
+ERROR message
+
+
+CLIENT EVENTS:
+
+TAG tag, emitted when the local storage finishes all the objects for a new tree.
+
 

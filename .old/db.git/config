@@ -1,7 +1,0 @@
-[core]
-	repositoryformatversion = 0
-	filemode = true
-	bare = true
-[remote "origin"]
-	url = git@github.com:creationix/lit-test-repo.git
-	fetch = +refs/heads/*:refs/remotes/origin/*

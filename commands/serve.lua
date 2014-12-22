@@ -4,7 +4,8 @@ local log = require('../lib/log')
 local semver = require('creationix/semver')
 local git = require('creationix/git')
 local digest = require('openssl').digest.digest
-local JSON = require('json')
+local config = require('../lib/config')
+local db = config.db
 
 local codec = require('../lib/codec')
 
@@ -14,6 +15,7 @@ local function handleClient(peerName, read, write)
   -- log("client connect", peerName)
 
   local commands = {}
+  local waiting = nil
 
   coroutine.wrap(xpcall)(function ()
 
@@ -53,22 +55,23 @@ local function handleClient(peerName, read, write)
   end)
 
   function commands.MATCH(name, version)
-    version = semver.normalize(version)
-    local list = storage:versions(name)
-    version = semver(version, list)
-    if not version then return end
-    local hash = storage:read(name .. '/v' .. version)
-    return {version, hash}
+    return db.match(name, version)
   end
 
-  function commands.VERSIONS(name)
-    local list = storage:versions(name)
-    for i = 1, #list do
-      local version = list[i]
-      local hash = storage:read(name .. '/v' .. version)
-      list[i] = {version,hash}
-    end
-    return list
+  function commands.READ(name, version)
+    return db.read(name, version)
+  end
+
+  function commands.PUSH(hash)
+    p("PUSH", hash)
+    local queue = {hash}
+    repeat
+      local hash = table.remove(queue)
+      waiting = coroutine.running()
+      write("want", hash)
+      coroutine.yield()
+    until #queue == 0
+    return true
   end
 
   local authorized = {}
@@ -88,11 +91,9 @@ local function handleClient(peerName, read, write)
     error("Unauthorized send")
   end
 
-  function commands.wants(hashes)
-    for i = 1, #hashes do
-      local data = storage:load(hashes[i])
-      write("send", data)
-    end
+  function commands.want(hash)
+    local data = assert(db.load(hash))
+    write("send", data)
   end
 
 end

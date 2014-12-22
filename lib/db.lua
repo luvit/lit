@@ -6,6 +6,7 @@ local readStorage = require('./read-package').readStorage
 local fetch = require('./fetch')
 local import = require('./import')
 local export = require('./export')
+local makeUpstream = require('./upstream')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -38,7 +39,17 @@ exports(storage, upstream) -> db
 Given two storage instances (one local, one remote if online), return a
 db interface implementation.
 ]]--
-return function (storage, upstream)
+return function (storage, host, port)
+
+  local upstream
+  local function connect()
+    upstream = upstream or makeUpstream(storage, host, port)
+  end
+
+  local function disconnect()
+    if upstream then upstream.close() end
+    upstream = nil
+  end
 
   local db = {}
 
@@ -56,10 +67,10 @@ return function (storage, upstream)
     if err then return nil, err end
     local match = iter and semver.match(version, iter)
     local upMatch
-    if upstream then
-      iter, err = upstream.versions(name)
+    if host then
+      connect()
+      upMatch, err = upstream.query("MATCH", name, version)
       if err then return nil, err end
-      upMatch = iter and semver.match(version, iter)
     end
     local s = storage
     -- If the upstream version is better, use it instead
@@ -70,6 +81,7 @@ return function (storage, upstream)
     if not match then return end
     local hash = s.read(formatTag(name, match))
     if not hash then return end
+    disconnect()
     return match, hash
   end
 
@@ -85,9 +97,12 @@ return function (storage, upstream)
     local hash, err = storage.read(tag)
     if err then return nil, err end
     if hash then return hash end
-    if upstream then
+    if host then
+      connect()
       p("remote read")
-      return upstream.read(tag)
+      hash, err = upstream.query("READ", name, version)
+      disconnect()
+      return hash, err
     end
   end
 
@@ -107,9 +122,11 @@ return function (storage, upstream)
   function db.loadAs(kind, hash)
     local data, err = storage.load(hash)
     assert(not err, err)
-    if not data and upstream then
+    if not data and host then
+      connect()
       p("REMOTE LOAD", hash)
       data, err = fetch(storage, upstream, hash)
+      disconnect()
     end
     if not data then return nil, err end
 
@@ -185,12 +202,16 @@ return function (storage, upstream)
   the user has personally signed.  Will conflict if upstream has tag already
   ]]--
   function db.push(name, version)
-    assert(upstream, "upstream required to push")
+    assert(host, "upstream required to push")
+    connect()
     version = semver.normalize(version)
     local tag = formatTag(name, version)
-    local hash, err = storage.read(tag)
+    local hash, success, err
+    hash, err = storage.read(tag)
     if not hash then return nil, err or "No such tag to push" end
-    return upstream.fetch(storage, hash)
+    success, err = upstream.query("PUSH", hash)
+    disconnect()
+    return success, err
   end
 
 
@@ -211,6 +232,12 @@ return function (storage, upstream)
     end
   end
 
+  --[[
+  db.export(path, name, version)
+  -----------------------
+
+  Export a package to the filesystem.
+  ]]--
   function db.export(path, name, version)
     local hash = assert(db.read(name, version))
     local tag = assert(db.loadAs("tag", hash))

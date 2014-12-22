@@ -17,6 +17,7 @@ return function (isServer, client)
         end
       end
       local chunk = read()
+      p("INPUT", chunk)
       if not chunk then return end
       buffer = buffer .. chunk
     end
@@ -30,6 +31,7 @@ return function (isServer, client)
       error("Unknown encoding: " .. command)
     end
     local encoded = encode(data)
+    p("OUTPUT", encoded)
     return write(encoded)
   end
 end

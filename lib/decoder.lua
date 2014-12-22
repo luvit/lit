@@ -46,7 +46,7 @@ local function decoder(isServer)
   end
 
   -- Binary Encoding
-  -- WANT - 10xxxxxx (groups of 20 bytes)
+  -- WANT - 0x80 20 byte raw hash
   -- SEND - 11Mxxxxx [Mxxxxxxx] data
   --        (M) is more flag, x is variable length unsigned int
   -- Text Encoding
@@ -59,15 +59,10 @@ local function decoder(isServer)
     if bit.band(head, 0x80) > 0 then
 
       -- WANT - 10xxxxxx (groups of 20 bytes)
-      if bit.band(head, 0x40) == 0 then
-        -- Make sure we have all the wants buffered before moving on.
-        local size = (bit.band(head, 0x3f) + 1) * 20 + 1
-        if #chunk < size then return nil end
-        local wants = {}
-        for i = 2, size, 20 do
-          wants[#wants + 1] = binToHex(string.sub(chunk, i, i + 19))
-        end
-        return string.sub(chunk, size + 1), "wants", wants
+      if head == 0x80 then
+        -- Wait for the full hash
+        if #chunk < 21 then return nil end
+        return string.sub(chunk, 22), "want", binToHex(string.sub(chunk, 2, 21))
       end
 
       -- SEND - 11Mxxxxx [Mxxxxxxx] data
@@ -87,12 +82,16 @@ local function decoder(isServer)
     end
 
     -- Text frame with \n or \n\n terminator
-    local term, tend = string.find(chunk, "\n", 1, true)
+    local term = string.find(chunk, "\n", 1, true)
     -- Make sure we have all data up to the terminator
     if not term then return end
 
     local line = string.sub(chunk, 1, term - 1)
-    chunk = string.sub(chunk, tend + 1)
+    chunk = string.sub(chunk, term + 1)
+
+    if head == 0 then
+      return chunk, "error", string.sub(line, 2)
+    end
 
     if not isServer then
       local data, _, err = JSON.parse(line)
@@ -124,7 +123,7 @@ local input = "LIT/0,1\n"
            .. string.char(128 + 64 + 12) .. "Hello World\n"
            .. string.char(128 + 64 + 32 + 7, 104) .. large
            .. string.char(128 + 64 + 32, 128 + 78, 16) .. huge
-           .. '\129[---20-byte-hash---]<== 20 byte hash ==>'
+           .. '\128[---20-byte-hash---]'
            .. "XX"
 local decode = decoder(true)
 local t, e
@@ -139,10 +138,8 @@ assert(t == "send" and e == large)
 input, t, e = decode(input)
 assert(t == "send" and e == huge)
 input, t, e = decode(input)
-assert(t == "wants")
-assert(#e == 2)
-assert(e[1] == '5b2d2d2d32302d627974652d686173682d2d2d5d')
-assert(e[2] == '3c3d3d20323020627974652068617368203d3d3e')
+assert(t == "want")
+assert(e == '5b2d2d2d32302d627974652d686173682d2d2d5d')
 assert(input == "XX")
 assert(decode(input) == nil)
 
