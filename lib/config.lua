@@ -59,8 +59,7 @@ if config.privateKey then
 end
 
 local storage = require('../lib/storage-' .. config.storage)(config.database)
-local upstream = config.upstream and require('../lib/upstream')(config.upstream)
-local db = makeDb(storage, upstream)
+local db = makeDb(storage, config.upstream)
 
 return setmetatable(config, {
   __index = {

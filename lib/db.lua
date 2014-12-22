@@ -66,22 +66,21 @@ return function (storage, host, port)
     local iter, err = storage.versions(name)
     if err then return nil, err end
     local match = iter and semver.match(version, iter)
-    local upMatch
     if host then
+      -- If we're online, check the remote for a possibly better match.
+      local result, upMatch, hash
       connect()
-      upMatch, err = upstream.query("MATCH", name, version)
+      result, err = upstream.query("MATCH", name, version)
+      disconnect()
       if err then return nil, err end
-    end
-    local s = storage
-    -- If the upstream version is better, use it instead
-    if not semver.gte(match, upMatch) then
-      s = upstream
-      match = upMatch
+      upMatch, hash = unpack(result)
+      if not semver.gte(match, upMatch) then
+        return upMatch, hash
+      end
     end
     if not match then return end
-    local hash = s.read(formatTag(name, match))
+    local hash = storage.read(formatTag(name, match))
     if not hash then return end
-    disconnect()
     return match, hash
   end
 
@@ -98,8 +97,8 @@ return function (storage, host, port)
     if err then return nil, err end
     if hash then return hash end
     if host then
-      connect()
       p("remote read")
+      connect()
       hash, err = upstream.query("READ", name, version)
       disconnect()
       return hash, err
@@ -125,6 +124,13 @@ return function (storage, host, port)
     if not data and host then
       connect()
       p("REMOTE LOAD", hash)
+      local queue = {hash}
+      while #queue > 0 then
+        local hash = table.remove(queue)
+        local upstream.want(hash)
+        local data = upstream.wait(hash)
+      end
+      coroutine.yield()
       data, err = fetch(storage, upstream, hash)
       disconnect()
     end
