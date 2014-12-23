@@ -1,100 +1,38 @@
 local uv = require('uv')
 local log = require('../lib/log')
 
-local semver = require('creationix/semver')
-local git = require('creationix/git')
-local digest = require('openssl').digest.digest
 local config = require('../lib/config')
 local db = config.db
-
-local codec = require('../lib/codec')
-
-
+local wrapStream = require('creationix/coro-channel').wrapStream
+local protocol = require('../lib/protocol')
 
 local function handleClient(peerName, read, write)
-  -- log("client connect", peerName)
+  local proto = protocol(true, read, write)
 
-  local commands = {}
-  local waiting = nil
-
-  coroutine.wrap(xpcall)(function ()
-
-    -- Process the protocol handshake
-    local command, versions = read()
-    assert(command == "handshake", "Expected handshake")
-    if not versions[0] then
-      error("Server only supports lit protocol version 0")
-    end
-    write("agreement", 0)
-
-    -- log("client handshake", peerName)
-
-    -- Process commands till the client disconnects
-    for command, value in read do
-      log("request", command .. ' ' .. tostring(value))
-      local fn = commands[command]
-      if not fn then error("Unsupported command: " .. command) end
-      if command == "send" or command == "wants" then
-        fn(value)
-      else
-        local parts = {}
-        for part in string.gmatch(value, "[^ ]+") do
-          parts[#parts + 1] = part
-        end
-        write("reply", fn(unpack(parts)))
-      end
-    end
-
-    write()
-    log("client disconnect", peerName)
-
-  end, function (err)
-    log("client error", peerName .. "\n" .. debug.traceback(err), "failure")
-    write("error", (string.match(err, "%][^ ]+ (.*)") or err) .. "\n")
-    write()
+  proto.on("want", function (hash)
+    log("client want", hash)
+    return proto.send("send", assert(db.load(hash)))
   end)
 
-  function commands.MATCH(name, version)
-    return {db.match(name, version)}
-  end
+  proto.on("send", function (data)
+    local hash = assert(db.save(data))
+    log("client send", hash)
+    return hash
+  end)
 
-  function commands.READ(name, version)
-    return db.read(name, version)
-  end
+  proto.on("match", function (name, version)
+    log("client match", version and (name .. ' ' .. version) or name)
+    error("test")
+    return proto.send("reply", db.match(name, version))
+  end)
 
-  function commands.PUSH(hash)
-    p("PUSH", hash)
-    local queue = {hash}
-    repeat
-      local hash = table.remove(queue)
-      waiting = coroutine.running()
-      write("want", hash)
-      coroutine.yield()
-    until #queue == 0
-    return true
-  end
-
-  local authorized = {}
-  function commands.send(data)
-    local hash = digest("sha1", data)
-    local valid = authorized[hash]
-    if not valid then
-      local raw, kind = git.deframe(data, true)
-      if kind == "tag" then
-        valid = true
-        -- TODO: verify signature
-      end
+  log("client connected", peerName)
+  proto.start(function (err)
+    if err then
+      log("client error", err, "err")
     end
-    if valid then
-      return assert(hash == storage:save(data))
-    end
-    error("Unauthorized send")
-  end
-
-  function commands.want(hash)
-    local data = assert(db.load(hash))
-    write("send", data)
-  end
+    log("client disconnected", peerName)
+  end)
 
 end
 
@@ -109,7 +47,13 @@ local function makeServer(name, ip, port)
     server:accept(client)
     local peerName = client:getpeername()
     peerName = peerName.ip .. ':' .. peerName.port
-    handleClient(peerName, codec(true, client))
+    coroutine.wrap(xpcall)(function ()
+      handleClient(peerName, wrapStream(client))
+    end, function (message)
+      client:write(message .. "\n")
+      client:close()
+      print(debug.traceback(message))
+    end)
   end)
   return server
 end

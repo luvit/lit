@@ -1,6 +1,8 @@
 local uv = require('uv')
 local digest = require('openssl').digest.digest
-local codec = require('./codec')
+local git = require('creationix/git')
+local wrapStream = require('creationix/coro-channel').wrapStream
+local protocol = require('../lib/protocol')
 
 local function makeCallback()
   local thread = coroutine.running()
@@ -14,7 +16,7 @@ end
 
 local function connect(host, port)
   local res, success, err
-  uv.getaddrinfo(host, port, { socktype = "stream" }, makeCallback())
+  uv.getaddrinfo(host, port, { socktype = "stream", family="inet" }, makeCallback())
   res, err = coroutine.yield()
   if not res then return nil, err end
   local socket = uv.new_tcp()
@@ -28,42 +30,17 @@ return function (storage, host, port)
   local socket, err = connect(host, port or 4821)
   if not socket then return nil, err end
 
-  local read, write = codec(false, socket)
+  local proto = protocol(false, wrapStream(socket))
 
-  local callbacks = {}
-  local waiting
-
-  -- Handshake with the remote server
-  write("handshake", {0})
-  local command, data = read()
-  -- Make sure the server is speaking protocol v0
-  assert(command == "agreement" and data == 0)
-
-  coroutine.wrap(xpcall)(function ()
-    for command, data in read do
-      if command == "reply" and waiting then
-        local thread = waiting
-        waiting = nil
-        assert(coroutine.resume(thread, data))
-      elseif command == "error" and waiting then
-        local thread = waiting
-        waiting = nil
-        assert(coroutine.resume(thread, nil, data))
-      elseif command == "want" then
-        write("send", storage.load(data))
-      elseif command == "send" then
-        local hash = digest("sha1", data)
-        local callback = callbacks[hash]
-        assert(callback, "Unexpected value sent!")
-        callbacks[hash] = nil
-        callback(nil, data)
-      else
-        p(command, data)
-      end
-    end
-  end, function (message)
-    error(debug.traceback(message))
+  proto.on("send", function (data)
+    return proto.emit(assert(storage.save(data)), data)
   end)
+
+  proto.on("want", function (hash)
+    return proto.send("send", assert(storage.load(hash)))
+  end)
+
+  proto.start()
 
   local upstream = {}
 
@@ -136,8 +113,29 @@ return function (storage, host, port)
   before confirming a tree as complete.
   ]]--
   function upstream.pull(hash)
-    error("TODO: upstream.pull")
-    return name, version
+    proto.send("want", hash)
+    local queue = {hash}
+    repeat
+      local hash = table.remove(queue)
+      local data = proto.waitFor(hash)
+      local kind, body = git.deframe(data)
+      if kind == "tag" then
+        local tag = git.decoders.tag(body)
+        -- TODO: verify signature
+        storage.write(tag.tag, hash)
+        local subHash = tag.object
+        queue[#queue + 1] = subHash
+        proto.send("want", subHash)
+      elseif kind == "tree" then
+        local tree = git.decoders.tree(body)
+        for i = 1, #tree do
+          local subHash = tree[i].hash
+          queue[#queue + 1] = subHash
+          proto.send("want", subHash)
+        end
+      end
+    until #queue == 0
+    return true
   end
 
   --[[
@@ -151,8 +149,8 @@ return function (storage, host, port)
       Server: REPLY version
   ]]--
   function upstream.match(name, version)
-    error("TODO: upstream.match")
-    return version, hash
+    proto.send("match", name, version)
+    return proto.waitFor("reply")
   end
 
   --[[

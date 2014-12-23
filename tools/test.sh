@@ -3,7 +3,7 @@
 # Make sure to use the dev version of lit
 export LUVI_APP=`pwd`:
 
-rm -rf ~/.lit* test-app
+# rm -rf ~/.lit* test-app
 
 luvit auth creationix
 

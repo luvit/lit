@@ -10,7 +10,7 @@ else
   prefix = env.get("HOME") .. "/."
 end
 
-local configFile = prefix .. "litconfig"
+local configFile = env.get("LIT_CONFIG") or (prefix .. "litconfig")
 
 local loaded = false
 local config = {}

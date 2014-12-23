@@ -27,6 +27,7 @@ function exports.wrapStream(socket)
   end
 
   function onRead(err, chunk)
+    p("IN", {err=err,chunk=chunk})
     local data = err and {nil, err} or {chunk}
     if waiting then
       local thread = waiting
@@ -49,6 +50,7 @@ function exports.wrapStream(socket)
   end
 
   local function write(chunk)
+    p("OUT", {chunk=chunk})
     if chunk == nil then
       -- Shutdown our side of the socket
       writing = false

@@ -3,10 +3,10 @@ local git = require('creationix/git')
 local sshRsa = require('creationix/ssh-rsa')
 local fs = require('creationix/coro-fs')
 local readStorage = require('./read-package').readStorage
-local fetch = require('./fetch')
 local import = require('./import')
 local export = require('./export')
 local makeUpstream = require('./upstream')
+local uv = require('uv')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -42,13 +42,34 @@ db interface implementation.
 return function (storage, host, port)
 
   local upstream
+  local timer
   local function connect()
-    upstream = upstream or makeUpstream(storage, host, port)
+    if timer then
+      timer:close()
+      timer = nil
+    end
+    upstream = upstream or assert(makeUpstream(storage, host, port))
+  end
+
+  local function close()
+    if timer then
+      timer:close()
+      timer = nil
+    end
+    if upstream then
+      upstream.close()
+      upstream = nil
+    end
   end
 
   local function disconnect()
-    if upstream then upstream.close() end
-    upstream = nil
+    if timer then
+      timer:stop()
+    else
+      timer = uv.new_timer()
+      timer:unref()
+    end
+    timer:start(100, 0, close)
   end
 
   local db = {}
@@ -68,12 +89,12 @@ return function (storage, host, port)
     local match = iter and semver.match(version, iter)
     if host then
       -- If we're online, check the remote for a possibly better match.
-      local result, upMatch, hash
+      local upMatch, hash
       connect()
-      result, err = upstream.query("MATCH", name, version)
+      upMatch, hash = upstream.match(name, version)
       disconnect()
-      if err then return nil, err end
-      upMatch, hash = unpack(result)
+      if not upMatch then return nil, hash end
+      p{match=match,upMatch=upMatch,hash=hash}
       if not semver.gte(match, upMatch) then
         return upMatch, hash
       end
@@ -87,22 +108,13 @@ return function (storage, host, port)
   --[[
   db.read(name, version) -> hash
 
-  Read hash directly without doing match
+  Read hash directly without doing match. Only reads local version.
   ]]--
   function db.read(name, version)
     assert(version, "version required for direct read")
     version = semver.normalize(version)
     local tag = formatTag(name, version)
-    local hash, err = storage.read(tag)
-    if err then return nil, err end
-    if hash then return hash end
-    if host then
-      p("remote read")
-      connect()
-      hash, err = upstream.query("READ", name, version)
-      disconnect()
-      return hash, err
-    end
+    return storage.read(tag)
   end
 
   --[[
@@ -137,6 +149,7 @@ return function (storage, host, port)
   end
 
   db.load = storage.load
+  db.save = storage.save
 
   --[[
   db.saveAs(kind, value) -> hash

@@ -35,15 +35,14 @@ function exports.send(data)
   return head .. data
 end
 
--- QUERY - query "\n\n"
--- REPLY - reply "\n\n"
-function exports.query(line)
-  assert(not string.match(line, "\n", 1, true), "Query cannot contain \n")
-  return line .. "\n"
-end
-
-function exports.reply(data)
-  return JSON.stringify(data) .. "\n"
+-- message - NAME space seperated args "\n"
+function exports.message(name, ...)
+  assert(name == string.upper(name), "message name must be upper case")
+  local args = {...}
+  for i = 1, #args do
+    assert(not string.match(args[i], "[ \n]"), "args cannot contain \n or ' '")
+  end
+  return name .. ' ' .. table.concat(args, " ") .. "\n"
 end
 
 assert(exports.want("5b2d2d2d32302d627974652d686173682d2d2d5d") == '\128[---20-byte-hash---]')
@@ -53,6 +52,5 @@ local data = string.rep("0123456789", 100)
 assert(exports.send(data) == string.char(128 + 64 + 32 + 7, 104) .. data)
 data = string.rep("0123456789", 1000)
 assert(exports.send(data) == string.char(128 + 64 + 32, 128 + 78, 16) .. data)
-assert(exports.query("Who are you?") == "Who are you?\n")
-assert(exports.reply("There are those who call me Tim!") == '"There are those who call me Tim!"\n')
-assert(exports.reply({{1,2,3},true,false}) == '[[1,2,3],true,false]\n')
+assert(exports.message("WHO", "are", "you") == "WHO are you\n")
+assert(exports.message("I", "am", "Tim") == "I am Tim\n")

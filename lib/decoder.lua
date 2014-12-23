@@ -45,69 +45,6 @@ local function decoder(isServer)
     return chunk, "agreement", tonumber(version)
   end
 
-  -- Binary Encoding
-  -- WANT - 0x80 20 byte raw hash
-  -- SEND - 11Mxxxxx [Mxxxxxxx] data
-  --        (M) is more flag, x is variable length unsigned int
-  -- Text Encoding
-  -- QUERY - COMMAND data '\n' - sent by client to server
-  -- REPLY - reply "\n\n" - sent by server to client
-  function bodyDecode(chunk)
-    local head = string.byte(chunk, 1)
-
-    -- Binary frame when high bit is set
-    if bit.band(head, 0x80) > 0 then
-
-      -- WANT - 10xxxxxx (groups of 20 bytes)
-      if head == 0x80 then
-        -- Wait for the full hash
-        if #chunk < 21 then return nil end
-        return string.sub(chunk, 22), "want", binToHex(string.sub(chunk, 2, 21))
-      end
-
-      -- SEND - 11Mxxxxx [Mxxxxxxx] data
-      local length = bit.band(head, 0x1f)
-      local i = 2
-      if bit.band(head, 0x20) > 0 then
-        repeat
-          if i > #chunk then return end
-          head = string.byte(chunk, i)
-          i = i + 1
-          length = bit.bor(bit.lshift(length, 7), bit.band(head, 0x7f))
-        until bit.band(head, 0x80) == 0
-      end
-      if #chunk < i + length - 1 then return end
-      return string.sub(chunk, i + length), "send", string.sub(chunk, i, i + length - 1)
-
-    end
-
-    -- Text frame with \n or \n\n terminator
-    local term = string.find(chunk, "\n", 1, true)
-    -- Make sure we have all data up to the terminator
-    if not term then return end
-
-    local line = string.sub(chunk, 1, term - 1)
-    chunk = string.sub(chunk, term + 1)
-
-    if head == 0 then
-      return chunk, "error", string.sub(line, 2)
-    end
-
-    if not isServer then
-      local data, _, err = JSON.parse(line)
-      assert(not err, err)
-      return chunk, "reply", data
-    end
-
-    -- Trim whitespace on both ends
-    line = string.gsub(line, "^%s+", "")
-    line = string.gsub(line, "%s+$", "")
-
-    local command, query = string.match(line, "^(%u+) +(.*)")
-    if not command then error("Invalid query") end
-    return chunk, command, query
-
-  end
 
   mode = isServer and handshakeDecode or agreementDecode
   return function (chunk)
