@@ -123,15 +123,9 @@ return function (storage, host, port)
     assert(not err, err)
     if not data and host then
       connect()
-      p("REMOTE LOAD", hash)
-      local queue = {hash}
-      while #queue > 0 then
-        local hash = table.remove(queue)
-        local upstream.want(hash)
-        local data = upstream.wait(hash)
-      end
-      coroutine.yield()
-      data, err = fetch(storage, upstream, hash)
+      local success, failure = upstream.pull(hash)
+      if not success then return nil, failure end
+      data, err = storage.load(hash)
       disconnect()
     end
     if not data then return nil, err end
@@ -203,25 +197,20 @@ return function (storage, host, port)
 
 
   --[[
-  db.push(tag, version)
+  db.publish(name, version)
   ---------------------
 
-  Given a tag and concrete version, push to upstream.  Can only be done for tags
-  the user has personally signed.  Will conflict if upstream has tag already
+  Given a tag and concrete version, publish to upstream.Can only be done for
+  tags the user has personally signed.Will conflict if upstream has tag already.
   ]]--
-  function db.push(name, version)
+  function db.publish(name, version)
     assert(host, "upstream required to push")
-    connect()
     version = semver.normalize(version)
-    local tag = formatTag(name, version)
-    local hash, success, err
-    hash, err = storage.read(tag)
-    if not hash then return nil, err or "No such tag to push" end
-    success, err = upstream.query("PUSH", hash)
+    connect()
+    local hash, err = upstream.push(name, version)
     disconnect()
-    return success, err
+    return hash, err
   end
-
 
   --[[
   db.import(path) -> hash

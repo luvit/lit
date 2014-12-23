@@ -16,7 +16,7 @@ local function emit(name, value)
   if not list then return end
   waiters[name] = nil
   for i = 1, #list do
-    list[i](value)
+    assert(coroutine.resume(list[i], value))
   end
 end
 
@@ -25,7 +25,7 @@ local function fail(err)
   waiters = {}
   for _, list in pairs(events) do
     for i = 1, #list do
-      list[i](nil, err)
+      assert(coroutine.resume(list[i], nil, err))
     end
   end
 end
