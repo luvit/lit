@@ -57,18 +57,19 @@ end
 
 local db = config.db
 
+p(list)
 for i = 1, #list do
   local name, version = unpack(list[i])
 
   local target = pathJoin(uv.cwd(), "modules", name)
 
-  local match = db.match(name, version)
+  local match, hash = db.match(name, version)
   if not match then
     -- TODO: check upstream if no match can be found locally
     error("No such package in local database matching: " .. name .. ' ' .. version)
   end
 
-  db.export(target, name, version)
+  db.export(target, hash)
 
 end
 

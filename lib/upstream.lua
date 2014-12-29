@@ -1,156 +1,110 @@
-local uv = require('uv')
 local digest = require('openssl').digest.digest
 local git = require('creationix/git')
-local wrapStream = require('creationix/coro-channel').wrapStream
-local protocol = require('../lib/protocol')
+local deframe = git.deframe
+local decodeTag = git.decoders.tag
+local decodeTree = git.decoders.tree
+local connect = require('../lib/coro-tcp').connect
+local makeRemote = require('../lib/codec').makeRemote
 
-local function makeCallback()
-  local thread = coroutine.running()
-  return function (err, data)
-    if err then
-      return assert(coroutine.resume(thread, nil, err))
-    end
-    return assert(coroutine.resume(thread, data or true))
-  end
-end
-
-local function connect(host, port)
-  local res, success, err
-  uv.getaddrinfo(host, port, { socktype = "stream", family="inet" }, makeCallback())
-  res, err = coroutine.yield()
-  if not res then return nil, err end
-  local socket = uv.new_tcp()
-  socket:connect(res[1].addr, res[1].port, makeCallback())
-  success, err = coroutine.yield()
-  if not success then return nil, err end
-  return socket
-end
 
 return function (storage, host, port)
-  local socket, err = connect(host, port or 4821)
-  if not socket then return nil, err end
-
-  local proto = protocol(false, wrapStream(socket))
-
-  proto.on("send", function (data)
-    return proto.emit(assert(storage.save(data)), data)
-  end)
-
-  proto.on("want", function (hash)
-    return proto.send("send", assert(storage.load(hash)))
-  end)
-
-  proto.start()
-
+local read, write, socket = assert(connect(host, port or 4821))
+  local remote = makeRemote(read, write)
   local upstream = {}
 
-  --[[
-  upstream.push(name, version) -> hash
-  --------------------------
+  -- Client: SEND tagObject
 
-  Push a ref and dependents recursivly to upstream server.
+  -- Server: WANTS objectHash
 
-  Internally this does the following:
+  -- Client: SEND object
 
-      Client: SEND tagObject
+  -- Server: WANTS ...
 
-      Server: WANT objectHash
+  -- Client: SEND ...
+  -- Client: SEND ...
+  -- Client: SEND ...
 
-      Client: SEND object
-
-      Server: WANT ...
-      Server: WANT ...
-      Server: WANT ...
-
-      Client: SEND ...
-      Client: SEND ...
-      Client: SEND ...
-
-      Server: CONF tagHash
-
-  The client sends an unwanted tag which will trigger a sync from the server.
-  The client, without waiting also sends a VERIFY request requesting the server
-  tell it when it has the tag and it's children.  The server then fetches and
-  objects it's missing.  When done, server confirms tagHash to the client.
-
-  If a server already has an object when receiving a graph, it will scan it's
-  children for missing bits from previous failed attemps and resume there.
-
-  Only after confirming the entire tree saved will the server write the tag and
-  seal the package.
-  ]]--
-  function upstream.push(ref)
-    error("TODO: upstream.push")
-    return hash
-  end
-
-  --[[
-  upstream.pull(hash) -> success, err
-  --------------------------
-
-  Pull a hash and dependents recursivly from upstream server.
-
-  This is essentially the same command, but reversed.
-
-      Client: WANT tagHash
-
-      Server: SEND tagObject
-
-      Client: WANT objectHash
-
-      Server: SEND object
-
-      Client: WANT ...
-      Client: WANT ...
-      Client: WANT ...
-
-      Server: SEND ...
-      Server: SEND ...
-      Server: SEND ...
-
-  The client knows locally when it has the entire tree and creates the local tag
-  sealing the package.  The client will also check deep for missing objects
-  before confirming a tree as complete.
-  ]]--
-  function upstream.pull(hash)
-    proto.send("want", hash)
-    local queue = {hash}
-    repeat
-      local hash = table.remove(queue)
-      local data = proto.waitFor(hash)
-      local kind, body = git.deframe(data)
-      if kind == "tag" then
-        local tag = git.decoders.tag(body)
-        -- TODO: verify signature
-        storage.write(tag.tag, hash)
-        local subHash = tag.object
-        queue[#queue + 1] = subHash
-        proto.send("want", subHash)
-      elseif kind == "tree" then
-        local tree = git.decoders.tree(body)
-        for i = 1, #tree do
-          local subHash = tree[i].hash
-          queue[#queue + 1] = subHash
-          proto.send("want", subHash)
+  -- Server: DONE hash
+  function upstream.push(hash)
+    remote.writeAs("send", storage.load(hash))
+    while true do
+      local name, data = remote.read()
+      if name == "wants" then
+        for i = 1, #data do
+          remote.writeAs("send", storage.load(data[i]))
         end
+      elseif name == "done" then
+        return data
+      else
+        error("Expected more wants or done in reply to send to server")
       end
-    until #queue == 0
-    return true
+    end
   end
 
-  --[[
-  upstream.match(name, version) -> version, hash
-  ----------------------------------------------
+        -- Client: WANT tagHash
 
-  Query a server for the best match to a semver
+        -- Server: SEND tagObject
 
-      Client: MATCH name version
+        -- Client: WANT objectHash
 
-      Server: REPLY version
-  ]]--
+        -- Server: SEND object
+
+        -- Client: WANT ...
+        -- Client: WANT ...
+        -- Client: WANT ...
+
+        -- Server: SEND ...
+        -- Server: SEND ...
+        -- Server: SEND ...
+
+  function upstream.pull(hash)
+    local list = {hash}
+    local refs = {}
+    repeat
+      local hashes = list
+      list = {}
+      remote.writeAs("wants", hashes)
+      for i = 1, #hashes do
+        local hash = hashes[i]
+        local data = remote.readAs("send")
+        assert(digest("sha1", data) == hash, "hash mismatch in result object")
+        local kind, body = deframe(data)
+        if kind == "tag" then
+          local tag = decodeTag(body)
+          -- TODO: verify tag
+          refs[tag.tag] = hash
+          -- Check if we have the object the tag points to.
+          if not storage.has(tag.object) then
+            -- If not, add it to the list
+            table.insert(list, tag.object)
+          end
+        elseif kind == "tree" then
+          local tree = decodeTree(body)
+          for i = 1, #tree do
+            local subHash = tree[i].hash
+            if not storage.has(subHash) then
+              table.insert(list, subHash)
+            end
+          end
+        end
+        storage.save(data)
+      end
+    until #list == 0
+    for ref, hash in pairs(refs) do
+      storage.write(ref, hash)
+    end
+    return refs
+  end
+
+      -- Client: MATCH name version
+
+      -- SERVER: REPLY version hash
+
   function upstream.match(name, version)
-    proto.send("match", name, version)
-    return proto.waitFor("reply")
+    remote.writeAs("match", name .. " " .. version)
+    local data = assert(remote.readAs("reply"))
+    local match, hash = string.match(data, "^([^ ]+) (.*)$")
+    return match, hash
   end
 
   --[[

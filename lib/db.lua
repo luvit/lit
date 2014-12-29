@@ -94,7 +94,6 @@ return function (storage, host, port)
       upMatch, hash = upstream.match(name, version)
       disconnect()
       if not upMatch then return nil, hash end
-      p{match=match,upMatch=upMatch,hash=hash}
       if not semver.gte(match, upMatch) then
         return upMatch, hash
       end
@@ -243,13 +242,12 @@ return function (storage, host, port)
   end
 
   --[[
-  db.export(path, name, version)
+  db.export(path, hash)
   -----------------------
 
   Export a package to the filesystem.
   ]]--
-  function db.export(path, name, version)
-    local hash = assert(db.read(name, version))
+  function db.export(path, hash)
     local tag = assert(db.loadAs("tag", hash))
     if tag.type == "blob" then
       path = path .. ".lua"

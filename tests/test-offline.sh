@@ -9,6 +9,7 @@ mkdir $BASE
 echo "database: $BASE/db.git\nstorage: git" > $LIT_CONFIG
 
 luvit auth creationix
+luvit down
 
 for file in modules/creationix/*.lua
 do
