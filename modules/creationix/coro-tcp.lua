@@ -1,3 +1,10 @@
+
+exports.name = "creationix/coro-tcp"
+exports.version = "0.1.1"
+exports.dependencies = {
+  "creationix/coro-channel@1.0.0"
+}
+
 local uv = require('uv')
 local wrapStream = require('creationix/coro-channel').wrapStream
 

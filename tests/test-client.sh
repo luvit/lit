@@ -17,20 +17,20 @@ cd $APP_DIR
 luvit install
 cd -
 
-APP_DIR=$BASE/app2
+# APP_DIR=$BASE/app2
 
-mkdir $APP_DIR
-cp package.lua $APP_DIR
-cd $APP_DIR
-luvit install
-cd -
+# mkdir $APP_DIR
+# cp package.lua $APP_DIR
+# cd $APP_DIR
+# luvit install
+# cd -
 
-luvit down
+# luvit down
 
-APP_DIR=$BASE/app3
+# APP_DIR=$BASE/app3
 
-mkdir $APP_DIR
-cp package.lua $APP_DIR
-cd $APP_DIR
-luvit install
-cd -
+# mkdir $APP_DIR
+# cp package.lua $APP_DIR
+# cd $APP_DIR
+# luvit install
+# cd -

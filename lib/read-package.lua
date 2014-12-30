@@ -30,12 +30,12 @@ function exports.eval(data, name)
   return meta
 end
 
--- Given a storage instance and the package root hash return kind and meta. For
+-- Given a db instance and the package root hash return kind and meta. For
 -- blobs, assume meta is in the file, for trees, look for package.lua and then
 -- init.lua
-function exports.readStorage(storage, hash)
+function exports.read(db, hash)
   local kind, data
-  data = assert(storage.load(hash))
+  data = assert(db.load(hash))
   kind, data = git.deframe(data)
   if kind == "tree" then
     local tree = git.listToMap(git.decoders.tree(data))
@@ -50,7 +50,7 @@ function exports.readStorage(storage, hash)
       end
     end
     assert(packageHash, "neither package.lua or init.lua found in package root")
-    data = assert(storage.load(packageHash))
+    data = assert(db.load(packageHash))
     local packageKind
     packageKind, data = git.deframe(data)
     assert(packageKind == "blob")

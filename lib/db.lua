@@ -2,7 +2,7 @@ local semver = require('creationix/semver')
 local git = require('creationix/git')
 local sshRsa = require('creationix/ssh-rsa')
 local fs = require('creationix/coro-fs')
-local readStorage = require('./read-package').readStorage
+local readPackage = require('./read-package').read
 local import = require('./import')
 local export = require('./export')
 local makeUpstream = require('./upstream')
@@ -130,15 +130,8 @@ return function (storage, host, port)
   entire sub-graph is cached locally.
   ]]--
   function db.loadAs(kind, hash)
-    local data, err = storage.load(hash)
+    local data, err = db.load(hash)
     assert(not err, err)
-    if not data and host then
-      connect()
-      local success, failure = upstream.pull(hash)
-      if not success then return nil, failure end
-      data, err = storage.load(hash)
-      disconnect()
-    end
     if not data then return nil, err end
 
     local actualKind
@@ -147,7 +140,16 @@ return function (storage, host, port)
     return git.decoders[kind](data)
   end
 
-  db.load = storage.load
+  db.load = function (hash)
+    local data, err = storage.load(hash)
+    if not data and host then
+      connect()
+      data, err = upstream.read(hash)
+      disconnect()
+    end
+    return data, err
+  end
+
   db.save = storage.save
 
   --[[
@@ -182,7 +184,7 @@ return function (storage, host, port)
   function db.tag(config, hash, message)
     assert(config.key, "need ssh key to sign tag, setup with `lit auth`")
 
-    local kind, meta = readStorage(storage, hash)
+    local kind, meta = readPackage(storage, hash)
     local version = semver.normalize(meta.version)
     local name = meta.name
     local tag = formatTag(name, version)
@@ -207,6 +209,17 @@ return function (storage, host, port)
     return tag, hash
   end
 
+  function db.pull(name, version)
+    assert(host, "upstream required to pull")
+    local match, hash = assert(upstream.match(name, version))
+    connect()
+    local success, err = upstream.pull(hash)
+    disconnect()
+    if success then
+      return match, hash
+    end
+    return nil, err
+  end
 
   --[[
   db.publish(name, version)

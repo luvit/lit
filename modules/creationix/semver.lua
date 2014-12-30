@@ -59,6 +59,7 @@ function match(version, iterator)
   if not version then
     -- With a n empty match, simply grab the newest version
     for possible in iterator do
+      p(version, possible)
       local d, e, f = parse(possible)
       if (not a) or (d > a) or (d == a and (e > b or (e == b and f > c))) then
         a, b, c = d, e, f

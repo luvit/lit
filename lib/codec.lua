@@ -118,13 +118,14 @@ function exports.makeRemote(rawRead, rawWrite)
         local extra, name, data = decode(buffer)
         if extra then
           buffer = extra
+          -- p("network read", name, data and (#data <=60 and data or #data))
           assert(name ~= 'error', data)
           return name, data
         end
       end
       local chunk, err = rawRead()
       if err then return nil, err end
-      p("INPUT", chunk)
+      -- p("INPUT", chunk)
       if not chunk then return end
       buffer = buffer .. chunk
     end
@@ -137,9 +138,10 @@ function exports.makeRemote(rawRead, rawWrite)
   end
 
   local function writeAs(name, data)
+    -- p("network write", name, data and (#data <=60 and data or #data))
     if not name then return rawWrite() end
     local encoded = encode(name, data)
-    p("OUTPUT", encoded)
+    -- p("OUTPUT", encoded)
     return rawWrite(encoded)
   end
 

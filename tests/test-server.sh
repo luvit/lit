@@ -9,7 +9,7 @@ echo "database: $BASE/db.git\nstorage: git" > $LIT_CONFIG
 
 luvit auth creationix
 
-for file in modules/creationix/*.lua
+for file in modules/creationix/*
 do
   luvit add $file || exit -1
 done
