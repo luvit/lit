@@ -59,7 +59,6 @@ function match(version, iterator)
   if not version then
     -- With a n empty match, simply grab the newest version
     for possible in iterator do
-      p(version, possible)
       local d, e, f = parse(possible)
       if (not a) or (d > a) or (d == a and (e > b or (e == b and f > c))) then
         a, b, c = d, e, f
@@ -72,7 +71,7 @@ function match(version, iterator)
       -- breaking changes or additons.
       for possible in iterator do
         local d, e, f = parse(possible)
-        if d == g and e >= h and ((not a) or e > b or (e == b and f > c)) then
+        if d == g and ((e == h and f >= i) or e > h) and ((not a) or e > b or (e == b and f > c)) then
           a, b, c = d, e, f
         end
       end
@@ -90,3 +89,27 @@ function match(version, iterator)
   return a and (a .. '.' .. b .. '.' .. c)
 end
 exports.match = match
+
+local function iterator()
+  local versions = {"0.0.1", "0.0.2", "0.1.0", "0.1.1", "0.2.0", "0.2.1", "1.0.0", "1.1.0", "1.1.3", "2.0.0", "2.1.2", "3.1.4"}
+  local i = 0
+  return function ()
+    i = i + 1
+    return versions[i]
+  end
+end
+
+-- Sanity check for match code
+assert(match("0.0.1", iterator()) == "0.0.2")
+assert(match("0.1.0", iterator()) == "0.1.1")
+assert(match("0.2.0", iterator()) == "0.2.1")
+assert(not match("0.3.0", iterator()))
+assert(match("1.0.0", iterator()) == "1.1.3")
+assert(not match("1.1.4", iterator()))
+assert(not match("1.2.0", iterator()))
+assert(match("2.0.0", iterator()) == "2.1.2")
+assert(not match("2.1.3", iterator()))
+assert(not match("2.2.0", iterator()))
+assert(match("3.0.0", iterator()) == "3.1.4")
+assert(not match("3.1.5", iterator()))
+assert(match(nil, iterator()) == "3.1.4")
