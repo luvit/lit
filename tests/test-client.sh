@@ -5,7 +5,8 @@ export LIT_CONFIG=$BASE/config
 APP_DIR=$BASE/app
 rm -rf $BASE
 mkdir $BASE
-echo -e "database: $BASE/db.git\nstorage: git" > $LIT_CONFIG
+echo "database: $BASE/db.git" > $LIT_CONFIG
+echo "storage: git" >> $LIT_CONFIG
 
 export LUVI_APP=`pwd`:
 luvit auth creationix
