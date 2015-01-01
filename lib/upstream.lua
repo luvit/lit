@@ -4,8 +4,7 @@ local deframe = git.deframe
 local decodeTag = git.decoders.tag
 local decodeTree = git.decoders.tree
 local connect = require('creationix/coro-tcp').connect
-local makeRemote = require('../lib/codec').makeRemote
-
+local makeRemote = require('./codec').makeRemote
 
 return function (storage, host, port)
 local read, write, socket = assert(connect(host, port or 4821))
@@ -100,7 +99,7 @@ local read, write, socket = assert(connect(host, port or 4821))
 
       -- Server: SEND data
 
-  function upstream.read(hash)
+  function upstream.load(hash)
     remote.writeAs("wants", {hash})
     local data = remote.readAs("send")
     assert(digest("sha1", data) == hash, "hash mismatch in result object")
@@ -111,6 +110,13 @@ local read, write, socket = assert(connect(host, port or 4821))
       -- Client: MATCH name version
 
       -- SERVER: REPLY version hash
+
+  function upstream.read(name, version)
+    remote.writeAs("read", name .. " " .. version)
+    local data = assert(remote.readAs("reply"))
+    local match, hash = string.match(data, "^([^ ]+) (.*)$")
+    return match, hash
+  end
 
   function upstream.match(name, version)
     remote.writeAs("match", version and (name .. " " .. version) or name)

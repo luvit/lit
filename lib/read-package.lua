@@ -1,4 +1,6 @@
 local git = require('creationix/git')
+local fs = require('creationix/coro-fs')
+local pathJoin = require('luvi').path.join
 
 local function makeAny()
   return setmetatable({},{
@@ -37,6 +39,12 @@ function exports.read(db, hash)
   local kind, data
   data = assert(db.load(hash))
   kind, data = git.deframe(data)
+  if kind == "tag" then
+    local tag = git.decoders.tag(data)
+    data = assert(db.load(tag.object))
+    kind, data = git.deframe(data)
+    assert(kind == tag.type)
+  end
   if kind == "tree" then
     local tree = git.listToMap(git.decoders.tree(data))
     local packageHash
@@ -57,4 +65,22 @@ function exports.read(db, hash)
   end
 
   return kind, exports.eval(data, "package:" .. hash)
+end
+
+function exports.readFs(path)
+  local packagePath = path
+  local data = fs.readFile(path)
+  if not data then
+    packagePath = pathJoin(path, "package.lua")
+    data = fs.readFile(packagePath)
+  end
+  if not data then
+    packagePath = pathJoin(path, "init.lua")
+    data = fs.readFile(packagePath)
+  end
+  local meta = data and exports.eval(data, packagePath)
+  if not meta then
+    return nil, path .. " does not appear to be a lit package"
+  end
+  return meta, packagePath
 end

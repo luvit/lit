@@ -7,6 +7,8 @@ local import = require('./import')
 local export = require('./export')
 local makeUpstream = require('./upstream')
 local uv = require('uv')
+local parseVersion = require('./parse-version')
+local log = require('./log')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -73,6 +75,9 @@ return function (storage, host, port)
   end
 
   local db = {}
+
+  db.has = storage.has
+  db.write = storage.write
 
   --[[
   db.match(name, version) -> version, hash
@@ -144,7 +149,7 @@ return function (storage, host, port)
     local data, err = storage.load(hash)
     if not data and host then
       connect()
-      data, err = upstream.read(hash)
+      data, err = upstream.load(hash)
       disconnect()
     end
     return data, err
@@ -226,16 +231,44 @@ return function (storage, host, port)
   db.publish(name, version)
   ---------------------
 
-  Given a tag and concrete version, publish to upstream.Can only be done for
-  tags the user has personally signed.Will conflict if upstream has tag already.
+  Given a package name, publish to upstream. Can only be done for tags the
+  user has personally signed. Will conflict if upstream has tag already.
   ]]--
-  function db.publish(name, version)
-    assert(host, "upstream required to push")
-    version = semver.normalize(version)
+  function db.publish(name)
+    assert(host, "upstream required to publish")
+
+    -- Loop through all local versions that aren't upstream
+    local queue = {}
     connect()
-    local hash, err = upstream.push(name, version)
+    for version in storage.versions(name) do
+      if not upstream.read(name, version) then
+        local tag = formatTag(name, version)
+        local hash = storage.read(tag)
+        queue[#queue + 1] = {name, version, hash}
+      end
+    end
     disconnect()
-    return hash, err
+    if #queue == 0 then
+      error("All local versions are already published, maybe add a new local version?")
+    end
+
+    for i = 1, #queue do
+      local name, version, hash = unpack(queue[i])
+      log("publishing", name .. '@' .. version)
+      p(name, version, hash)
+      local _, meta = readPackage(db, hash)
+      -- Make sure all deps are satisifiable in upstream before publishing broken package there.
+      local deps = meta.dependencies
+      if deps then
+        for i = 1, #deps do
+          local name, version = parseVersion(deps[i])
+          if not upstream.match(name, version) then
+            error("Cannot find suitable dependency match in upstream for: " .. deps[i])
+          end
+        end
+      end
+      upstream.push(hash)
+    end
   end
 
   --[[

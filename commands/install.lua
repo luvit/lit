@@ -3,16 +3,14 @@ local config = require('../lib/config')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
 local semver = require('creationix/semver')
-local evalPackage = require('../lib/read-package').eval
+local readPackageFs = require('../lib/read-package').readFs
 local readPackage = require('../lib/read-package').read
-local fs = require('creationix/coro-fs')
+local parseVersion = require('../lib/parse-version')
 local db = config.db
 
 local list
 if #args == 1 then
-  local packagePath = pathJoin(uv.cwd(), "package.lua")
-  local data = fs.readFile(packagePath)
-  local meta = data and evalPackage(data, packagePath)
+  local meta, packagePath = assert(readPackageFs(uv.cwd()))
   list = meta and meta.dependencies
   if list then
     log("install deps", packagePath)
@@ -58,21 +56,7 @@ end
 
 function parseList(list)
   for i = 1, #list do
-    local item = list[i]
-
-    -- split out name and version
-    local name = string.match(item, "^([^@]+)")
-    if not name then
-      error("Missing name in dep: " .. list[i])
-    end
-    local version = string.sub(item, #name + 2)
-    if #version == 0 then
-      version = nil
-    else
-      version = semver.normalize(version)
-    end
-    addDep(name, version)
-
+    addDep(parseVersion(list[i]))
   end
 end
 
