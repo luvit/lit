@@ -1,13 +1,13 @@
 #!/bin/sh
 
 BASE=`pwd`/test-client
-export LUVI_APP=`pwd`:
 export LIT_CONFIG=$BASE/config
 APP_DIR=$BASE/app
 rm -rf $BASE
 mkdir $BASE
-echo "database: $BASE/db.git\nstorage: git" > $LIT_CONFIG
+echo -e "database: $BASE/db.git\nstorage: git" > $LIT_CONFIG
 
+export LUVI_APP=`pwd`:
 luvit auth creationix
 luvit up localhost
 
