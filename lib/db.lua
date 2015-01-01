@@ -183,6 +183,7 @@ return function (storage, host, port)
   ]]--
   function db.tag(config, hash, message)
     assert(config.key, "need ssh key to sign tag, setup with `lit auth`")
+    assert(hash, "Hash required to tag")
 
     local kind, meta = readPackage(storage, hash)
     local version = semver.normalize(meta.version)

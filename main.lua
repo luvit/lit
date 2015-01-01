@@ -14,6 +14,7 @@ coroutine.wrap(function ()
     log("done", "success", "success")
   else
     log("fail", err, "failure")
+    os.exit(-1)
   end
 end)()
 luvit.run()

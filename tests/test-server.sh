@@ -8,11 +8,4 @@ echo "database: $BASE/db.git" > $LIT_CONFIG
 echo "storage: git" >> $LIT_CONFIG
 
 export LUVI_APP=`pwd`:
-luvit auth creationix
-
-for file in modules/creationix/*
-do
-  luvit add $file || exit -1
-done
-
-luvit serve
+luvit serve || exit -1

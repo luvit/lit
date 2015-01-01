@@ -10,7 +10,6 @@ end
 
 local path = pathJoin(uv.cwd(), args[2] or '.')
 local message = args[3] or ""
-local hash = db.import(path)
+local hash = assert(db.import(path))
 local tag, tagHash = db.tag(config, hash, message)
-
-p(tag, tagHash)
+log("added package", tag .. " " .. tagHash)

@@ -3,14 +3,13 @@ Lit - Package Manager for Luvit
 
 Available commands:
 
+  lit auth username
+  lit up [upstream]
   lit install
   lit install packages...
-  lit sync [upstream]
-  lit auth [username] [name] [email]
   lit add [path] [release message]
-  lit publish [package] [upstream]
+  lit publish [package]
   lit serve
 ]]
 
--- TODO: print detailed help for each command with `help install` or
--- `help sync` for example.
+-- TODO: print detailed help for each command
