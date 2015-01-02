@@ -37,12 +37,13 @@ if not config.privateKey then
   end
 end
 
-local fingerprint = sshRsa.fingerprint(
-  sshRsa.loadPrivate(fs.readFile(config.privateKey))
-)
+local sshKey = sshRsa.loadPrivate(fs.readFile(config.privateKey))
+local fingerprint = sshRsa.fingerprint(sshKey)
 log("ssh fingerprint", fingerprint)
 
 -- TODO: verify ownership of username using key
+config.db.storage.writeKey(config.username, fingerprint, sshRsa.writePublic(sshKey))
+
 
 config.save()
 

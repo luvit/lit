@@ -15,7 +15,7 @@ local function tagPath(name, version)
 end
 
 local function keyPath(author, fingerprint)
-  return pathJoin("keys", author, fingerprint)
+  return pathJoin("keys", author, (string.gsub(fingerprint, ":", "")))
 end
 
 return function (dir)
