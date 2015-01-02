@@ -5,6 +5,7 @@ local config = require('../lib/config')
 local log = require('../lib/log')
 local exec = require('../lib/exec')
 local sshRsa = require('creationix/ssh-rsa')
+local jsonParse = require('json').parse
 
 local function confirm(name, value)
   if value then
@@ -39,10 +40,23 @@ end
 
 local sshKey = sshRsa.loadPrivate(fs.readFile(config.privateKey))
 local fingerprint = sshRsa.fingerprint(sshKey)
-log("ssh fingerprint", fingerprint)
+log("checking ssh fingerprint", fingerprint)
 
--- TODO: verify ownership of username using key
-config.db.storage.writeKey(config.username, fingerprint, sshRsa.writePublic(sshKey))
+local url = "https://api.github.com/users/" .. config.username .. "/keys"
+local json = assert(exec("curl", url))
+local keys = jsonParse(json)
+local valid = false
+for i = 1, #keys do
+  local key = sshRsa.loadPublic(keys[i].key)
+  local fp = sshRsa.fingerprint(key)
+  if fp == fingerprint then
+    valid = true
+  end
+  config.db.storage.writeKey(config.username, fp, sshRsa.writePublic(key))
+end
+if not valid then
+  error("Private key doesn't match keys at " .. url)
+end
 
 
 config.save()

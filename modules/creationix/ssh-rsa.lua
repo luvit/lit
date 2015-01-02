@@ -6,7 +6,43 @@ local openssl = require('openssl')
 local pkey = openssl.pkey
 local bn = openssl.bn
 local digest = openssl.digest.digest
-local base64 = openssl.base64
+
+local enc, dec
+-- base64 code from http://lua-users.org/wiki/BaseSixtyFour
+do
+  -- character table string
+  local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+  -- encoding
+  function enc(data)
+      return ((data:gsub('.', function(x)
+          local r,b='',x:byte()
+          for i=8,1,-1 do r=r..(b%2^i-b%2^(i-1)>0 and '1' or '0') end
+          return r;
+      end)..'0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+          if (#x < 6) then return '' end
+          local c=0
+          for i=1,6 do c=c+(x:sub(i,i)=='1' and 2^(6-i) or 0) end
+          return b:sub(c+1,c+1)
+      end)..({ '', '==', '=' })[#data%3+1])
+  end
+
+  -- decoding
+  function dec(data)
+      data = string.gsub(data, '[^'..b..'=]', '')
+      return (data:gsub('.', function(x)
+          if (x == '=') then return '' end
+          local r,f='',(b:find(x)-1)
+          for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+          return r;
+      end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+          if (#x ~= 8) then return '' end
+          local c=0
+          for i=1,8 do c=c+(x:sub(i,i)=='1' and 2^(8-i) or 0) end
+          return string.char(c)
+      end))
+  end
+end
 
 local function encodePrefix(body)
   if string.byte(body, 1) >= 128 then
@@ -67,11 +103,12 @@ end
 
 -- Extract the raw data from a public key file.
 function exports.loadPublic(data)
-  error("TODO: Implement")
+  data = data:match("^ssh%-rsa ([^ ]+)"):gsub("%s", "")
+  return data and dec(data)
 end
 
 function exports.writePublic(data)
-  return "ssh-rsa " .. base64(data):gsub("\n", "")
+  return "ssh-rsa " .. enc(data)
 end
 
 function exports.sign(body, privateKey)
