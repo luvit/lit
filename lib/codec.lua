@@ -63,7 +63,7 @@ local function decode(chunk)
   local line = string.sub(chunk, 1, term - 1)
   local name, message = string.match(line, "^([^ ]+) *(.*)$")
   assert(name, "Invalid message")
-  return string.sub(chunk, term + 1), name, message
+  return string.sub(chunk, term + 1), name, #message > 0 and message or nil
 end
 exports.decode = decode
 
