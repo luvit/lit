@@ -151,6 +151,7 @@ return function (storage, host, port)
       connect()
       data, err = upstream.load(hash)
       disconnect()
+      assert(storage.save(data) == hash)
     end
     return data, err
   end
