@@ -1,8 +1,6 @@
 exports.name = "creationix/coro-channel"
 exports.version = "1.0.0"
 
-local uv = require('uv')
-
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 function exports.wrapStream(socket)
@@ -20,7 +18,7 @@ function exports.wrapStream(socket)
     end
     if paused then
       paused = false
-      uv.read_start(socket, onRead)
+      socket:read_start(onRead)
     end
     waiting = coroutine.running()
     return coroutine.yield()
@@ -36,14 +34,14 @@ function exports.wrapStream(socket)
       queue[#queue + 1] = data
       if not paused then
         paused = true
-        uv.read_stop(socket)
+        socket:read_stop()
       end
     end
     if not chunk then
       reading = false
       -- Close the whole socket if the writing side is also closed already.
-      if not writing and not uv.is_closing(socket) then
-        uv.close(socket)
+      if not writing and not socket:is_closing() then
+        socket:close()
       end
     end
   end
@@ -52,17 +50,17 @@ function exports.wrapStream(socket)
     if chunk == nil then
       -- Shutdown our side of the socket
       writing = false
-      if not uv.is_closing(socket) then
-        uv.shutdown(socket)
+      if not socket:is_closing() then
+        socket:shutdown()
         -- Close if we're done reading too
-        if not reading and not uv.is_closing(socket) then
-          uv.close(socket)
+        if not reading and not socket:is_closing() then
+          socket:close()
         end
       end
     else
       -- TODO: add backpressure by pausing and resuming coroutine
       -- when write buffer is full.
-      uv.write(socket, chunk)
+      socket:write(chunk)
     end
   end
 
