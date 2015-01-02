@@ -131,7 +131,9 @@ local read, write, socket = assert(connect(host, port or 4821))
   function upstream.match(name, version)
     remote.writeAs("match", version and (name .. " " .. version) or name)
     local data = remote.readAs("reply")
-    return data and string.match(data, "^([^ ]+) (.*)$")
+    if data then
+      return string.match(data, "^([^ ]+) (.*)$")
+    end
   end
 
   --[[
