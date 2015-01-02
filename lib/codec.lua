@@ -1,5 +1,7 @@
 local binToHex = require('creationix/hex-bin').binToHex
 local hexToBin = require('creationix/hex-bin').hexToBin
+local deflate = require('miniz').deflate
+local inflate = require('miniz').inflate
 
 -- Binary Encoding
 -- WANT - 0x80 20 byte raw hash
@@ -28,7 +30,7 @@ local function decode(chunk)
       return string.sub(chunk, 22), "wants", hashes
     end
 
-    -- SEND - 11Mxxxxx [Mxxxxxxx] data
+    -- SEND - 11Mxxxxx [Mxxxxxxx] deflated data
     local length = bit.band(head, 0x1f)
     local i = 2
     if bit.band(head, 0x20) > 0 then
@@ -41,6 +43,7 @@ local function decode(chunk)
     end
     if #chunk < i + length - 1 then return end
     local body = string.sub(chunk, i, i + length - 1)
+    body = inflate(body, 1)
     return string.sub(chunk, i + length), "send", body
 
   end
@@ -80,6 +83,9 @@ end
 -- SEND - 11Mxxxxx [Mxxxxxxx] data
 --        (M) is more flag, x is variable length unsigned int
 function encoders.send(data)
+  -- TDEFL_WRITE_ZLIB_HEADER             = 0x01000,
+  -- 4095=Huffman+LZ (slowest/best compression)
+  data = deflate(data, 0x01000 + 4095)
   local length = #data
   local head = ""
   local more = 0
