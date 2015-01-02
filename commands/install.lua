@@ -7,6 +7,7 @@ local readPackageFs = require('../lib/read-package').readFs
 local readPackage = require('../lib/read-package').read
 local parseVersion = require('../lib/parse-version')
 local db = config.db
+local storage = db.storage
 
 local list
 if #args == 1 then
@@ -67,7 +68,7 @@ end
 parseList(list)
 
 for name, value in pairs(deps) do
-  if not db.read(name, value.version) then
+  if not storage.readTag(name, value.version) then
     log("pulling package", name .. '@' .. value.version)
     db.pull(name, value.version)
   end

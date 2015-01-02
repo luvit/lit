@@ -25,10 +25,6 @@ local function now()
   }
 end
 
-local function formatTag(name, version)
-  return name .. '/v' .. version
-end
-
 --[[
 DB Interface
 ============
@@ -75,9 +71,7 @@ return function (storage, host, port)
   end
 
   local db = {}
-
-  db.has = storage.has
-  db.write = storage.write
+  db.storage = storage
 
   --[[
   db.match(name, version) -> version, hash
@@ -104,7 +98,7 @@ return function (storage, host, port)
       end
     end
     if not match then return end
-    local hash = storage.read(formatTag(name, match))
+    local hash = storage.readTag(name, match)
     if not hash then return end
     return match, hash
   end
@@ -112,13 +106,21 @@ return function (storage, host, port)
   --[[
   db.read(name, version) -> hash
 
-  Read hash directly without doing match. Only reads local version.
+  Read hash directly without doing match. Checks upstream if not found locally.
   ]]--
   function db.read(name, version)
     assert(version, "version required for direct read")
     version = semver.normalize(version)
-    local tag = formatTag(name, version)
-    return storage.read(tag)
+    local hash, err = storage.readTag(name, version)
+    if not hash and host then
+      connect()
+      hash = upstream.read(name, version)
+      disconnect()
+    end
+    if hash then
+      return hash
+    end
+    return nil, err or "no such tag"
   end
 
   --[[
@@ -174,7 +176,7 @@ return function (storage, host, port)
   end
 
   --[[
-  db.tag(config, hash, message) -> tag, hash
+  db.tag(config, hash, message) -> name, version, hash
   ------------------------------------------------
 
   Create an annotated tag for a package, sign using the config data and save to
@@ -194,9 +196,8 @@ return function (storage, host, port)
     local kind, meta = readPackage(storage, hash)
     local version = semver.normalize(meta.version)
     local name = meta.name
-    local tag = formatTag(name, version)
 
-    assert(not storage.read(tag), "tag already exists")
+    assert(not storage.readTag(name, version), "tag already exists")
     if string.sub(message, #message) ~= "\n" then
       message = message .. "\n"
     end
@@ -204,7 +205,7 @@ return function (storage, host, port)
     hash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
       object = hash,
       type = kind,
-      tag = tag,
+      tag = name .. "/v" .. version,
       tagger = {
         name = config.name,
         email = config.email,
@@ -212,8 +213,8 @@ return function (storage, host, port)
       },
       message = message
     }), config.key))
-    storage.write(tag, hash)
-    return tag, hash
+    storage.writeTag(name, version, hash)
+    return name, version, hash
   end
 
   function db.pull(name, version)
@@ -243,8 +244,7 @@ return function (storage, host, port)
     connect()
     for version in storage.versions(name) do
       if not upstream.read(name, version) then
-        local tag = formatTag(name, version)
-        local hash = storage.read(tag)
+        local hash = storage.readTag(name, version)
         queue[#queue + 1] = {name, version, hash}
       end
     end

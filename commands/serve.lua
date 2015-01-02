@@ -3,6 +3,7 @@ local createServer = require('creationix/coro-tcp').createServer
 local makeRemote = require('../lib/codec').makeRemote
 local config = require('../lib/config')
 local db = config.db
+local storage = db.storage
 local git = require('creationix/git')
 local digest = require('openssl').digest.digest
 
@@ -16,15 +17,11 @@ local function split(line)
   return unpack(args)
 end
 
-
 function handlers.read(remote, data)
   local name, version = split(data)
   -- TODO: check for mismatch
-  local match, hash = db.read(name, version)
-  if not match and hash then
-    error(hash)
-  end
-  remote.writeAs("reply", match and (match .. ' ' .. hash))
+  local hash = db.read(name, version)
+  remote.writeAs("reply", hash)
 end
 
 function handlers.match(remote, data)
@@ -88,7 +85,7 @@ function handlers.send(remote, data)
   local wants = {}
   for i = 1, #hashes do
     local hash = hashes[i]
-    if not db.has(hash) then
+    if not storage.has(hash) then
       wants[#wants + 1] = hash
       authorized[hash] = true
     end
@@ -98,7 +95,8 @@ function handlers.send(remote, data)
     remote.writeAs("wants", wants)
   elseif not next(authorized) then
     local tag = remote.tag
-    db.write(tag.tag, tag.hash)
+    local name, version = string.match(tag.tag, "(.*)/v(.*)")
+    storage.writeTag(name, version, tag.hash)
     log("new package", tag.tag)
     remote.writeAs("done", tag.hash)
     remote.tag = nil

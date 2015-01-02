@@ -11,5 +11,5 @@ end
 local path = pathJoin(uv.cwd(), args[2] or '.')
 local message = args[3] or ""
 local hash = assert(db.import(path))
-local tag, tagHash = db.tag(config, hash, message)
-log("added package", tag .. " " .. tagHash)
+local name, version, tagHash = db.tag(config, hash, message)
+log("added package", name .. "@" .. version .. " " .. tagHash)
