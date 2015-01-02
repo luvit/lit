@@ -6,6 +6,8 @@ local db = config.db
 local storage = db.storage
 local git = require('creationix/git')
 local digest = require('openssl').digest.digest
+local importKeys = require('../lib/import-keys')
+local sshRsa = require('creationix/ssh-rsa')
 
 local handlers = {}
 
@@ -63,7 +65,21 @@ function handlers.send(remote, data)
       return remote.writeAs("error", "package upload already in progress: " .. remote.tag.tag)
     end
     local tag = git.decoders.tag(raw)
-    -- TODO: verify signature
+    local username = string.match(tag.tag, "^[^/]+")
+    importKeys(storage, username)
+    local body, signature = string.match(raw, "^(.*)%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-%s(.*)%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
+
+    if not signature then
+      p(raw)
+      error("Missing signature")
+    end
+    -- TODO: verify format
+    -- TODO: extract fingerprint
+    -- TODO: extract sshKey
+    local sshKey = ""
+    if not sshRsa.verify(body, signature, sshKey) then
+      return remote.writeAs("error", "Signature verification failure")
+    end
     tag.hash = hash
     remote.tag = tag
     remote.authorized = authorized

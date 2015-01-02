@@ -133,7 +133,7 @@ end
 
 -- Given a raw body, a raw signature (PEM encoded with metadata), and a
 -- publicKey instance, verify a signature.
-function exports.verify(body, signature, publicKey)
+function exports.verify(body, signature, data)
   -- TODO: really verify
   return true
 end
