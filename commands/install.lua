@@ -34,7 +34,11 @@ function addDep(name, version)
   local existing = deps[name]
   local match, hash = db.match(name, version)
   if not match then
-    error("Can't find match for " .. name .. '@' .. tostring(version))
+    if version then
+      error("No matching package: " .. name .. '@' .. version)
+    else
+      error("No such pagkage: " .. name)
+    end
   end
   if existing then
     if existing.version ~= match then
