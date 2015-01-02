@@ -114,7 +114,7 @@ function exports.makeRemote(rawRead, rawWrite)
   -- read
   local function read()
     while true do
-      while #buffer > 0 do
+      if #buffer > 0 then
         local extra, name, data = decode(buffer)
         if extra then
           buffer = extra
