@@ -103,7 +103,8 @@ end
 
 -- Extract the raw data from a public key file.
 function exports.loadPublic(data)
-  data = data:match("^ssh%-rsa ([^ ]+)"):gsub("%s", "")
+  data = data:match("^ssh%-rsa ([^ ]+)")
+  data = data and data:gsub("%s", "")
   return data and dec(data)
 end
 
@@ -126,7 +127,7 @@ function exports.sign(body, privateKey)
     "-----BEGIN RSA SIGNATURE-----\n" ..
     "Format: sha256-ssh-rsa\n" ..
     "Fingerprint: " .. fingerprint .. "\n\n" ..
-    base64(sig) ..
+    openssl.base64(sig) ..
     "-----END RSA SIGNATURE-----\n"
 end
 

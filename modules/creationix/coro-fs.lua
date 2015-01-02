@@ -26,6 +26,10 @@ function fs.open(path, flags, mode)
   uv.fs_open(path, flags or "r", mode or 438, makeCallback())
   return coroutine.yield()
 end
+function fs.unlink(path)
+  uv.fs_unlink(path, makeCallback())
+  return coroutine.yield()
+end
 function fs.stat(path)
   uv.fs_stat(path, makeCallback())
   return coroutine.yield()
@@ -130,6 +134,9 @@ function fs.chroot(base)
   end
   function chroot.open(path, flags, mode)
     return fs.open(resolve(path), flags, mode)
+  end
+  function chroot.unlink(path)
+    return fs.unlink(resolve(path))
   end
   function chroot.stat(path)
     return fs.stat(resolve(path))

@@ -153,6 +153,10 @@ return function (dir)
     return write(keyPath(author, fingerprint), key)
   end
 
+  function storage.revokeKey(author, fingerprint)
+    return fs.unlink(keyPath(author, fingerprint))
+  end
+
   --[[
   storage.versions(name) -> iterator<version>
   -------------------------------------------
@@ -171,6 +175,33 @@ return function (dir)
         local entry = iter()
         if entry and entry.type == "file" then
           return semver.normalize(entry.name)
+        end
+      until not entry
+    end
+  end
+
+  --[[
+  storage.fingerprints(author) -> iterator<fingerprint>
+  -------------------------------------------
+
+  Given a author name, return an iterator of fingerprints or nil if no such
+  package.
+  ]]
+  function storage.fingerprints(author)
+    local iter, err = fs.scandir("keys/" .. author)
+    if not iter then
+      if string.match(err, "^ENOENT:") then return end
+      return nil, err
+    end
+    return function ()
+      repeat
+        local entry = iter()
+        if entry and entry.type == "file" and entry.name ~= "etag" then
+          local parts = {}
+          for part in entry.name:gmatch("..") do
+            parts[#parts + 1] = part
+          end
+          return table.concat(parts, ":")
         end
       until not entry
     end

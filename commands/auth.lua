@@ -5,7 +5,7 @@ local config = require('../lib/config')
 local log = require('../lib/log')
 local exec = require('../lib/exec')
 local sshRsa = require('creationix/ssh-rsa')
-local jsonParse = require('json').parse
+local importKeys = require('../lib/import-keys')
 
 local function confirm(name, value)
   if value then
@@ -38,26 +38,17 @@ if not config.privateKey then
   end
 end
 
+
 local sshKey = sshRsa.loadPrivate(fs.readFile(config.privateKey))
 local fingerprint = sshRsa.fingerprint(sshKey)
 log("checking ssh fingerprint", fingerprint)
 
-local url = "https://api.github.com/users/" .. config.username .. "/keys"
-local json = assert(exec("curl", url))
-local keys = jsonParse(json)
-local valid = false
-for i = 1, #keys do
-  local key = sshRsa.loadPublic(keys[i].key)
-  local fp = sshRsa.fingerprint(key)
-  if fp == fingerprint then
-    valid = true
-  end
-  config.db.storage.writeKey(config.username, fp, sshRsa.writePublic(key))
-end
-if not valid then
+local storage = config.db.storage
+local url = importKeys(storage, config.username)
+
+if not storage.readKey(config.username, fingerprint) then
   error("Private key doesn't match keys at " .. url)
 end
-
 
 config.save()
 
