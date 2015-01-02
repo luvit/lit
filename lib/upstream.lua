@@ -101,7 +101,8 @@ local read, write, socket = assert(connect(host, port or 4821))
       end
     until #list == 0
     for ref, hash in pairs(refs) do
-      storage.write(ref, hash)
+      local name, version = string.match(ref, "^(.*)/v(.*)$")
+      storage.writeTag(name, version, hash)
     end
     return refs
   end
@@ -124,16 +125,13 @@ local read, write, socket = assert(connect(host, port or 4821))
 
   function upstream.read(name, version)
     remote.writeAs("read", name .. " " .. version)
-    local data = assert(remote.readAs("reply"))
-    local match, hash = string.match(data, "^([^ ]+) (.*)$")
-    return match, hash
+    return remote.readAs("reply")
   end
 
   function upstream.match(name, version)
     remote.writeAs("match", version and (name .. " " .. version) or name)
-    local data = assert(remote.readAs("reply"))
-    local match, hash = string.match(data, "^([^ ]+) (.*)$")
-    return match, hash
+    local data = remote.readAs("reply")
+    return data and string.match(data, "^([^ ]+) (.*)$")
   end
 
   --[[
