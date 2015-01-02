@@ -44,7 +44,13 @@ function handlers.wants(remote, hashes)
     if not data then
       return remote.writeAs("error", err or "No such hash: " .. hash)
     end
-    log("client want", hash, "string")
+    local kind, raw = git.deframe(data)
+    if kind == 'tag' then
+      local tag = git.decoders.tag(raw)
+      log("client want", tag.tag)
+    else
+      log("client want", hash, "string")
+    end
     remote.writeAs("send", data)
   end
 end
