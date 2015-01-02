@@ -70,6 +70,10 @@ function exports.loadPublic(data)
   error("TODO: Implement")
 end
 
+function exports.writePublic(data)
+  return "ssh-rsa " .. base64(data):gsub("\n", "")
+end
+
 function exports.sign(body, privateKey)
 
   -- Extract e and n from the private RSA key to build the ssh public key
