@@ -10,6 +10,14 @@ local function hashToPath(hash)
   return pathJoin("objects", string.sub(hash, 1, 2), string.sub(hash, 3))
 end
 
+local function tagPath(name, version)
+  return pathJoin("refs/tags", name, "v" .. version)
+end
+
+local function keyPath(author, fingerprint)
+  return pathJoin("keys", author, fingerprint)
+end
+
 return function (dir)
 
   local storage = {}
@@ -88,30 +96,16 @@ return function (dir)
     return nil, err
   end
 
-  --[[
-  storage.read(tag) -> hash
-  -------------------------
-
-  Given a full tag (name and version), return the hash or nil for no such match.
-  ]]--
-  function storage.read(tag)
-    local raw, err = fs.readFile(pathJoin("refs/tags/", tag))
+  local function read(path)
+    local raw, err = fs.readFile(path)
     if not raw then
       if string.match(err, "^ENOENT:") then return end
       return nil, err
     end
-    return raw and string.match(raw, "%x+")
+    return raw and raw:gsub("%s+$", "")
   end
 
-  --[[
-  storage.write(tag, hash)
-  ------------------------
-
-  Write the hash for a full tag (name and version). Fails if the tag already
-  exists.
-  ]]--
-  function storage.write(tag, hash)
-    local path = pathJoin("refs/tags/", tag)
+  local function write(path, value)
     local fd, success, err
     while true do
       fd, err = fs.open(path, "wx")
@@ -122,11 +116,41 @@ return function (dir)
        return nil, err
       end
     end
-    local data = hash .. "\n"
+    local data = value .. "\n"
     success, err = fs.write(fd, data)
     fs.fchmod(fd, 256)
     fs.close(fd)
     return success, err
+  end
+
+  --[[
+  storage.readTag(name, version) -> hash
+  -------------------------
+
+  Given a full name and version, return the hash or nil for no such match.
+  ]]--
+  function storage.readTag(name, version)
+    return read(tagPath(name, version))
+  end
+
+  --[[
+  storage.writeTag(name, version, hash
+  ------------------------
+
+  Write the hash for a full tag (name and version). Fails if the tag already
+  exists.
+
+  ]]--
+  function storage.writeTag(name, version, hash)
+    return write(tagPath(name, version), hash)
+  end
+
+  function storage.readKey(author, fingerprint)
+    return read(keyPath(author, fingerprint))
+  end
+
+  function storage.writeKey(author, fingerprint, key)
+    return write(keyPath(author, fingerprint), key)
   end
 
   --[[
@@ -137,7 +161,7 @@ return function (dir)
   package.
   ]]
   function storage.versions(name)
-    local iter, err = fs.scandir(pathJoin("refs/tags", name))
+    local iter, err = fs.scandir("refs/tags/" .. name)
     if not iter then
       if string.match(err, "^ENOENT:") then return end
       return nil, err
