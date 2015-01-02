@@ -62,31 +62,42 @@ local read, write, socket = assert(connect(host, port or 4821))
     repeat
       local hashes = list
       list = {}
-      remote.writeAs("wants", hashes)
+
+      -- Fetch any hashes from list we don't have already
+      local wants = {}
       for i = 1, #hashes do
         local hash = hashes[i]
-        local data = remote.readAs("send")
-        assert(digest("sha1", data) == hash, "hash mismatch in result object")
+        if not storage.has(hash) then
+          wants[#wants + 1] = hash
+        end
+      end
+      if #wants > 0 then
+        remote.writeAs("wants", wants)
+        for i = 1, #wants do
+          local hash = hashes[i]
+          local data = remote.readAs("send")
+          assert(digest("sha1", data) == hash, "hash mismatch in result object")
+          assert(storage.save(data) == hash)
+        end
+      end
+
+      -- Process the hashes looking for child nodes
+      for i = 1, #hashes do
+        local hash = hashes[i]
+        local data = storage.load(hash)
         local kind, body = deframe(data)
         if kind == "tag" then
           local tag = decodeTag(body)
           -- TODO: verify tag
           refs[tag.tag] = hash
-          -- Check if we have the object the tag points to.
-          if not storage.has(tag.object) then
-            -- If not, add it to the list
-            table.insert(list, tag.object)
-          end
+          table.insert(list, tag.object)
         elseif kind == "tree" then
           local tree = decodeTree(body)
           for i = 1, #tree do
             local subHash = tree[i].hash
-            if not storage.has(subHash) then
-              table.insert(list, subHash)
-            end
+            table.insert(list, subHash)
           end
         end
-        storage.save(data)
       end
     until #list == 0
     for ref, hash in pairs(refs) do
