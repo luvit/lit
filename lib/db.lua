@@ -248,7 +248,6 @@ return function (storage, host, port)
         queue[#queue + 1] = {name, version, hash}
       end
     end
-    disconnect()
     if #queue == 0 then
       error("All local versions are already published, maybe add a new local version?")
     end
@@ -270,6 +269,7 @@ return function (storage, host, port)
       end
       upstream.push(hash)
     end
+    disconnect()
   end
 
   --[[
