@@ -28,7 +28,9 @@ end
 
 function handlers.match(remote, data)
   local name, version = split(data)
-  -- TODO: check for mismatch
+  if not name then
+    return remote.writeAs("error", "Missing name parameter")
+  end
   local match, hash = db.match(name, version)
   if not match and hash then
     error(hash)
@@ -67,16 +69,23 @@ function handlers.send(remote, data)
     local tag = git.decoders.tag(raw)
     local username = string.match(tag.tag, "^[^/]+")
     importKeys(storage, username)
-    local body, signature = string.match(raw, "^(.*)%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-%s(.*)%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
+    local body, fingerprint, signature = string.match(raw, "^(.*)"
+      .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
+      .. "Format: sha256%-ssh%-rsa\n"
+      .. "Fingerprint: ([^\n]+)\n\n"
+      .. "(.*)\n"
+      .. "%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
 
     if not signature then
-      p(raw)
-      error("Missing signature")
+      error("Missing sha256-ssh-rsa signature")
     end
-    -- TODO: verify format
-    -- TODO: extract fingerprint
-    -- TODO: extract sshKey
-    local sshKey = ""
+    signature = signature:gsub("\n", "")
+    local sshKey = storage.readKey(username, fingerprint)
+    if not sshKey then
+      error("Invalid fingerprint")
+    end
+    sshKey = sshRsa.loadPublic(sshKey)
+    assert(sshRsa.fingerprint(sshKey) == fingerprint, "fingerprint mismatch")
     if not sshRsa.verify(body, signature, sshKey) then
       return remote.writeAs("error", "Signature verification failure")
     end

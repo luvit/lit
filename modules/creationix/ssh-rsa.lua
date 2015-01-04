@@ -2,7 +2,7 @@ exports.name = "creationix/ssh-rsa"
 exports.version = "0.1.0"
 
 local openssl = require('openssl')
-
+local hexToBin = require('creationix/hex-bin').hexToBin
 local pkey = openssl.pkey
 local bn = openssl.bn
 local digest = openssl.digest.digest
@@ -62,7 +62,7 @@ local function decodePrefix(input)
     bit.lshift(string.byte(input, 2), 16),
     bit.lshift(string.byte(input, 3), 8),
                string.byte(input, 4))
-  return string.sub(input, 5, 4 + len), string.sub(5 + len)
+  return string.sub(input, 5, 4 + len), string.sub(input, 5 + len)
 end
 
 
@@ -131,9 +131,36 @@ function exports.sign(body, privateKey)
     "-----END RSA SIGNATURE-----\n"
 end
 
+function exports.toPublicKey(data)
+
+  -- Convert to der format so openssl can read it
+  local e, n = exports.decode(data)
+  local ns = n:totext()
+  if string.byte(ns, 1) >= 128 then
+    ns = '\0' .. ns
+  end
+  local es = e:totext()
+  if string.byte(es, 1) >= 128 then
+    es = '\0' .. es
+  end
+  -- SEQUENCE (2 elem)
+  --   SEQUENCE (2 elem) (RSA public key uid) (NULL)
+  --   BIT SEQUENCE (1 elem) SEQUENCE (2 elem) (INTEGER n) (INTEGER e)
+  local der = hexToBin("30820122300D06092A864886F70D01010105000382010F003082010A")
+    .. string.char(0x02, 0x82) .. bn.number(#ns):totext() .. ns
+    .. string.char(0x02) .. bn.number(#es):totext() .. es
+
+  local key = pkey.read(der)
+  -- Make sure the encoding/decoding roudtrip worked
+  local rsa = key:parse().rsa:parse()
+  assert(rsa.e == e and rsa.n == n)
+
+  return key
+end
+
 -- Given a raw body, a raw signature (PEM encoded with metadata), and a
 -- publicKey instance, verify a signature.
 function exports.verify(body, signature, data)
-  -- TODO: really verify
-  return true
+  local key = exports.toPublicKey(data)
+  return key:verify(body, dec(signature), "sha256")
 end
