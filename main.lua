@@ -12,6 +12,7 @@ coroutine.wrap(function ()
   end, debug.traceback)
   if success then
     log("done", "success", "success")
+    os.exit(0)
   else
     log("fail", err, "failure")
     os.exit(-1)

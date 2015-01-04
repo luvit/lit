@@ -255,7 +255,6 @@ return function (storage, host, port)
     for i = 1, #queue do
       local name, version, hash = unpack(queue[i])
       log("publishing", name .. '@' .. version)
-      p(name, version, hash)
       local _, meta = readPackage(db, hash)
       -- Make sure all deps are satisifiable in upstream before publishing broken package there.
       local deps = meta.dependencies
