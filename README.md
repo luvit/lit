@@ -22,7 +22,7 @@ code you're downloading and a company could keep a list of authorized package
 authors they trust.  By default the client will trust any package where the
 signer is the package owner and the signature verifies.
 
-Initially verification will be done via dowloading public keys using github's
+Initially verification will be done via downloading public keys using github's
 web API.  Publishers will sign with the same ssh private key they use to push to
 github.  In fact this will be the only constrained operation in the network
 protocol.  While reads are anonymous, publishing a new package requires signing

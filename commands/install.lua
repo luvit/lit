@@ -38,7 +38,7 @@ function addDep(name, version)
     if version then
       error("No matching package: " .. name .. '@' .. version)
     else
-      error("No such pagkage: " .. name)
+      error("No such package: " .. name)
     end
   end
   if existing then
