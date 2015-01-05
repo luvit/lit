@@ -3,3 +3,4 @@ test-offline
 test-pull
 test-push
 test-server
+modules/creationix/require.lua

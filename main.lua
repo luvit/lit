@@ -1,7 +1,6 @@
-require('luvi').bundle.register("luvit-require", "modules/require.lua");
+require('luvi').bundle.register("luvit-require", "modules/creationix/require.lua");
+local uv = require('uv')
 local require = require('luvit-require')()("bundle:main.lua")
-local luvit = require('luvit')
-luvit.init()
 coroutine.wrap(function ()
   local log = require('./lib/log')
   local success, err = xpcall(function ()
@@ -18,4 +17,4 @@ coroutine.wrap(function ()
     os.exit(-1)
   end
 end)()
-luvit.run()
+uv.run()
