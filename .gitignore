@@ -4,3 +4,4 @@ test-pull
 test-push
 test-server
 modules/creationix/require.lua
+modules/creationix/pretty-print

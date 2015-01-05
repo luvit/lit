@@ -1,6 +1,7 @@
 require('luvi').bundle.register("luvit-require", "modules/creationix/require.lua");
 local uv = require('uv')
 local require = require('luvit-require')()("bundle:main.lua")
+_G.p = require('creationix/pretty-print').prettyPrint
 coroutine.wrap(function ()
   local log = require('./lib/log')
   local success, err = xpcall(function ()

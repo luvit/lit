@@ -2,6 +2,7 @@ return {
   name = "lit",
   version = "0.1.0",
   dependencies = {
+    "creationix/pretty-print@0.1.0",
     "creationix/require@1.0.1",
     "creationix/coro-fs@1.1.0",
     "creationix/coro-tcp@0.1.1",
