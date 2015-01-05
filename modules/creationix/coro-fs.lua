@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.0.0"
+exports.version = "1.1.0"
 
 local uv = require('uv')
 local fs = exports
