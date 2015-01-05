@@ -39,25 +39,26 @@ system will be as centralized or distributed as you wish, exactly the same way
 git works. Though the network protocol itself is nothing like gits pack
 protocol.
 
-## Handshake
+## Centralized and Distributed
 
-When a client makes a connection to a server, the following handshake is made:
+Each instance of the lit system has a local database.  When lit is running on
+online mode, it will check the  remote for updates and missing packages and
+cache everything downloaded locally.
 
-Client sends:
+This node can then act as client or server.  Simply run `lit serve` to start a
+local server.
 
-    LIT0,1\n
+To connect to a remote server use the `lit up` command.  By default it
+connects to `lit.luvit.io`, but can be set to any custom server like `lit up
+localcache.server`.  This way it's trivial to setup a caching proxy for a lan.
+This is highly recommended for any continuious deployment systems to take
+network pressure off the main server and to insulate yourself from outages in
+the main server.  Also this means it's easy to setup your own custom
+repositories that contain private code in addition to pulling from the public
+repo.
 
-meaning "Do you speak lit protocol versions 0 or 1?"
-
-At which point the server will respond with:
-
-    LIT0\n
-
-meaning "Yes I do, Let's speak version 0!"
-
-This way as future modifications to the protocol are added, clients and servers
-can easily and quickly negotiate what versions they implement.  This document is
-version 0.
+Currently the client starts out in offline mode, so you'll need to `lit up`
+before downloading any new packages.
 
 ## Binary Encoding
 
@@ -72,71 +73,90 @@ request for requesting up to 64 hashes at a time.  Note that the number of
 hashes is the value of `xxxxxx` + 1.
 
 For example sending the hash `9012ffdba8018cf1f7a9b77a3145a459d40fa125` would
-be:
+be the following binary data (21 bytes long):
 
-    10000000 90 12 ff db a8 01 8c f1 f7 a9 b7 7a 31 45 a4 59 d4 0f a1 25
+    base2(10000000) base16(9012ffdba8018cf1f7a9b77a3145a459d40fa125)
 
 ### SEND - 11Mxxxxx [Mxxxxxxx] data
 
 (M) is more flag, x is variable length unsigned int.
 
-This command is for
-sending an object to the remote end of the pair.  Clients send then publishing a
-new package and servers send then clients are downloading a package.
+This command is for sending an object to the remote end of the pair.  Clients
+send when publishing a new package and servers send when clients are
+downloading a package.
 
 The hash isn't included, but it calculated by the receiving end.  This way there
 can never be hash/value mismatches.  If a value is modified in transit, the hash
 won't match and the receiver will reject it.  You can only send a value the
 other side has asked for explicitly or you know they are expecting.
 
-For example the binary message `"Hello World\n"`, would be encoded as:
+For example the binary message `"Hello World\n"`, would be encoded as (13 bytes):
 
-    11001100 48 65 6c 6c 6f 20 57 6f 72 6c 64 0a
+    base2(11001100) base16(48656c6c6f20576f726c640a)
 
-### QUERY - COMMAND data '\n'
+### MESSAGE - COMMAND data '\n'
 
-A query is simply an UPPERCASE query string followed by query text (any number
-of space separated string arguments) ending with a newline.  The string is
-assumed to be UTF-8 encoded. and has it's whitespace trimmed off both ends
-before processing.  This is designed to be easily typed by a human in a netcat
-terminal for manual testing.
+All other messages are send in plain ASCII with the first byte required to be
+under `0x80` (no high bit set).  The message cannot contain newlines and is
+terminated by a newline. This is designed to allow manual queries using netcat in a terminal.
 
-Example:
+The command is first in the message followed by a space and the actual data.
 
-    MATCH creationix/git 1.2.3\n
+For example, here is a client asking an upstream for the best match to `creationix/git@0.1.0`:
 
-### REPLY - reply-json '\n'
+    > match creationix/git 0.1.0
+    reply 0.1.0 1462ea9bac27022e71db39b538b35b388a4873
 
-A reply is sent by servers.  It's a newline terminated JSON value.
+When a client is uploading a package upstream, the entire conversation is
+binary WANTS and SENDS, except for the final `done` sent by the server to
+confirm it was all received and stored to persistant storage.
 
-Example:
+    Client: SEND tag object
 
-    [1,2]\n
-    true\n
-    false\n
+    Server: WANTS hash to object in tag
 
-## Query System
+    Client: SEND object
 
-The low-level WANT/SEND commands are for syncing binary objects between two
-nodes, but the high-level QUERY/REPLY commands are for deciding what a client
-wants to download from a server.
+    Server: WANTS ... (blobs in tree not on server yet)
 
-For example, if a client wants to get the release hash for `creationix/jack` at
-version matching semver 0.1.2 they will send the query `"match creationix/jack 0.1.2"`
-and the server will reply with `"0.1.2
-59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4"`.  If the tag didn't exist or the range
-didn't match anything, the reply would be empty.  If the version is omitted, the
-newest version will be returned.
+    Client: SEND ... (client sends all wants at once)
+    Client: SEND ...
+    Client: SEND ...
 
-    > MATCH creationix/jack 0.1.2
-    >>
-    0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
-    > MATCH creationix/jack
-    >>
-    0.1.2 59d6ef82e7bbb7b2d585c3680d3207c3a1a97be4
+    (repeat till server has entire graph from tag)
 
-Other queries can be added later like package name searches or metadata
-searches.
+    Server: "done acb2e4b9bf8b7a99e63b830de5d610af2e8d49\n"
+
+Downloading from the server is similar, but in reverse and without the "done" message:
+
+    Client: "match creationix/sample-lib\n"
+
+    Server: "reply 0.1.1 acb2e4b9bf8b7a99e63b830de5d610af2e8d49\n"
+
+    Client: WANTS acb2e4b9bf8b7a99e63b830de5d610af2e8d49 (tag hash)
+
+    Server: SEND data for tag
+
+    Client: WANTS ...
+
+    Server: SEND ...
+    Server: SEND ...
+    Server: SEND ...
+
+    (repeat till client has all missing objects)
+
+The server will reject any "SEND" commands for objects it hasn't authorized.
+Sending a tag that's signed by it's owner is allowed.  Then any dependent
+objects on that tag's graph as requested by the server are authorized.
+
+Clients likewise should reject objects from servers that they weren't
+expecting.  Clients should also verify signatured in tag objects before asking
+for it's contents.
+
+Since the storage is content addressable, any files or folders already cached
+from a related package won't be transferred again.  When uploading or
+downloading a new package, only the changed blobs/trees will be transfered in
+addition to the tag object.
 
 ## Storage
 
@@ -167,6 +187,10 @@ This will create a tree structure like the following:
 │   │   └── ac958dae3e2f27af843956e64e6f37ec53f523
 │   └── f5
 │       └── 96188cbe1506da3e05626f6e25eee8a68b73cf
+├── keys
+│   └── creationix
+│       ├── e4b9bf8b7a99e63b830de5d610af2e
+│       └── etag
 └── refs
     └── tags
         └── creationix
@@ -177,28 +201,7 @@ This will create a tree structure like the following:
 This is a tiny repo containing a single small package, "creationix/greetings"
 version 0.0.1.
 
-This works great for small databases and interop with git, but it's slow and
-ineffecient for large databases.  A second backend is available if you have
-sophia db bindings available.
-
-That simply stores objects in sophia with the 20-byte key as key and the raw
-value as value for objects.  The refs will be stored as string keys pointing to
-the raw 20-byte hashes.
-
-This same database would have the following keys: (square brackets mean binary
-data, quotes mean string data.)
-
-```
-[10bda14b5d345a1a98ecfeed2d2478cb4b3d9ec4]
-[3f34a3a73291a7ed72b9726a2ffc891419f3ff18]
-[557db03de997c86a4a028e1ebd3a1ceb225be238]
-[8e7e2858b1734a9a846eb8b9ed91382dd290baed]
-[94acb2e4b9bf8b7a99e63b830de5d610af2e8d49]
-[ab626a6a7a67563e08486369d3eee0aba0ff47f8]
-[c9ac958dae3e2f27af843956e64e6f37ec53f523]
-[f596188cbe1506da3e05626f6e25eee8a68b73cf]
-"creationix/greetings/v0.0.1"
-```
+It also contains the public key for creationix cached locally with the etag from github's REST api.
 
 ## CLI Interface
 
