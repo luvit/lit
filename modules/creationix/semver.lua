@@ -1,5 +1,5 @@
 exports.name = "creationix/semver"
-exports.version = "1.0.0"
+exports.version = "1.0.1"
 local parse, normalize, match
 -- Make the module itself callable
 setmetatable(exports, {
