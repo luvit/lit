@@ -1,4 +1,4 @@
-local prompt = require('creationix/prompt')
+local prompt = require('creationix/prompt')(require('utils'))
 local fs = require('creationix/coro-fs')
 local env = require('env')
 local config = require('../lib/config')

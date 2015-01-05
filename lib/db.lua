@@ -219,8 +219,8 @@ return function (storage, host, port)
 
   function db.pull(name, version)
     assert(host, "upstream required to pull")
-    local match, hash = assert(upstream.match(name, version))
     connect()
+    local match, hash = assert(upstream.match(name, version))
     local success, err = upstream.pull(hash)
     disconnect()
     if success then

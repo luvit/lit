@@ -7,8 +7,7 @@ return {
     "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.0",
     "creationix/git@0.1.0",
-    "creationix/prompt@0.1.0",
+    "creationix/prompt@0.2.0",
     "creationix/ssh-rsa@0.1.0",
-    "creationix/test-lib",
   },
 }

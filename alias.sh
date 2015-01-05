@@ -1,1 +1,1 @@
-alias lit=LUVI_APP=`pwd`': luvit'
+alias lit=LUVI_APP=`pwd`': '`which luvit`
