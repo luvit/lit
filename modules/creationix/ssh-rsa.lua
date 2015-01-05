@@ -1,5 +1,5 @@
 exports.name = "creationix/ssh-rsa"
-exports.version = "0.1.0"
+exports.version = "0.1.1"
 
 local openssl = require('openssl')
 local hexToBin = require('creationix/hex-bin').hexToBin
