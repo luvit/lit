@@ -30,7 +30,7 @@ confirm("name", args[3] or run("git", "config", "--get", "user.name"))
 confirm("email", args[4] or run("git", "config", "--get", "user.email"))
 
 if not config.privateKey then
-  local path = env.get("HOME") .. '/.ssh/id_rsa'
+  local path = (env.get("HOME") or env.get("HOMEPATH")) .. '/.ssh/id_rsa'
   if fs.access(path, "r") then
     config.privateKey = path
   else
