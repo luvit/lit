@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.0.0"
+exports.version = "1.0.1"
 
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
