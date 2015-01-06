@@ -8,12 +8,12 @@ mkdir $BASE
 echo "database: $BASE/db.git" > $LIT_CONFIG
 echo "storage: git" >> $LIT_CONFIG
 
-export LUVI_APP=`pwd`:
+export LUVI_APP=`pwd`/app
 luvit auth creationix || exit -1
 luvit up localhost || exit -1
 
 mkdir $APP_DIR
-cp package.lua $APP_DIR
+cp app/package.lua $APP_DIR
 cd $APP_DIR
 luvit install || exit -1
 cd -
@@ -21,7 +21,7 @@ cd -
 APP_DIR=$BASE/app2
 
 mkdir $APP_DIR
-cp package.lua $APP_DIR
+cp app/ackage.lua $APP_DIR
 cd $APP_DIR
 luvit install || exit -1
 cd -
@@ -31,7 +31,7 @@ luvit down || exit -1
 APP_DIR=$BASE/app3
 
 mkdir $APP_DIR
-cp package.lua $APP_DIR
+cp app/package.lua $APP_DIR
 cd $APP_DIR
 luvit install || exit -1
 cd -

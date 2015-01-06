@@ -7,5 +7,5 @@ mkdir $BASE
 echo "database: $BASE/db.git" > $LIT_CONFIG
 echo "storage: git" >> $LIT_CONFIG
 
-export LUVI_APP=`pwd`:
+export LUVI_APP=`pwd`/app
 luvit serve || exit -1

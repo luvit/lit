@@ -1,5 +1,4 @@
 local hexToBin = require('creationix/hex-bin').hexToBin
-local JSON = require('json')
 
 function exports.error(message)
   return "\000" .. message .. "\n"

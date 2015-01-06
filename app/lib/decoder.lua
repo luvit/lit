@@ -1,5 +1,4 @@
 local binToHex = require('creationix/hex-bin').binToHex
-local JSON = require('json')
 
 local function decoder(isServer)
   local mode, handshakeDecode, agreementDecode, bodyDecode

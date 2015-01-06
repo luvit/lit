@@ -1,5 +1,5 @@
-local httpDecoder = require('http-decoder')
-local jsonParse = require('json').parse
+local httpDecoder = require('creationix/http-codec').decoder
+local jsonParse = require('creationix/json').parse
 local env = require('env')
 local exec = require('./exec')
 local sshRsa = require('creationix/ssh-rsa')

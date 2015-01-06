@@ -1,7 +1,9 @@
-modules/creationix/readline.lua
 test-offline
 test-pull
 test-push
 test-server
-modules/creationix/require.lua
-modules/creationix/pretty-print
+app/modules/creationix/require.lua
+app/modules/creationix/readline.lua
+app/modules/creationix/pretty-print
+app/modules/creationix/http-codec.lua
+app/modules/creationix/json.lua
