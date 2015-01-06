@@ -15,5 +15,13 @@ luvit up localhost || exit -1
 for file in app/modules/creationix/*
 do
   luvit add $file || exit -1
-  luvit publish $file || exit -1
+done
+
+luvit publish app/modules/creationix/readline.lua || exit -1
+
+for file in app/modules/creationix/*
+do
+  if [ $file != app/modules/creationix/readline.lua ]
+    then luvit publish $file || exit -1
+  fi
 done

@@ -21,7 +21,7 @@ cd -
 APP_DIR=$BASE/app2
 
 mkdir $APP_DIR
-cp app/ackage.lua $APP_DIR
+cp app/package.lua $APP_DIR
 cd $APP_DIR
 luvit install || exit -1
 cd -
