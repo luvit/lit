@@ -27,7 +27,7 @@ local function decode(chunk)
         hashes[i] = binToHex(string.sub(chunk, start, start + 19))
       end
 
-      return string.sub(chunk, 22), "wants", hashes
+      return string.sub(chunk, 2 + num * 20), "wants", hashes
     end
 
     -- SEND - 11Mxxxxx [Mxxxxxxx] deflated data
