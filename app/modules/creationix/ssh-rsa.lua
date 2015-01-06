@@ -133,24 +133,14 @@ end
 
 function exports.toPublicKey(data)
 
-  -- Convert to der format so openssl can read it
+  -- Convert to openssl format
   local e, n = exports.decode(data)
-  local ns = n:totext()
-  if string.byte(ns, 1) >= 128 then
-    ns = '\0' .. ns
-  end
-  local es = e:totext()
-  if string.byte(es, 1) >= 128 then
-    es = '\0' .. es
-  end
-  -- SEQUENCE (2 elem)
-  --   SEQUENCE (2 elem) (RSA public key uid) (NULL)
-  --   BIT SEQUENCE (1 elem) SEQUENCE (2 elem) (INTEGER n) (INTEGER e)
-  local der = hexToBin("30820122300D06092A864886F70D01010105000382010F003082010A")
-    .. string.char(0x02, 0x82) .. bn.number(#ns):totext() .. ns
-    .. string.char(0x02) .. bn.number(#es):totext() .. es
+  local key = pkey.new({
+    alg = 'rsa',
+    n = n,
+    e = e
+  })
 
-  local key = pkey.read(der)
   -- Make sure the encoding/decoding roudtrip worked
   local rsa = key:parse().rsa:parse()
   assert(rsa.e == e and rsa.n == n)
