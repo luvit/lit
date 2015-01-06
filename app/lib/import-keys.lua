@@ -41,8 +41,10 @@ return function (storage, username)
   local keys = jsonParse(json)
   for i = 1, #keys do
     local sshKey = sshRsa.loadPublic(keys[i].key)
-    local fingerprint = sshRsa.fingerprint(sshKey)
-    fingerprints[fingerprint] = sshKey
+    if sshKey then
+      local fingerprint = sshRsa.fingerprint(sshKey)
+      fingerprints[fingerprint] = sshKey
+    end
   end
 
   local iter = storage.fingerprints(username)
