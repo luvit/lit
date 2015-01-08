@@ -40,6 +40,9 @@ end
 local dirty = false
 if not config.defaultUpstream then
   config.defaultUpstream = "lit.luvit.io"
+  if not loaded then
+    config.upstream = config.defaultUpstream
+  end
   dirty = true
 end
 
