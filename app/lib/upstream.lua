@@ -34,6 +34,7 @@ return function (storage, url)
     local res = read()
     if not res then error("Missing server response") end
     if res.code == 400 then
+      p { req = req, res = res }
       local reason = read() or res.reason
       error("Invalid request: " .. reason)
     end
