@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.2.0"
+exports.version = "0.2.1"
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -143,7 +143,7 @@ end
 
 -- Make a client handshake connection
 function exports.handshake(options, request)
-  local key = string.gsub(base64(random(20)), "/n", "")
+  local key = string.gsub(base64(random(20)), "\n", "")
   local host = options.host
   local path = options.path or "/"
   local protocol = options.protocol
