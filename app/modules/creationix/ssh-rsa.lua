@@ -2,7 +2,6 @@ exports.name = "creationix/ssh-rsa"
 exports.version = "0.1.2"
 
 local openssl = require('openssl')
-local hexToBin = require('creationix/hex-bin').hexToBin
 local pkey = openssl.pkey
 local bn = openssl.bn
 local digest = openssl.digest.digest
