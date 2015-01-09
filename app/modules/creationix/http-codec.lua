@@ -17,10 +17,10 @@ limitations under the License.
 --]]
 
 exports.name = "creationix/http-codec"
-exports.version = "0.1.1"
+exports.version = "0.1.2"
 
 local sub = string.sub
-local match = string.match
+local gsub = string.gsub
 local lower = string.lower
 local find = string.find
 local format = string.format
@@ -91,6 +91,8 @@ exports.encoder = function ()
     local head, chunkedEncoding
     local version = item.version or 1.1
     if item.method then
+      local path = item.path
+      assert(path and #path > 0, "expected non-empty path")
       head = { item.method .. ' ' .. item.path .. ' HTTP/' .. version .. '\r\n' }
     else
       local reason = item.reason or STATUS_CODES[item.code]
@@ -102,6 +104,7 @@ exports.encoder = function ()
       if lowerKey == "transfer-encoding" then
         chunkedEncoding = lower(value) == "chunked"
       end
+      value = gsub(tostring(value), "[\r\n]+", " ")
       head[#head + 1] = key .. ': ' .. tostring(value) .. '\r\n'
     end
     head[#head + 1] = '\r\n'
