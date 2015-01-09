@@ -249,7 +249,7 @@ return function (storage, host, port)
       end
     end
     if #queue == 0 then
-      error("All local versions are already published, maybe add a new local version?")
+      print("Warning: All local versions are already published, maybe add a new local version?")
     end
 
     for i = 1, #queue do
