@@ -1,33 +1,9 @@
 local createServer = require('creationix/coro-tcp').createServer
 local httpCodec = require('creationix/http-codec')
 local websocketCodec = require('creationix/websocket-codec')
-
-local function readWrap(read, decode)
-  local buffer = ""
-  return function ()
-    while true do
-      if #buffer > 0 then
-        local item, extra = decode(buffer)
-        if item then
-          buffer = extra
-          return item
-        end
-      end
-      local chunk = read()
-      if not chunk then return end
-      buffer = buffer .. chunk
-    end
-  end
-end
-
-local function writeWrap(write, encode)
-  return function (item)
-    if not item then
-      return write()
-    end
-    return write(encode(item))
-  end
-end
+local wrapper = require('../lib/wrapper')
+local readWrap = wrapper.reader
+local writeWrap = wrapper.writer
 
 createServer("0.0.0.0", 8080, function (rawRead, rawWrite, socket)
   local peerName = socket:getpeername()
