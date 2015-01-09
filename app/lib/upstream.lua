@@ -21,6 +21,7 @@ return function (storage, url)
     error("Sorry, only ws:// protocol currently supported")
   end
   port = tonumber(port) or 80
+  if #path == 0 then path = "/" end
   local rawRead, rawWrite, socket = assert(connect(host, port))
   local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
   local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
