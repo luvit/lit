@@ -1,7 +1,5 @@
 local openssl = require('openssl')
 local digest = openssl.digest.digest
-local base64 = openssl.base64
-local random = openssl.random
 local connect = require('creationix/coro-tcp').connect
 local httpCodec = require('creationix/http-codec')
 local websocketCodec = require('creationix/websocket-codec')
@@ -97,16 +95,18 @@ return function (storage, url)
 
       -- Fetch any hashes from list we don't have already
       local wants = {}
+      local pending = {}
       for i = 1, #hashes do
         local hash = hashes[i]
-        if not storage.has(hash) then
+        if not pending[hash] and not storage.has(hash) then
           wants[#wants + 1] = hash
+          pending[hash] = true
         end
       end
       if #wants > 0 then
         remote.writeAs("wants", wants)
         for i = 1, #wants do
-          local hash = hashes[i]
+          local hash = wants[i]
           local data = remote.readAs("send")
           assert(digest("sha1", data) == hash, "hash mismatch in result object")
           assert(storage.save(data) == hash)
