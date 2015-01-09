@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.2.1"
+exports.version = "0.2.2"
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -156,7 +156,7 @@ function exports.handshake(options, request)
     {"Sec-Websocket-Key", key},
   }
   if host then
-    req.host = host
+    req[#req + 1] = {"Host", host}
   end
   if protocol then
     req[#req + 1] = {"Sec-Websocket-Protocol", protocol}
