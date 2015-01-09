@@ -15,12 +15,24 @@ local readWrap, writeWrap = wrapper.reader, wrapper.writer
 
 return function (storage, url)
   local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
-  if protocol ~= "ws" then
-    error("Sorry, only ws:// protocol currently supported")
+  local tls
+  if protocol == "ws" then
+    port = tonumber(port) or 80
+    tls = false
+  elseif protocol == "wss" then
+    port = tonumber(port) or 443
+    tls = true
+  else
+    error("Sorry, only ws:// or wss:// protocols supported")
   end
-  port = tonumber(port) or 80
   if #path == 0 then path = "/" end
   local rawRead, rawWrite, socket = assert(connect(host, port))
+
+  if tls then
+    error("TODO: Implement tls.wrap")
+    rawRead, rawWrite = tls.wrap(rawRead, rawWrite)
+  end
+
   local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
   local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
 

@@ -13,7 +13,11 @@ tcp.createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
   -- Handle the websocket handshake at the HTTP level
   local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
   local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
-  local res, err = websocketCodec.handleHandshake(read(), "lit")
+  local req = read()
+  if not req then
+    return write()
+  end
+  local res, err = websocketCodec.handleHandshake(req, "lit")
   if not res then
     write({code=400})
     write(err or "lit websocket request required")
