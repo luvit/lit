@@ -162,19 +162,21 @@ exports.decoder = function ()
     -- Parse the status/request line
     local head = {}
     local _, offset
-    _, offset, head.version, head.code, head.reason =
+    local version
+    _, offset, version, head.code, head.reason =
       find(chunk, "^HTTP/(%d%.%d) (%d+) ([^\r]+)\r\n")
     if offset then
       head.code = tonumber(head.code)
     else
-      _, offset, head.method, head.path, head.version =
+      _, offset, head.method, head.path, version =
         find(chunk, "^(%u+) ([^ ]+) HTTP/(%d%.%d)\r\n")
       if not offset then
         error("expected HTTP data")
       end
     end
-    head.version = tonumber(head.version)
-    head.keepAlive = head.version > 1.0
+    version = tonumber(version)
+    head.version = version
+    head.keepAlive = version > 1.0
 
     -- We need to inspect some headers to know how to parse the body.
     local contentLength
