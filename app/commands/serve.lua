@@ -174,8 +174,8 @@ createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
   local write = writeWrap(rawWrite, httpCodec.encoder())
   local res, err = websocketCodec.handshake(read(), "lit")
   if not res then
-    write({code=500})
-    write(err or "websocket request required")
+    write({code=400})
+    write(err or "lit websocket request required")
     return write()
   end
   write(res)
