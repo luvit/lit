@@ -1,14 +1,45 @@
-local digest = require('openssl').digest.digest
+local openssl = require('openssl')
+local digest = openssl.digest.digest
+local base64 = openssl.base64
+local random = openssl.random
+local connect = require('creationix/coro-tcp').connect
+local httpCodec = require('creationix/http-codec')
+local websocketCodec = require('creationix/websocket-codec')
+
 local git = require('creationix/git')
 local deframe = git.deframe
 local decodeTag = git.decoders.tag
 local decodeTree = git.decoders.tree
-local connect = require('creationix/coro-tcp').connect
-local makeRemote = require('./codec').makeRemote
 
-return function (storage, host, port)
-local read, write, socket = assert(connect(host, port or 4821))
-  local remote = makeRemote(read, write)
+local makeRemote = require('./codec').makeRemote
+local wrapper = require('../lib/wrapper')
+local readWrap, writeWrap = wrapper.reader, wrapper.writer
+
+return function (storage, url)
+  local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
+  if protocol ~= "ws" then
+    error("Sorry, only ws:// protocol currently supported")
+  end
+  port = tonumber(port) or 80
+  local rawRead, rawWrite, socket = assert(connect(host, port))
+  local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
+  local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
+
+  -- Perform the websocket handshake
+  assert(websocketCodec.handshake({
+    host = host,
+    path = path,
+    protocol = "lit"
+  }, function (req)
+    write(req)
+    return read()
+  end))
+
+  -- Upgrade the protocol to websocket
+  updateDecoder(websocketCodec.decode)
+  updateEncoder(websocketCodec.encode)
+
+  local remote = makeRemote(read, write, true)
   local upstream = {}
 
   -- Client: SEND tagObject

@@ -62,7 +62,11 @@ before downloading any new packages.
 
 ## Binary Encoding
 
-The network protocol consists of a stream of self-framed messages.
+The network protocol is based on websockets.
+
+TODO: document the new websocket protocol.  What follows is the old protocol.
+
+```
 
 ### WANT - 10xxxxxx (groups of 20 bytes)
 
@@ -157,6 +161,8 @@ Since the storage is content addressable, any files or folders already cached
 from a related package won't be transferred again.  When uploading or
 downloading a new package, only the changed blobs/trees will be transfered in
 addition to the tag object.
+
+```
 
 ## Storage
 

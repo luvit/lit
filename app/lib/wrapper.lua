@@ -13,6 +13,9 @@ function exports.reader(read, decode)
       if not chunk then return end
       buffer = buffer .. chunk
     end
+  end,
+  function (newDecode)
+    decode = newDecode
   end
 end
 
@@ -22,5 +25,8 @@ function exports.writer(write, encode)
       return write()
     end
     return write(encode(item))
+  end,
+  function (newEncode)
+    encode = newEncode
   end
 end

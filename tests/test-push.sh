@@ -10,7 +10,7 @@ echo "storage: git" >> $LIT_CONFIG
 
 export LUVI_APP=`pwd`/app
 luvit auth creationix || exit -1
-luvit up localhost || exit -1
+luvit up ws://localhost:4822 || exit -1
 
 for file in app/modules/creationix/*
 do
