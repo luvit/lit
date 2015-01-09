@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.2.2"
+exports.version = "0.2.3"
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -143,7 +143,7 @@ end
 
 -- Make a client handshake connection
 function exports.handshake(options, request)
-  local key = string.gsub(base64(random(20)), "\n", "")
+  local key = gsub(base64(random(20)), "\n", "")
   local host = options.host
   local path = options.path or "/"
   local protocol = options.protocol
@@ -173,12 +173,11 @@ function exports.handshake(options, request)
   local headers = {}
   for i = 1, #res do
     local name, value = unpack(res[i])
-    headers[string.lower(name)] = value
+    headers[lower(name)] = value
   end
 
-  if headers["upgrade"] ~= "websocket" or
-     string.lower(headers["connection"]) ~= "upgrade" then
-    return nil, "Invalid or missing upgrade headers in response"
+  if not headers.connection or lower(headers.connection) ~= "upgrade" then
+    return nil, "Invalid or missing connection upgrade header in response"
   end
   if headers["sec-websocket-accept"] ~= acceptKey(key) then
     return nil, "challenge key missing or mismatched"
@@ -202,10 +201,7 @@ function exports.handleHandshake(head, protocol)
   end
 
   -- Must have 'Upgrade: websocket' and 'Connection: Upgrade' headers
-  if not (headers.upgrade and headers.connection
-      and headers.upgrade == "websocket"
-      and lower(headers.connection) == "upgrade"
-  ) then return end
+  if not headers.connection or lower(headers.connection) ~= "upgrade" then return end
 
   -- Make sure it's a new client speaking v13 of the protocol
   if tonumber(headers["sec-websocket-version"]) < 13 then
