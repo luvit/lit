@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.1.0"
+exports.version = "0.1.1"
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -82,10 +82,20 @@ function exports.encode(item)
   local payload = item.payload
   assert(type(payload) == "string", "payload must be string")
   local len = #payload
+  if item.fin == nil then item.fin = true end
+  if item.opcode == nil then item.opcode = 2 end
   local chars = {
-    string.char(bit.bor(0x80, item.opcode or 2)),
-    string.char(bit.bor(item.mask and 0x80 or 0,
-      len < 0x10 and len or len < 0x10000 and 126 or 127))
+    string.char(bit.bor(
+      item.fin and 0x80 or 0,
+      item.rsv1 and 0x40 or 0,
+      item.rsv2 and 0x20 or 0,
+      item.rsv3 and 0x10 or 0,
+      item.opcode
+    )),
+    string.char(bit.bor(
+      item.mask and 0x80 or 0,
+      len < 0x10 and len or len < 0x10000 and 126 or 127
+    ))
   }
   if len >= 0x10000 then
     chars[3] = string.char(bit.band(bit.rshift(len, 56), 0xff))
