@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.1.2"
+exports.version = "0.2.0"
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -136,7 +136,60 @@ function exports.encode(item)
 end
 
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-function exports.handshake(head, protocol)
+
+local function acceptKey(key)
+  return gsub(base64(hexToBin(digest("sha1", key .. websocketGuid))), "\n", "")
+end
+
+-- Make a client handshake connection
+function exports.handshake(options, request)
+  local key = string.gsub(base64(random(20)), "/n", "")
+  local host = options.host
+  local path = options.path or "/"
+  local protocol = options.protocol
+  local req = {
+    method = "GET",
+    path = path,
+    {"Connection", "Upgrade"},
+    {"Upgrade", "websocket"},
+    {"Sec-Websocket-Version", "13"},
+    {"Sec-Websocket-Key", key},
+  }
+  if host then
+    req.host = host
+  end
+  if protocol then
+    req[#req + 1] = {"Sec-Websocket-Protocol", protocol}
+  end
+  local res = request(req)
+  if not res then
+    return nil, "Missing response from server"
+  end
+  -- Parse the headers for quick reading
+  if res.code ~= 101 then
+    return nil, "response must be code 101"
+  end
+
+  local headers = {}
+  for i = 1, #res do
+    local name, value = unpack(res[i])
+    headers[string.lower(name)] = value
+  end
+
+  if headers["upgrade"] ~= "websocket" or
+     string.lower(headers["connection"]) ~= "upgrade" then
+    return nil, "Invalid or missing upgrade headers in response"
+  end
+  if headers["sec-websocket-accept"] ~= acceptKey(key) then
+    return nil, "challenge key missing or mismatched"
+  end
+  if protocol and headers["sec-websocket-protocol"] ~= protocol then
+    return nil, "protocol missing or mistmatched"
+  end
+  return true
+end
+
+function exports.handleHandshake(head, protocol)
 
   -- Websocket connections must be GET requests
   if not head.method == "GET" then return end
@@ -150,7 +203,7 @@ function exports.handshake(head, protocol)
 
   -- Must have 'Upgrade: websocket' and 'Connection: Upgrade' headers
   if not (headers.upgrade and headers.connection
-      and lower(headers.upgrade) == "websocket"
+      and headers.upgrade == "websocket"
       and lower(headers.connection) == "upgrade"
   ) then return end
 
@@ -181,7 +234,7 @@ function exports.handshake(head, protocol)
     end
   end
 
-  local accept = gsub(base64(hexToBin(digest("sha1", key .. websocketGuid))), "\n", "")
+  local accept = acceptKey(key)
 
   local res = {
     code = 101,
