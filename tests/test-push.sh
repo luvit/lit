@@ -12,11 +12,6 @@ export LUVI_APP=`pwd`/app
 luvit auth creationix || exit -1
 luvit up ws://localhost:4822 || exit -1
 
-for file in app/modules/creationix/*
-do
-  luvit add $file || exit -1
-done
-
 luvit publish app/modules/creationix/readline.lua || exit -1
 
 for file in app/modules/creationix/*

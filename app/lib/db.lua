@@ -3,6 +3,7 @@ local git = require('creationix/git')
 local sshRsa = require('creationix/ssh-rsa')
 local fs = require('creationix/coro-fs')
 local readPackage = require('./read-package').read
+local readPackageFs = require('./read-package').readFs
 local import = require('./import')
 local export = require('./export')
 local makeUpstream = require('./upstream')
@@ -176,7 +177,7 @@ return function (storage, host, port)
   end
 
   --[[
-  db.tag(config, hash, message) -> name, version, hash
+  db.add(config, path) -> name, version, tagHash
   ------------------------------------------------
 
   Create an annotated tag for a package, sign using the config data and save to
@@ -187,22 +188,23 @@ return function (storage, host, port)
   for. If it's a tree, the entry `package.lua` is looked for and same eval is
   done looking for name and version.
 
-  If the tag with version already exists, it will error.
+  If the tag with version already exists, it will error return a soft error.
   ]]--
-  function db.tag(config, hash, message)
-    assert(config.key, "need ssh key to sign tag, setup with `lit auth`")
-    assert(hash, "Hash required to tag")
+  function db.add(config, path)
 
-    local kind, meta = readPackage(storage, hash)
-    local version = semver.normalize(meta.version)
-    local name = meta.name
-
-    assert(not storage.readTag(name, version), "tag already exists")
-    if string.sub(message, #message) ~= "\n" then
-      message = message .. "\n"
+    if not (config.key and config.name and config.email) then
+      error("Please run `lit auth` to configure your username")
     end
 
-    hash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
+    local meta = readPackageFs(path)
+    local name = meta.name
+    local version = semver.normalize(meta.version)
+    local tagHash = storage.readTag(name, version)
+    if tagHash then
+      return name, version, tagHash
+    end
+    local hash, kind = assert(db.import(path))
+    tagHash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
       object = hash,
       type = kind,
       tag = name .. "/v" .. version,
@@ -211,10 +213,11 @@ return function (storage, host, port)
         email = config.email,
         date = now()
       },
-      message = message
+      message = "\n"
     }), config.key))
-    storage.writeTag(name, version, hash)
-    return name, version, hash
+    storage.writeTag(name, version, tagHash)
+    log("added package", name .. "@" .. version .. " " .. tagHash)
+    return name, version, tagHash
   end
 
   function db.pull(name, version)
@@ -236,13 +239,22 @@ return function (storage, host, port)
   Given a package name, publish to upstream. Can only be done for tags the
   user has personally signed. Will conflict if upstream has tag already.
   ]]--
-  function db.publish(name)
+  function db.publish(config, path)
     assert(host, "upstream required to publish")
+
+    local name = db.add(config, path)
+
+
+    local iter = storage.versions(name)
+    if not iter then
+      error("No such package: " .. name)
+    end
 
     -- Loop through all local versions that aren't upstream
     local queue = {}
     connect()
-    for version in storage.versions(name) do
+    log("publishing", name)
+    for version in iter do
       if not upstream.read(name, version) then
         local hash = storage.readTag(name, version)
         queue[#queue + 1] = {name, version, hash}
@@ -280,9 +292,9 @@ return function (storage, host, port)
   function db.import(path)
     local stat = fs.lstat(path)
     if stat.type == "file" then
-      return import.blob(db, path)
+      return import.blob(db, path), "blob"
     elseif stat.type == "directory" then
-      return import.tree(db, path)
+      return import.tree(db, path), "tree"
     else
       error("Unsupported type " .. stat.type)
     end
