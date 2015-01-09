@@ -204,6 +204,10 @@ return function (storage, host, port)
       return name, version, tagHash
     end
     local hash, kind = assert(db.import(path))
+    local owner = string.match(name, "^([^/]+)/")
+    if owner ~= config.username then
+      error("You can only sign packages matching " .. config.username .. "/*, not " .. name)
+    end
     tagHash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
       object = hash,
       type = kind,
