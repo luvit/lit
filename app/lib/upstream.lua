@@ -31,7 +31,13 @@ return function (storage, url)
     protocol = "lit"
   }, function (req)
     write(req)
-    return read()
+    local res = read()
+    if not res then error("Missing server response") end
+    if res.code == 400 then
+      local reason = read() or res.reason
+      error("Invalid request: " .. reason)
+    end
+    return res
   end))
 
   -- Upgrade the protocol to websocket
