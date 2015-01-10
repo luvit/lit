@@ -10,7 +10,8 @@ local decodeTag = git.decoders.tag
 local decodeTree = git.decoders.tree
 
 local makeRemote = require('./codec').makeRemote
-local wrapper = require('../lib/wrapper')
+local wrapper = require('./wrapper')
+local tlsWrap = require('./tls-wrap')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 
 return function (storage, url)
@@ -29,8 +30,7 @@ return function (storage, url)
   local rawRead, rawWrite, socket = assert(connect(host, port))
 
   if tls then
-    error("TODO: Implement tls.wrap")
-    rawRead, rawWrite = tls.wrap(rawRead, rawWrite)
+    rawRead, rawWrite = tlsWrap(rawRead, rawWrite)
   end
 
   local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())

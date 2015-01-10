@@ -36,7 +36,6 @@ return function (read, write, options)
     ssl:shutdown()
     flush()
     write()
-    p("done");
   end
 
   local function plainRead()

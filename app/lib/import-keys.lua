@@ -1,27 +1,50 @@
-local httpDecoder = require('creationix/http-codec').decoder
-local jsonParse = require('creationix/json').parse
 local env = require('env')
-local exec = require('./exec')
+local httpCodec = require('creationix/http-codec')
+local jsonParse = require('creationix/json').parse
 local sshRsa = require('creationix/ssh-rsa')
+local connect = require('creationix/coro-tcp').connect
+local tlsWrap = require('./tls-wrap')
+local wrapper = require('./wrapper')
 local log = require('./log')
 
 return function (storage, username)
 
-  local url = "https://api.github.com/users/" .. username .. "/keys"
-  local options = {"-i"}
+  local path = "/users/" .. username .. "/keys"
+  local url = "https://api.github.com" .. path
+
+  local req = {
+    method = "GET",
+    path = path,
+    {"Host", "api.github.com"},
+    {"User-Agent", "lit"},
+  }
+
   -- Set GITHUB_TOKEN to a token from https://github.com/settings/tokens/new to increase the rate limit
   local token = env.get("GITHUB_TOKEN")
   if token then
-    options[#options + 1] = "-H"
-    options[#options + 1] = "Authorization: token " .. token
+    req[#req + 1] = {"Authorization", "token " .. token}
   end
+
   local etag = storage.readKey(username, "etag")
   if etag then
-    options[#options + 1] = "-H"
-    options[#options + 1] = "If-None-Match: " .. etag
+    req[#req + 1] = {"If-None-Match", etag}
   end
-  options[#options + 1] = url
-  local head, json = httpDecoder()(assert(exec("curl", unpack(options))))
+
+  local read, write = assert(connect("api.github.com", "https"))
+  read, write = tlsWrap(read, write)
+
+  read = wrapper.reader(read, httpCodec.decoder())
+  write = wrapper.writer(write, httpCodec.encoder())
+
+  write(req)
+  local head = read()
+  local json = {}
+  for item in read do
+    if #item == 0 then break end
+    json[#json + 1] = item
+  end
+  write()
+  json = table.concat(json)
   if head.code == 304 then return url end
   if head.code == 404 then
     error("No such username at github: " .. username)
