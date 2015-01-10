@@ -11,7 +11,7 @@ return {
     "creationix/git@0.1.0",
     "creationix/prompt@0.2.0",
     "creationix/ssh-rsa@0.1.2",
-    "creationix/http-codec@0.1.2",
+    "creationix/http-codec@0.1.3",
     "creationix/websocket-codec@0.2.3",
     "creationix/json@2.5.0",
   },

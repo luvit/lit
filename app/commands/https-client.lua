@@ -10,12 +10,14 @@ read, write = tlsWrap(read, write)
 read = wrapper.reader(read, httpCodec.decoder())
 write = wrapper.writer(write, httpCodec.encoder())
 
-write({
+write {
   method = "GET",
   path = "/",
   {"Host", "luvit.io"}
-})
+}
+p(read())
 for item in read do
+  if #item == 0 then break end
   p(item)
 end
 write()
