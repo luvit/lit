@@ -60,51 +60,42 @@ repo.
 Currently the client starts out in offline mode, so you'll need to `lit up`
 before downloading any new packages.
 
-## Binary Encoding
+## Network Protocol
 
-The network protocol is based on websockets.
+The network protocol is a websocket subprotocol.  The main lit.luvit.io server
+is listening on IPv4 and IPv6 on ws:// and wss://.
 
-TODO: document the new websocket protocol.  What follows is the old protocol.
+The core lit subprotocol doesn't require encryption since it verifies everything
+using RSA signatures and SHA1 hashes.  The wss:// transport is for use in
+networks where HTTP proxies break normal websocket traffic.
 
-```
+Within this websocket stream, there are binary and text frames.
 
-### WANT - 10xxxxxx (groups of 20 bytes)
+### WANTS - 0x00, num, num * (groups of 20 bytes)
 
-`xxxxxx` is number of wants - 1.
+The first binary frame type is a list of hashes the sender wants.  The first
+byte is a null byte.  The second is the number of hashes.  Then groups of 20
+bytes follow for each hash in raw binary form.
 
-This command is to tell the other end you want several hashes.  It's a bulk
-request for requesting up to 64 hashes at a time.  Note that the number of
-hashes is the value of `xxxxxx` + 1.
+### SEND - deflated raw data
 
-For example sending the hash `9012ffdba8018cf1f7a9b77a3145a459d40fa125` would
-be the following binary data (21 bytes long):
+When the sender wishes to send a git object, it simply sends the raw data
+as deflated binary data.  Since deflate can't start with a null byte, this is
+safe.
 
-    base2(10000000) base16(9012ffdba8018cf1f7a9b77a3145a459d40fa125)
+### ERROR - '\0', message
 
-### SEND - 11Mxxxxx [Mxxxxxxx] data
+Errors are sent as text frames that start with a null byte.
 
-(M) is more flag, x is variable length unsigned int.
+### MESSAGE NAME, ' ', data
 
-This command is for sending an object to the remote end of the pair.  Clients
-send when publishing a new package and servers send when clients are
-downloading a package.
+All other messages are send as plain text frames.  The name of the event is
+the first part of the string up till the first space.  Everything following
+the space is the data to this event.
 
-The hash isn't included, but it calculated by the receiving end.  This way there
-can never be hash/value mismatches.  If a value is modified in transit, the hash
-won't match and the receiver will reject it.  You can only send a value the
-other side has asked for explicitly or you know they are expecting.
+### Examples
 
-For example the binary message `"Hello World\n"`, would be encoded as (13 bytes):
-
-    base2(11001100) base16(48656c6c6f20576f726c640a)
-
-### MESSAGE - COMMAND data '\n'
-
-All other messages are send in plain ASCII with the first byte required to be
-under `0x80` (no high bit set).  The message cannot contain newlines and is
-terminated by a newline. This is designed to allow manual queries using netcat in a terminal.
-
-The command is first in the message followed by a space and the actual data.
+This is designed to allow manual queries using `wscat` in a terminal.
 
 For example, here is a client asking an upstream for the best match to `creationix/git@0.1.0`:
 
