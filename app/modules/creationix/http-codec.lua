@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 
 exports.name = "creationix/http-codec"
-exports.version = "0.1.2"
+exports.version = "0.1.3"
 
 local sub = string.sub
 local gsub = string.gsub
@@ -254,13 +254,16 @@ exports.decoder = function ()
     -- Make sure we have at least one byte to process
     if length == 0 then return end
 
+    if length >= bytesLeft then
+      mode = decodeEmpty
+    end
+
     -- If the entire chunk fits, pass it all through
     if length <= bytesLeft then
       bytesLeft = bytesLeft - length
       return chunk, ""
     end
 
-    mode = decodeEmpty
     return sub(chunk, 1, bytesLeft), sub(chunk, bytesLeft + 1)
   end
 
