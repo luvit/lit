@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 
 exports.name = "creationix/http-codec"
-exports.version = "0.1.3"
+exports.version = "0.1.4"
 
 local sub = string.sub
 local gsub = string.gsub
@@ -25,6 +25,7 @@ local lower = string.lower
 local find = string.find
 local format = string.format
 local concat = table.concat
+local match = string.match
 
 local STATUS_CODES = {
   [100] = 'Continue',
@@ -231,16 +232,16 @@ exports.decoder = function ()
   end
 
   function decodeChunked(chunk)
-    local match, term
-    match, term = match(chunk, "^(%x+)(..)")
-    if not match then return end
+    local len, term
+    len, term = match(chunk, "^(%x+)(..)")
+    if not len then return end
     assert(term == "\r\n")
-    local length = tonumber(match, 16)
-    if #chunk < length + 4 + #match then return end
+    local length = tonumber(len, 16)
+    if #chunk < length + 4 + #len then return end
     if length == 0 then
       mode = decodeHead
     end
-    chunk = sub(chunk, #match + 3)
+    chunk = sub(chunk, #len + 3)
     assert(sub(chunk, length + 1, length + 2) == "\r\n")
     return sub(chunk, 1, length), sub(chunk, length + 3)
   end
