@@ -153,8 +153,6 @@ from a related package won't be transferred again.  When uploading or
 downloading a new package, only the changed blobs/trees will be transfered in
 addition to the tag object.
 
-```
-
 ## Storage
 
 There are two storage backends.  One is implemented in pure lua and is
