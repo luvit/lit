@@ -167,10 +167,6 @@ function exports.handshake(options, request)
   end
   -- Parse the headers for quick reading
   if res.code ~= 101 then
-    print("HTTP Request")
-    p(req)
-    print("HTTP Response")
-    p(res)
     return nil, "response must be code 101"
   end
 
