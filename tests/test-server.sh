@@ -1,5 +1,6 @@
 #!/bin/sh
 
+LIT=`pwd`/lit
 BASE=`pwd`/test-server
 export LIT_CONFIG=$BASE/config
 rm -rf $BASE
@@ -8,5 +9,5 @@ echo "database: $BASE/db.git" > $LIT_CONFIG
 echo "storage: git" >> $LIT_CONFIG
 
 export LUVI_APP=`pwd`/app
-luvit down || exit -1
-luvit serve || exit -1
+$LIT down || exit -1
+$LIT serve || exit -1
