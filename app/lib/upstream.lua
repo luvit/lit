@@ -11,7 +11,7 @@ local decodeTree = git.decoders.tree
 
 local makeRemote = require('./codec').makeRemote
 local wrapper = require('./wrapper')
-local tlsWrap = require('./tls-wrap')
+local tlsWrap = require('creationix/coro-tls').wrap
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 
 return function (storage, url)

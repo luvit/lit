@@ -1,8 +1,11 @@
 local openssl = require('openssl')
 local bit = require('bit')
 
+exports.name = "creationix/coro-tls"
+exports.version = "1.0.0"
+
 -- Given a read/write pair, return a new read/write pair for plaintext
-return function (read, write, options)
+exports.wrap = function (read, write, options)
   if options then
     -- TODO: process options
   end
