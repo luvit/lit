@@ -5,13 +5,13 @@ This project is a command-line client and server for sharing luvit modules.
 The server listens on a TCP port and speaks a custom sync protocol.
 
 Message integrity is implemented via the nature of content addressable storage
-using git compatable hashes of blobs, trees, and annotated tags.  It's
+using git compatible hashes of blobs, trees, and annotated tags.  It's
 impossible to change any data without affecting the hashes of all parent nodes
 in the graph (assuming you don't discover a way to create sha1 collisions within
 the git format constraints).
 
 Reading from the server is anonymous and has zero authentication.  Clients
-simply query the server for things like list of package versions for a specefic
+simply query the server for things like list of package versions for a specific
 package, list of package names that match a search, list of authors, packaged by
 a author, etc.
 
@@ -51,7 +51,7 @@ local server.
 To connect to a remote server use the `lit up` command.  By default it
 connects to `lit.luvit.io`, but can be set to any custom server like `lit up
 localcache.server`.  This way it's trivial to setup a caching proxy for a lan.
-This is highly recommended for any continuious deployment systems to take
+This is highly recommended for any continuous deployment systems to take
 network pressure off the main server and to insulate yourself from outages in
 the main server.  Also this means it's easy to setup your own custom
 repositories that contain private code in addition to pulling from the public
@@ -104,7 +104,7 @@ For example, here is a client asking an upstream for the best match to `creation
 
 When a client is uploading a package upstream, the entire conversation is
 binary WANTS and SENDS, except for the final `done` sent by the server to
-confirm it was all received and stored to persistant storage.
+confirm it was all received and stored to persistent storage.
 
     Client: SEND tag object
 
@@ -145,7 +145,7 @@ Sending a tag that's signed by it's owner is allowed.  Then any dependent
 objects on that tag's graph as requested by the server are authorized.
 
 Clients likewise should reject objects from servers that they weren't
-expecting.  Clients should also verify signatured in tag objects before asking
+expecting.  Clients should also verify signatures in tag objects before asking
 for it's contents.
 
 Since the storage is content addressable, any files or folders already cached
@@ -156,7 +156,7 @@ addition to the tag object.
 ## Storage
 
 There are two storage backends.  One is implemented in pure lua and is
-compatable with the git client.  This allows using tools like `git fsck` to
+compatible with the git client.  This allows using tools like `git fsck` to
 verify the sanity of the local database and allows storing mirrors on github.
 
 This will create a tree structure like the following:
@@ -256,7 +256,7 @@ field in the local `package.lua` file.
 The version is guessed based on the result of `git describe` or the `version`
 field of `package.lua`.
 
-The tree is imported recursivly into the local database, a tag is created
+The tree is imported recursively into the local database, a tag is created
 containing the name and version.  This tag is then signed using the local
 identity.
 
@@ -320,4 +320,3 @@ run sync when you're online if you want to get updates.
 
 Running a sync will grab the latest versions and latest semver matches of all
 local packages in the db.
-
