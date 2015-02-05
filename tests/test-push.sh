@@ -13,11 +13,11 @@ export LUVI_APP=`pwd`/app
 $LIT auth creationix || exit -1
 $LIT up ws://localhost:4822 || exit -1
 
-$LIT publish app/modules/creationix/readline.lua || exit -1
+$LIT publish app/modules/readline.lua || exit -1
 
-for file in app/modules/creationix/*
+for file in app/modules/*
 do
-  if [ $file != app/modules/creationix/readline.lua ]
+  if [ $file != app/modules/readline.lua ]
     then $LIT publish $file || exit -1
   fi
 done
