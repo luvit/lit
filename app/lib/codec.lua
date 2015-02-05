@@ -1,5 +1,5 @@
-local binToHex = require('creationix/hex-bin').binToHex
-local hexToBin = require('creationix/hex-bin').hexToBin
+local binToHex = require('hex-bin').binToHex
+local hexToBin = require('hex-bin').hexToBin
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
 

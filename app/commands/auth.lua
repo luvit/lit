@@ -1,10 +1,10 @@
-local prompt = require('creationix/prompt')(require('creationix/pretty-print'))
-local fs = require('creationix/coro-fs')
+local prompt = require('prompt')(require('pretty-print'))
+local fs = require('coro-fs')
 local env = require('env')
 local config = require('../lib/config')
 local log = require('../lib/log')
 local exec = require('../lib/exec')
-local sshRsa = require('creationix/ssh-rsa')
+local sshRsa = require('ssh-rsa')
 local importKeys = require('../lib/import-keys')
 
 local function confirm(name, value)
@@ -51,6 +51,3 @@ if not storage.readKey(config.username, fingerprint) then
 end
 
 config.save()
-
-
-

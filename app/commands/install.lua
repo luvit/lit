@@ -27,15 +27,15 @@ else
 end
 
 local deps = parseDeps(list)
+p(deps)
 
-for name, value in pairs(deps) do
+for alias, value in pairs(deps) do
+  local name = value.name
   if not storage.readTag(name, value.version) then
     log("pulling package", name .. '@' .. value.version)
     db.pull(name, value.version)
   end
   log("installing package", name .. '@' .. value.version)
-  local target = pathJoin(uv.cwd(), "modules", name)
+  local target = pathJoin(uv.cwd(), "modules", alias)
   db.export(target, value.hash)
 end
-
-

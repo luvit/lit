@@ -1,12 +1,12 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "0.1.2"
+exports.version = "1.0.0"
 exports.dependencies = {
   "creationix/coro-channel@1.0.0"
 }
 
 local uv = require('uv')
-local wrapStream = require('creationix/coro-channel').wrapStream
+local wrapStream = require('coro-channel').wrapStream
 
 local function makeCallback()
   local thread = coroutine.running()

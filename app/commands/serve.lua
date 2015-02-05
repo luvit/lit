@@ -1,6 +1,6 @@
-local tcp = require('creationix/coro-tcp')
-local httpCodec = require('creationix/http-codec')
-local websocketCodec = require('creationix/websocket-codec')
+local tcp = require('coro-tcp')
+local httpCodec = require('http-codec')
+local websocketCodec = require('websocket-codec')
 
 local log = require('../lib/log')
 local wrapper = require('../lib/wrapper')

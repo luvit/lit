@@ -1,10 +1,10 @@
 exports.name = "creationix/prompt"
-exports.version = "0.2.0"
+exports.version = "1.0.0"
 exports.dependencies = {
   "creationix/readline@1.0.1"
 }
 
-local readLine = require('creationix/readline').readLine
+local readLine = require('readline').readLine
 
 return function (options)
   -- Wrapper around readline to provide a nice blocking version for coroutines

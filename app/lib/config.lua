@@ -1,5 +1,5 @@
 local log = require('./log')
-local fs = require('creationix/coro-fs')
+local fs = require('coro-fs')
 local env = require('env')
 local makeDb = require('../lib/db')
 

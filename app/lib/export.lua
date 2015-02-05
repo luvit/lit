@@ -1,8 +1,8 @@
-local git = require('creationix/git')
+local git = require('git')
 local log = require('./log')
 local modes = git.modes
 local pathJoin = require('luvi').path.join
-local fs = require('creationix/coro-fs')
+local fs = require('coro-fs')
 
 local function exportBlob(db, path, hash, mode)
   log("export blob", path, "string")

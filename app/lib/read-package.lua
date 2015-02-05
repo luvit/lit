@@ -1,5 +1,5 @@
-local git = require('creationix/git')
-local fs = require('creationix/coro-fs')
+local git = require('git')
+local fs = require('coro-fs')
 local pathJoin = require('luvi').path.join
 
 local function makeAny()

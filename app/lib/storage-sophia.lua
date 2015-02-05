@@ -1,8 +1,8 @@
 local Sophia = require('./sophia.so')
 local digest = require('openssl').digest.digest
 local log = require('./log')
-local hexToBin = require('creationix/hex-bin').hexToBin
-local binToHex = require('creationix/hex-bin').binToHex
+local hexToBin = require('hex-bin').hexToBin
+local binToHex = require('hex-bin').binToHex
 
 local function escape(c)
   return "%" .. c

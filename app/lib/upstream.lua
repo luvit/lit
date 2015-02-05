@@ -1,17 +1,17 @@
 local openssl = require('openssl')
 local digest = openssl.digest.digest
-local connect = require('creationix/coro-tcp').connect
-local httpCodec = require('creationix/http-codec')
-local websocketCodec = require('creationix/websocket-codec')
+local connect = require('coro-tcp').connect
+local httpCodec = require('http-codec')
+local websocketCodec = require('websocket-codec')
 
-local git = require('creationix/git')
+local git = require('git')
 local deframe = git.deframe
 local decodeTag = git.decoders.tag
 local decodeTree = git.decoders.tree
 
 local makeRemote = require('./codec').makeRemote
 local wrapper = require('./wrapper')
-local tlsWrap = require('creationix/coro-tls').wrap
+local tlsWrap = require('coro-tls').wrap
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 
 return function (storage, url)

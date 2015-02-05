@@ -4,8 +4,8 @@ local uv = require('uv')
 local pathJoin = require('luvi').path.join
 local db = config.db
 local readPackageFs = require('../lib/read-package').readFs
-local fs = require('creationix/coro-fs')
-local git = require('creationix/git')
+local fs = require('coro-fs')
+local git = require('git')
 local parseDeps = require('../lib/parse-deps')
 local miniz = require('miniz')
 
@@ -119,4 +119,3 @@ if #args > 1 then
 else
   makeApp(cwd)
 end
-

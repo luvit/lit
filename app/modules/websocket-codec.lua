@@ -1,10 +1,13 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "0.2.3"
+exports.version = "1.0.0"
+exports.dependencies = {
+  "creationix/hex-bin@1.0.0"
+}
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
 local random = require('openssl').random
-local hexToBin = require('creationix/hex-bin').hexToBin
+local hexToBin = require('hex-bin').hexToBin
 
 local band = bit.band
 local bor = bit.bor

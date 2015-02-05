@@ -1,9 +1,9 @@
 local env = require('env')
-local httpCodec = require('creationix/http-codec')
-local jsonParse = require('creationix/json').parse
-local sshRsa = require('creationix/ssh-rsa')
-local connect = require('creationix/coro-tcp').connect
-local tlsWrap = require('creationix/coro-tls').wrap
+local httpCodec = require('http-codec')
+local jsonParse = require('json').parse
+local sshRsa = require('ssh-rsa')
+local connect = require('coro-tcp').connect
+local tlsWrap = require('coro-tls').wrap
 local wrapper = require('./wrapper')
 local log = require('./log')
 

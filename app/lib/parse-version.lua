@@ -1,4 +1,4 @@
-local normalize = require('creationix/semver').normalize
+local normalize = require('semver').normalize
 return function (item)
   -- split out name and version
   local name = string.match(item, "^([^@]+)")

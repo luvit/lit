@@ -1,5 +1,5 @@
-local makeChroot = require('creationix/coro-fs').chroot
-local semver = require('creationix/semver')
+local makeChroot = require('coro-fs').chroot
+local semver = require('semver')
 local digest = require('openssl').digest.digest
 local pathJoin = require('luvi').path.join
 local deflate = require('miniz').deflate

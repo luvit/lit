@@ -2,10 +2,10 @@ local log = require('../lib/log')
 local config = require('../lib/config')
 local db = config.db
 local storage = db.storage
-local git = require('creationix/git')
+local git = require('git')
 local digest = require('openssl').digest.digest
 local importKeys = require('../lib/import-keys')
-local sshRsa = require('creationix/ssh-rsa')
+local sshRsa = require('ssh-rsa')
 
 local function split(line)
   local args = {}
