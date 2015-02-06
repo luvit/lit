@@ -14,8 +14,13 @@ for i = 1, #keys do
 end
 newEnv[#newEnv + 1] = "LUVI_APP=" .. uv.cwd()
 
+local newArgs = {}
+for i = 2, #args do
+  newArgs[i - 1] = args[i]
+end
+
 local child = uv.spawn(uv.exepath(), {
-  args = args,
+  args = newArgs,
   env = newEnv,
   stdio = {0,1,2}
 }, function (...)
