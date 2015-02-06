@@ -31,17 +31,23 @@ local function importGraph(files, root, hash)
   walk(root, hash)
 end
 
+local ignores = {
+  [".git"] = true,
+}
+
 local function importFolder(fs, files, path)
   for entry in fs.scandir(path) do
-    local newPath = #path > 0 and path .. "/" ..entry.name or entry.name
-    if entry.type == "directory" then
-      log("importing directory", newPath)
-      files[newPath .. "/"] = ""
-      importFolder(fs, files, newPath)
-    elseif entry.type == "file" then
-      -- log("importing file", newPath)
-      local data = assert(fs.readFile(newPath))
-      files[newPath] = data
+    if not ignores[entry.name] then
+      local newPath = #path > 0 and path .. "/" ..entry.name or entry.name
+      if entry.type == "directory" then
+        log("importing directory", newPath)
+        files[newPath .. "/"] = ""
+        importFolder(fs, files, newPath)
+      elseif entry.type == "file" then
+        -- log("importing file", newPath)
+        local data = assert(fs.readFile(newPath))
+        files[newPath] = data
+      end
     end
   end
 end
