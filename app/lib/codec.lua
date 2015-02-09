@@ -103,6 +103,7 @@ function exports.makeRemote(webRead, webWrite, isClient)
 
   local function readAs(expectedName)
     local name, data = read()
+    if name == "error" then return nil, data end
     assert(expectedName == name, "Expected " .. expectedName .. ", but found " .. name)
     return data
   end
