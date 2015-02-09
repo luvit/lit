@@ -27,7 +27,6 @@ else
 end
 
 local deps = parseDeps(list)
-p(deps)
 
 for alias, value in pairs(deps) do
   local name = value.name
