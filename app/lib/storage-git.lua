@@ -108,7 +108,7 @@ return function (dir)
   local function write(path, value)
     local fd, success, err
     while true do
-      fd, err = fs.open(path, "wx")
+      fd, err = fs.open(path, "w")
       if fd then break end
       if string.match(err, "^ENOENT:") then
         fs.mkdirp(pathJoin(path, ".."))
