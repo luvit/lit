@@ -196,7 +196,7 @@ return function (dir)
     return function ()
       repeat
         local entry = iter()
-        if entry and entry.type == "file" and entry.name ~= "etag" then
+        if entry and entry.type == "file" and entry.name ~= "etag" and entry.name ~= "owners" then
           local parts = {}
           for part in entry.name:gmatch("..") do
             parts[#parts + 1] = part

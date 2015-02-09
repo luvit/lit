@@ -74,7 +74,20 @@ local function verifySignature(username, raw)
   signature = signature:gsub("\n", "")
   local sshKey = storage.readKey(username, fingerprint)
   if not sshKey then
-    error("Invalid fingerprint")
+    local owners = storage.readKey(username, 'owners')
+    if owners then
+      for owner in owners:gmatch("[^\n]+") do
+        importKeys(storage, owner)
+        sshKey = storage.readKey(owner, fingerprint)
+        if sshKey then break end
+      end
+      if not sshKey then
+        error("Not in group: " .. username)
+      end
+    end
+    if not sshKey then
+      error("Invalid fingerprint")
+    end
   end
   sshKey = sshRsa.loadPublic(sshKey)
   assert(sshRsa.fingerprint(sshKey) == fingerprint, "fingerprint mismatch")
