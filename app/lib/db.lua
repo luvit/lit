@@ -10,6 +10,7 @@ local makeUpstream = require('./upstream')
 local uv = require('uv')
 local parseVersion = require('./parse-version')
 local log = require('./log')
+local jsonStringify = require('json').stringify
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -316,6 +317,32 @@ return function (storage, host, port)
       path = path .. ".lua"
     end
     return export[tag.type](db, path, tag.object)
+  end
+
+  local function makeRequest(config, name, req)
+    if not (config.key and config.name and config.email) then
+      error("Please run `lit auth` to configure your username")
+    end
+    assert(host, "upstream required to publish")
+    req.username = config.username
+    local json = jsonStringify(req) .. "\n"
+    local signature = sshRsa.sign(json, config.key)
+    connect()
+    local success, err = upstream[name](signature)
+    disconnect()
+    return success, err
+  end
+
+  function db.claim(config, org)
+    return makeRequest(config, "claim", { org = org })
+  end
+
+  function db.share(config, org, friend)
+    return makeRequest(config, "share", { org = org, friend = friend })
+  end
+
+  function db.unclaim(config, org)
+    return makeRequest(config, "unclaim", { org = org })
   end
 
   return db

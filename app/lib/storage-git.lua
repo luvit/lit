@@ -118,7 +118,7 @@ return function (dir)
     end
     local data = value .. "\n"
     success, err = fs.write(fd, data)
-    fs.fchmod(fd, 256)
+    fs.fchmod(fd, 384)
     fs.close(fd)
     return success, err
   end

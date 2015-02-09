@@ -197,6 +197,21 @@ return function (storage, url)
     return socket:close()
   end
 
+  function upstream.claim(request)
+    remote.writeAs("claim", request)
+    return remote.readAs("reply")
+  end
+
+  function upstream.share(request)
+    remote.writeAs("share", request)
+    return remote.readAs("reply")
+  end
+
+  function upstream.unclaim(request)
+    remote.writeAs("unclaim", request)
+    return remote.readAs("reply")
+  end
+
   return upstream
 
 end

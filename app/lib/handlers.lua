@@ -6,6 +6,9 @@ local git = require('git')
 local digest = require('openssl').digest.digest
 local importKeys = require('../lib/import-keys')
 local sshRsa = require('ssh-rsa')
+local githubQuery = require('./github-request')
+local jsonParse = require('json').parse
+local jsonStringify = require('json').stringify
 
 local function split(line)
   local args = {}
@@ -56,6 +59,28 @@ function exports.want(remote, hash)
   return exports.wants(remote, {hash})
 end
 
+local function verifySignature(username, raw)
+  importKeys(storage, username)
+  local body, fingerprint, signature = string.match(raw, "^(.*)"
+    .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
+    .. "Format: sha256%-ssh%-rsa\n"
+    .. "Fingerprint: ([^\n]+)\n\n"
+    .. "(.*)\n"
+    .. "%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
+
+  if not signature then
+    error("Missing sha256-ssh-rsa signature")
+  end
+  signature = signature:gsub("\n", "")
+  local sshKey = storage.readKey(username, fingerprint)
+  if not sshKey then
+    error("Invalid fingerprint")
+  end
+  sshKey = sshRsa.loadPublic(sshKey)
+  assert(sshRsa.fingerprint(sshKey) == fingerprint, "fingerprint mismatch")
+  return sshRsa.verify(body, signature, sshKey)
+end
+
 function exports.send(remote, data)
   local authorized = remote.authorized or {}
   local kind, raw = git.deframe(data)
@@ -68,25 +93,7 @@ function exports.send(remote, data)
     end
     local tag = git.decoders.tag(raw)
     local username = string.match(tag.tag, "^[^/]+")
-    importKeys(storage, username)
-    local body, fingerprint, signature = string.match(raw, "^(.*)"
-      .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
-      .. "Format: sha256%-ssh%-rsa\n"
-      .. "Fingerprint: ([^\n]+)\n\n"
-      .. "(.*)\n"
-      .. "%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
-
-    if not signature then
-      error("Missing sha256-ssh-rsa signature")
-    end
-    signature = signature:gsub("\n", "")
-    local sshKey = storage.readKey(username, fingerprint)
-    if not sshKey then
-      error("Invalid fingerprint")
-    end
-    sshKey = sshRsa.loadPublic(sshKey)
-    assert(sshRsa.fingerprint(sshKey) == fingerprint, "fingerprint mismatch")
-    if not sshRsa.verify(body, signature, sshKey) then
+    if not verifySignature(username, raw) then
       return remote.writeAs("error", "Signature verification failure")
     end
     tag.hash = hash
@@ -128,4 +135,90 @@ function exports.send(remote, data)
     remote.authorized = nil
   end
 
+end
+
+local function verifyRequest(raw)
+  local data = assert(jsonParse(string.match(raw, "([^\n]+)")))
+  assert(verifySignature(data.username, raw), "Signature verification failure")
+  return data
+end
+
+function exports.claim(remote, raw)
+  -- The request is RSA signed by the .username field.
+  -- This will verify the signature and return the data table
+  local data = verifyRequest(raw)
+  local username, org = data.username, data.org
+
+  if storage.readKey(org, "owners") then
+    error("Org already claimed: " .. org)
+  end
+
+  local head, members = githubQuery("/orgs/" .. org .. "/public_members")
+  if head.code == 404 then
+    error("Not an org name: " .. org)
+  end
+  local member = false
+  for i = 1, #members do
+    if members[i].login == username then
+      member = true
+      break
+    end
+  end
+  if not member then
+    error("Not a public member of: " .. org)
+  end
+
+  assert(storage.writeKey(org, "owners", username))
+  remote.writeAs("reply", "claimed")
+end
+
+function exports.share(remote, raw)
+  local data = verifyRequest(raw)
+  local username, org, friend = data.username, data.org, data.friend
+  local owners = storage.readKey(org, "owners")
+  if not owners then
+    error("No such claimed group: " .. org)
+  end
+  local found = false
+  for owner in owners:gmatch("[^\n]+") do
+    if owner == username then
+      found = true
+    end
+    if owner == friend then
+      error("Friend already in group: " .. friend)
+    end
+  end
+  if not found then
+    error("Can't share a group you're not in: " .. org)
+  end
+
+  assert(storage.writeKey(org, "owners", owners .. "\n" .. friend))
+
+  remote.writeAs("reply", "shared")
+end
+
+function exports.unclaim(remote, raw)
+  local data = verifyRequest(raw)
+  local username, org = data.username, data.org
+
+  local found
+  local owners = {}
+  for owner in storage.readKey(org, "owners"):gmatch("[^\n]+") do
+    if owner == username then
+      found = true
+    else
+      owners[#owners + 1] = owner
+    end
+  end
+  if not found then
+    error("Non a member of group: " .. org)
+  end
+
+  if #owners > 0 then
+    assert(storage.writeKey(org, "owners", table.concat(owners, "\n")))
+  else
+    assert(storage.revokeKey(org, "owners"))
+  end
+
+  remote.writeAs("reply", "unshared")
 end

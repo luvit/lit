@@ -39,6 +39,7 @@ tcp.createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
   local success
   success, err = xpcall(function ()
     for command, data in remote.read do
+      log("client command", peerName .. " - " .. command)
       local handler = handlers[command]
       if handler then
         handler(remote, data)
