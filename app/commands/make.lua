@@ -33,6 +33,7 @@ end
 
 local ignores = {
   [".git"] = true,
+  ["modules"] = true,
 }
 
 local function importFolder(fs, files, path)
@@ -44,7 +45,7 @@ local function importFolder(fs, files, path)
         files[newPath .. "/"] = ""
         importFolder(fs, files, newPath)
       elseif entry.type == "file" then
-        -- log("importing file", newPath)
+        log("importing file", newPath)
         local data = assert(fs.readFile(newPath))
         files[newPath] = data
       end
