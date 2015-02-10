@@ -40,6 +40,10 @@ local function importFolder(fs, files, path)
   for entry in fs.scandir(path) do
     if not ignores[entry.name] then
       local newPath = #path > 0 and path .. "/" ..entry.name or entry.name
+      if not entry.type then
+        -- Windows doesn't seem to get type from libuv at all in scandir.
+        entry.type = fs.stat(newPath).type
+      end
       if entry.type == "directory" then
         log("importing directory", newPath)
         files[newPath .. "/"] = ""
