@@ -64,7 +64,7 @@ local function makeApp(path)
   log("processing deps", #meta.dependencies)
   local deps = parseDeps(meta.dependencies)
 
-  local target = pathJoin(uv.cwd(), meta.target or meta.name)
+  local target = pathJoin(uv.cwd(), meta.target or meta.name:match("[^/]+$"))
   if require('ffi').os == "Windows" then
     target = target .. ".exe"
   end
