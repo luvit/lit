@@ -65,6 +65,9 @@ local function makeApp(path)
   local deps = parseDeps(meta.dependencies)
 
   local target = pathJoin(uv.cwd(), meta.target or meta.name)
+  if require('ffi').os == "Windows" then
+    target = target .. ".exe"
+  end
   log("creating binary", target)
   local fd = assert(uv.fs_open(target, "w", 511)) -- 0777
 
