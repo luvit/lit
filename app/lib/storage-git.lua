@@ -157,6 +157,11 @@ return function (dir)
     return fs.unlink(keyPath(author, fingerprint))
   end
 
+  -- Return an iterator of all package accounts
+  function storage.dir(path)
+    return fs.scandir("refs/tags/" .. path)
+  end
+
   --[[
   storage.versions(name) -> iterator<version>
   -------------------------------------------
