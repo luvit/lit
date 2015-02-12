@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.2.0"
+exports.version = "1.2.1"
 
 local uv = require('uv')
 local fs = exports
@@ -128,6 +128,7 @@ function fs.chroot(base)
     close = fs.close,
   }
   local function resolve(path)
+    assert(path, "path missing")
     return pathJoin(base, pathJoin(path))
   end
   function chroot.mkdir(path, mode)

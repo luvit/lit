@@ -1,14 +1,18 @@
 List of all internal functions to be organized
 
-## Low Level Storage Commands
+Low Level Storage Commands
+==========================
 
-These commands are implemented at the low level and are very backend specefic.
+These are the filesystem abstraction needed by lit's local database.
 
-storage.write(path, raw)   - Write mutable data by path
-storage.put(path, raw)     - Write immutable data by path
-storage.read(path) -> raw  - Read mutable data by path (nil if not found)
-storate.delete(path)       - Delete an entry
-storage.iter(path) -> iter - Iterate over children of path {name,type}
+storage.write(path, raw)     - Write mutable data by path
+storage.put(path, raw)       - Write immutable data by path
+storage.read(path) -> raw    - Read mutable data by path (nil if not found)
+storage.delete(path)         - Delete an entry
+storage.nodes(path) -> iter  - Iterate over node children of path
+                               (empty iter if not found)
+storage.leaves(path) -> iter - Iterate over node children of path
+                               (empty iter if not found)
 
 ## Object Level Storage Commands
 
