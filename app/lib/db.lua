@@ -28,6 +28,9 @@ db.owners(org) -> iter                 - Iterates lines of keys/$org.owners
 db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
+
+db.import(path) -> kind, hash          - Import a file or tree into database
+db.export(hash, path) -> kind          - Export a hash to a path
 ]]
 
 return function (path)
@@ -201,6 +204,14 @@ return function (path)
       end
     end
     storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
+  end
+
+  function db.import(path)
+-- db.import(path) -> kind, hash          - Import a file or tree into database
+  end
+
+  function db.export(hash, path)
+-- db.export(hash, path) -> kind          - Export a hash to a path
   end
 
   return db

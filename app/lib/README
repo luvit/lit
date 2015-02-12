@@ -44,7 +44,27 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
+db.import(path) -> kind, hash          - Import a file or tree into database
+db.export(hash, path) -> kind          - Export a hash to a path
 
+Package Commands
+================
+
+package.query(path) -> author, tag, version - Query an on-disk path for package info.
+package.tag(config, hash) -> hash           - Create a signed tag and return the hash.
+
+
+Server API Handlers
+===================
+
+handlers.read
+handlers.match
+handlers.wants
+handlers.want
+handlers.send
+handlers.claim
+handlers.share
+handlers.unclaim
 
 git.toDate (seconds) -> { seconds, offset}  - Convert from unix timestamp to git timestamp
 git.fromDate ({seconds, offset}) -> seconds - Reverse the conversion
