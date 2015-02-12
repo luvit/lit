@@ -1,346 +1,207 @@
-local semver = require('semver')
-local git = require('git')
-local sshRsa = require('ssh-rsa')
-local fs = require('coro-fs')
-local readPackage = require('./read-package').read
-local readPackageFs = require('./read-package').readFs
-local import = require('./import')
-local export = require('./export')
-local makeUpstream = require('./upstream')
-local uv = require('uv')
-local parseVersion = require('./parse-version')
-local log = require('./log')
-local jsonStringify = require('json').stringify
-
--- Takes a time struct with a date and time in UTC and converts it into
--- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
--- Trickier than you'd think because os.time assumes the struct is in local time.
-local function now()
-  local t_secs = os.time() -- get seconds if t was in local time.
-  local t = os.date("*t", t_secs) -- find out if daylight savings was applied.
-  local t_UTC = os.date("!*t", t_secs) -- find out what UTC t was converted to.
-  t_UTC.isdst = t.isdst -- apply DST to this time if necessary.
-  local UTC_secs = os.time(t_UTC) -- find out the converted time in seconds.
-  return {
-    seconds = t_secs,
-    offset = os.difftime(t_secs, UTC_secs) / 60
-  }
-end
-
 --[[
-DB Interface
-============
 
-Medium level interface over storage used to implement commands.
+Mid Level Storage Commands
+=========================
 
-exports(storage, upstream) -> db
---------------------------------
+These commands work at a higher level and consume the low-level storage APIs.
 
-Given two storage instances (one local, one remote if online), return a
-db interface implementation.
-]]--
-return function (storage, host, port)
+db.load(hash) -> kind, value           - error if not found
+db.loadAs(kind, hash) -> value         - error if not found or wrong type
+db.save(kind, value) -> hash           - encode and save to objects/$ha/$sh
+db.hashes() -> iter                    - Iterate over all hashes
 
-  local upstream
-  local timer
-  local function connect()
-    if timer then
-      timer:close()
-      timer = nil
-    end
-    upstream = upstream or assert(makeUpstream(storage, host, port))
-  end
+db.read(author, tag, version) -> hash  - Read from refs/tags/$author/$tag/v$version
+db.write(author, tag, version, hash)   - Write to refs/tags/$suthor/$tag/v$version
+db.authors() -> iter                   - Iterate over refs/tags/*
+db.tags(author) -> iter                - Iterate nodes in refs/tags/$author/**
+db.versions(author, tag) -> iter       - Iterate leaves in refs/tags/$author/$tag/*
 
-  local function close()
-    if timer then
-      timer:close()
-      timer = nil
-    end
-    if upstream then
-      upstream.close()
-      upstream = nil
-    end
-  end
+db.readKey(author, fingerprint) -> key - Read from keys/$author/$fingerprint
+db.putKey(author, fingerprint, key)    - Write to keys/$author/$fingerprint
+db.revokeKey(author, fingerprint)      - Delete keys/$author/$fingerprint
+db.fingerprints(author) -> iter        - iter of fingerprints
 
-  local function disconnect()
-    if timer then
-      timer:stop()
-    else
-      timer = uv.new_timer()
-      timer:unref()
-    end
-    timer:start(100, 0, close)
-  end
+db.getEtag(author) -> etag             - Read keys/$author.etag
+db.setEtag(author, etag)               - Writes keys/$author.etag
+
+db.owners(org) -> iter                 - Iterates lines of keys/$org.owners
+db.isOwner(org, author) -> bool        - Check if a user is an org owner
+db.addOwner(org, author)               - Add a new owner
+db.removeOwner(org, author)            - Remove an owner
+]]
+
+return function (path)
+  local storage = require('./storage')(path)
+  local git = require('git')
+  local normalize = require('semver').normalize
+  local digest = require('openssl').digest.digest
+  local deflate = require('miniz').deflate
+  local inflate = require('miniz').inflate
+  local deframe = git.deframe
+  local frame = git.frame
+  local decoders = git.decoders
+  local encoders = git.encoders
 
   local db = {}
-  db.storage = storage
 
-  --[[
-  db.match(name, version) -> version, hash
-  ----------------------------------------
-
-  Given a semver version (or nil for any) return the best available version with
-  hash (or nil if no match).
-
-  If online, combine remote versions list.
-  ]]--
-  function db.match(name, version)
-    local iter, err = storage.versions(name)
-    if err then return nil, err end
-    local match = iter and semver.match(version, iter)
-    if host then
-      -- If we're online, check the remote for a possibly better match.
-      local upMatch, hash
-      connect()
-      upMatch, hash = upstream.match(name, version)
-      disconnect()
-      if not upMatch then return nil, hash end
-      if not semver.gte(match, upMatch) then
-        return upMatch, hash
-      end
-    end
-    if not match then return end
-    local hash = storage.readTag(name, match)
-    if not hash then return end
-    return match, hash
+  local function assertHash(hash)
+    assert(hash and #hash == 40 and hash:match("^%x+$"), "Invalid hash")
   end
 
-  --[[
-  db.read(name, version) -> hash
-
-  Read hash directly without doing match. Checks upstream if not found locally.
-  ]]--
-  function db.read(name, version)
-    assert(version, "version required for direct read")
-    version = semver.normalize(version)
-    local hash, err = storage.readTag(name, version)
-    if not hash and host then
-      connect()
-      hash = upstream.read(name, version)
-      disconnect()
-    end
-    if hash then
-      return hash
-    end
-    return nil, err or "no such tag"
+  local function hashPath(hash)
+    return string.format("objects/%s/%s", hash:sub(1, 2), hash:sub(3))
   end
 
-  --[[
-  db.loadAs(kind, hash) -> value
-  -----------------------------------
+  function db.load(hash)
+    assertHash(hash)
+    local compressed = assert(storage.read(hashPath(hash)), "No such hash")
+    local kind, raw = deframe(inflate(compressed, 1))
+    return kind, decoders[kind](raw)
+  end
 
-  Given a git kind and hash, return the pre-parsed value.  Verifies the kind is
-  the kind expected.
-
-  If missing locally and there is an upstream, load from upstream and cache
-  locally before returning.
-
-  When fetching from upstream, pre-fetch all child objects till the object's
-  entire sub-graph is cached locally.
-  ]]--
   function db.loadAs(kind, hash)
-    local data, err = db.load(hash)
-    assert(not err, err)
-    if not data then return nil, err end
-
-    local actualKind
-    actualKind, data = git.deframe(data)
-    assert(kind == actualKind, "kind mistmatch")
-    return git.decoders[kind](data)
+    assertHash(hash)
+    local actualKind, value = db.load(hash)
+    assert(kind == actualKind, "Kind mismatch")
+    return value
   end
 
-  db.load = function (hash)
-    local data, err = storage.load(hash)
-    if not data and host then
-      connect()
-      data, err = upstream.load(hash)
-      disconnect()
-      assert(storage.save(data) == hash)
-    end
-    return data, err
+  function db.save(kind, value)
+    local framed = frame(kind, encoders[kind](value))
+    local hash = digest("sha1", framed)
+    -- 0x1000 = TDEFL_WRITE_ZLIB_HEADER
+    -- 4095 = Huffman+LZ (slowest/best compression)
+    storage.put(hashPath(hash), deflate(framed, 0x1000 + 4095))
+    return hash
   end
 
-  db.save = storage.save
-
-  --[[
-  db.saveAs(kind, value) -> hash
-  ------------------------------
-
-  Value can be an object to be encoded or a pre-encoded raw string.  It will
-  auto-detect since blobs are the same either way.
-  ]]--
-  function db.saveAs(kind, value)
-    if type(value) ~= "string" then
-      value = git.encoders[kind](value)
-    end
-    value = git.frame(kind, value)
-    return storage.save(value)
-  end
-
-  --[[
-  db.add(config, path) -> name, version, tagHash
-  ------------------------------------------------
-
-  Create an annotated tag for a package, sign using the config data and save to
-  storage returning the hash.
-
-  The tag name and version are pulled from the data itself. If it's a blob, it's
-  run as lua code in a sandbox and exports.name and exports.version are looked
-  for. If it's a tree, the entry `package.lua` is looked for and same eval is
-  done looking for name and version.
-
-  If the tag with version already exists, it will error return a soft error.
-  ]]--
-  function db.add(config, path)
-
-    if not (config.key and config.name and config.email) then
-      error("Please run `lit auth` to configure your username")
-    end
-
-    local meta = readPackageFs(path)
-    local name = meta.name
-    local version = semver.normalize(meta.version)
-    local tagHash = storage.readTag(name, version)
-    if tagHash then
-      return name, version, tagHash
-    end
-    local hash, kind = assert(db.import(path))
-    tagHash = db.saveAs("tag", sshRsa.sign(git.encoders.tag({
-      object = hash,
-      type = kind,
-      tag = name .. "/v" .. version,
-      tagger = {
-        name = config.name,
-        email = config.email,
-        date = now()
-      },
-      message = "\n"
-    }), config.key))
-    storage.writeTag(name, version, tagHash)
-    log("added package", name .. "@" .. version .. " " .. tagHash)
-    return name, version, tagHash
-  end
-
-  function db.pull(name, version)
-    assert(host, "upstream required to pull")
-    connect()
-    local match, hash = assert(upstream.match(name, version))
-    local success, err = upstream.pull(hash)
-    disconnect()
-    if success then
-      return match, hash
-    end
-    return nil, err
-  end
-
-  --[[
-  db.publish(name, version)
-  ---------------------
-
-  Given a package name, publish to upstream. Can only be done for tags the
-  user has personally signed. Will conflict if upstream has tag already.
-  ]]--
-  function db.publish(config, path)
-    assert(host, "upstream required to publish")
-
-    local name = db.add(config, path)
-
-
-    local iter = storage.versions(name)
-    if not iter then
-      error("No such package: " .. name)
-    end
-
-    -- Loop through all local versions that aren't upstream
-    local queue = {}
-    connect()
-    log("publishing", name)
-    for version in iter do
-      if not upstream.read(name, version) then
-        local hash = storage.readTag(name, version)
-        queue[#queue + 1] = {name, version, hash}
-      end
-    end
-    if #queue == 0 then
-      print("Warning: All local versions are already published, maybe add a new local version?")
-    end
-
-    for i = 1, #queue do
-      local name, version, hash = unpack(queue[i])
-      log("publishing", name .. '@' .. version)
-      local _, meta = readPackage(db, hash)
-      -- Make sure all deps are satisifiable in upstream before publishing broken package there.
-      local deps = meta.dependencies
-      if deps then
-        for i = 1, #deps do
-          local name, version = parseVersion(deps[i])
-          if not upstream.match(name, version) then
-            error("Cannot find suitable dependency match in upstream for: " .. deps[i])
-          end
+  function db.hashes()
+    local groups = storage.nodes("objects")
+    local prefix, iter
+    return function ()
+      while true do
+        if prefix then
+          local rest = iter()
+          if rest then return prefix .. rest end
+          prefix = nil
+          iter = nil
         end
+        prefix = groups()
+        if not prefix then return end
+        iter = storage.leaves("objects/" .. prefix)
       end
-      upstream.push(hash)
-    end
-    disconnect()
-  end
-
-  --[[
-  db.import(path) -> hash
-  -----------------------
-
-  Import a file or tree from the filesystem and return the hash
-  ]]--
-  function db.import(path)
-    local stat = fs.lstat(path)
-    if stat.type == "file" then
-      return import.blob(db, path), "blob"
-    elseif stat.type == "directory" then
-      return import.tree(db, path), "tree"
-    else
-      error("Unsupported type " .. stat.type)
     end
   end
 
-  --[[
-  db.export(path, hash)
-  -----------------------
+  function db.read(author, tag, version)
+    version = normalize(version)
+    local path = string.format("refs/tags/%s/%s/v%s", author, tag, version)
+    local hash = storage.read(path)
+    if not hash then return end
+    return hash:sub(1, 40)
+  end
 
-  Export a package to the filesystem.
-  ]]--
-  function db.export(path, hash)
-    local tag = assert(db.loadAs("tag", hash))
-    if tag.type == "blob" then
-      path = path .. ".lua"
+  function db.write(author, tag, version, hash)
+    version = normalize(version)
+    assertHash(hash)
+    local path = string.format("refs/tags/%s/%s/v%s", author, tag, version)
+    p(path, hash)
+    storage.write(path, hash .. "\n")
+  end
+
+  function db.authors()
+    return storage.nodes("refs/tags")
+  end
+
+  function db.tags(author)
+    local prefix = "refs/tags/" .. author .. "/"
+    local stack = {storage.nodes(prefix)}
+    return function ()
+      while true do
+        if #stack == 0 then return end
+        local tag = stack[#stack]()
+        if tag then
+          local path = stack[#stack - 1]
+          local newPath = path and path .. "/" .. tag or tag
+          stack[#stack + 1] = newPath
+          stack[#stack + 1] = storage.nodes(prefix .. newPath)
+          return newPath
+        end
+        stack[#stack] = nil
+        stack[#stack] = nil
+      end
     end
-    return export[tag.type](db, path, tag.object)
   end
 
-  local function makeRequest(config, name, req)
-    if not (config.key and config.name and config.email) then
-      error("Please run `lit auth` to configure your username")
+  function db.versions(author, tag)
+    local path = string.format("refs/tags/%s/%s", author, tag)
+    return storage.leaves(path)
+  end
+
+  local function keyPath(author, fingerprint)
+    return string.format("keys/%s/%s", author, fingerprint)
+  end
+
+  function db.readKey(author, fingerprint)
+    return storage.read(keyPath(author, fingerprint))
+  end
+
+  function db.putKey(author, fingerprint, key)
+    return storage.put(keyPath(author, fingerprint), key)
+  end
+
+  function db.revokeKey(author, fingerprint)
+    return storage.delete(keyPath(author, fingerprint))
+  end
+
+  function db.fingerprints(author)
+    return storage.leaves("keys/" .. author)
+  end
+
+  function db.getEtag(author)
+    return storage.read("keys/" .. author .. ".etag")
+  end
+
+  function db.setEtag(author, etag)
+    return storage.write("keys/" .. author .. ".etag", etag)
+  end
+
+  local function ownersPath(org)
+    return "keys/" .. org .. ".owners"
+  end
+
+  function db.owners(org)
+    local owners = storage.read(ownersPath(org))
+    if not owners then
+      return function() end
     end
-    assert(host, "upstream required to publish")
-    req.username = config.username
-    local json = jsonStringify(req) .. "\n"
-    local signature = sshRsa.sign(json, config.key)
-    connect()
-    local success, err = upstream[name](signature)
-    disconnect()
-    return success, err
+    return owners:gmatch("[^\n]+")
   end
 
-  function db.claim(config, org)
-    return makeRequest(config, "claim", { org = org })
+  function db.isOwner(org, author)
+    for owner in db.owners(org) do
+      if author == owner then return true end
+    end
+    return false
   end
 
-  function db.share(config, org, friend)
-    return makeRequest(config, "share", { org = org, friend = friend })
+  function db.addOwner(org, author)
+    if db.isOwner(org, author) then return end
+    local path = ownersPath(org)
+    local owners = storage.read(path)
+    owners = (owners or "") .. author .. "\n"
+    storage.write(path, owners)
   end
 
-  function db.unclaim(config, org)
-    return makeRequest(config, "unclaim", { org = org })
+  function db.removeOwner(org, author)
+    local list = {}
+    for owner in db.owners(org) do
+      if owner ~= author then
+        list[#list + 1] = owner
+      end
+    end
+    storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
   end
 
   return db
-
 end

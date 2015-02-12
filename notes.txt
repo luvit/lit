@@ -8,13 +8,14 @@ These are the filesystem abstraction needed by lit's local database.
 storage.write(path, raw)     - Write mutable data by path
 storage.put(path, raw)       - Write immutable data by path
 storage.read(path) -> raw    - Read mutable data by path (nil if not found)
-storage.delete(path)         - Delete an entry
+storage.delete(path)         - Delete an entry (removes empty parent directories)
 storage.nodes(path) -> iter  - Iterate over node children of path
                                (empty iter if not found)
 storage.leaves(path) -> iter - Iterate over node children of path
                                (empty iter if not found)
 
-## Object Level Storage Commands
+Mid Level Storage Commands
+=========================
 
 These commands work at a higher level and consume the low-level storage APIs.
 

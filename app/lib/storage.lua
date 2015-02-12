@@ -7,7 +7,7 @@ These are the filesystem abstraction needed by lit's local database.
 storage.write(path, raw)     - Write mutable data by path
 storage.put(path, raw)       - Write immutable data by path
 storage.read(path) -> raw    - Read mutable data by path (nil if not found)
-storage.delete(path)         - Delete an entry
+storage.delete(path)         - Delete an entry (removes empty parent directories)
 storage.nodes(path) -> iter  - Iterate over node children of path
                                (empty iter if not found)
 storage.leaves(path) -> iter - Iterate over node children of path
@@ -16,6 +16,17 @@ storage.leaves(path) -> iter - Iterate over node children of path
 
 return function (path)
   local fs = require('coro-fs').chroot(path)
+
+  -- Initialize the git file storage tree if it does't exist yet
+  if not fs.access("HEAD") then
+    assert(fs.mkdirp("objects"))
+    assert(fs.mkdirp("refs/tags"))
+    assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))
+    assert(fs.writeFile("config", "[core]\n"
+      .. "\trepositoryformatversion = 0\n"
+      .. "\tfilemode = true\n"
+      .. "\tbare = true\n"))
+  end
 
   local storage = {}
 
@@ -26,14 +37,16 @@ return function (path)
   -- Perform an atomic write (with temp file and rename) for mutable data
   function storage.write(path, data)
     local fd, success, err
-    local tempPath = "~" .. path
+    local tempPath = path .. "~"
+    local tried = false
     while true do
       -- Try to open the file in write mode.
       fd, err = fs.open(tempPath, "w")
       if fd then break end
-      if err:match("^ENOENT:") then
+      if not tried and err:match("^ENOENT:") then
         -- If it doesn't exist, try to make the parent directory.
         assert(fs.mkdirp(dirname(path)))
+        tried = true
       else
         assert(nil, err)
       end
@@ -52,6 +65,7 @@ return function (path)
   -- Write immutable data with an exclusive open.
   function storage.put(path, data)
     local fd, success, err
+    local tried = false
     while true do
       -- Try to open the file in exclusive write mode.
       fd, err = fs.open(path, "wx")
@@ -59,9 +73,10 @@ return function (path)
       if err:match("^EEXIST:") then
         -- If it already exists, do nothing, it's immutable.
         return
-      elseif err:match("^ENOENT:") then
+      elseif not tried and err:match("^ENOENT:") then
         -- If it doesn't exist, try to make the parent directory.
         assert(fs.mkdirp(dirname(path)))
+        tried = true
       else
         assert(nil, err)
       end
