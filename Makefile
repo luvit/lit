@@ -5,7 +5,8 @@ lit: $(LUVI_BIN) $(APP_FILES)
 	LUVI_APP=app LUVI_TARGET=$@ $(LUVI_BIN)
 
 $(LUVI_BIN):
-	git submodule update --init
+	git submodule init
+	git submodule update --depth 1
 
 test: lit
 	tests/run.sh
