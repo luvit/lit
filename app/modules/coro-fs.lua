@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.2.1"
+exports.version = "1.2.2"
 
 local uv = require('uv')
 local fs = exports
@@ -68,6 +68,10 @@ function fs.access(path, flags)
 end
 function fs.rename(path, newPath)
   uv.fs_rename(path, newPath, makeCallback())
+  return coroutine.yield()
+end
+function fs.rmdir(path)
+  uv.fs_rmdir(path, makeCallback())
   return coroutine.yield()
 end
 function fs.scandir(path)
@@ -157,6 +161,9 @@ function fs.chroot(base)
   end
   function chroot.rename(path, newPath)
     return fs.rename(resolve(path), resolve(newPath))
+  end
+  function chroot.rmdir(path)
+    return fs.rmdir(resolve(path))
   end
   function chroot.scandir(path, iter)
     return fs.scandir(resolve(path), iter)
