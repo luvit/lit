@@ -63,6 +63,52 @@ These are the high-level actions.  This consumes a database instance
 core.tag(path, name, email, key)
   -> author, tag, version, hash          - Import a package complete with signed tag.
 
+REST API
+========
+
+This is a simple rest API for reading the remote database over HTTP.
+It uses hypermedia in the JSON responses to make linking between requests simple.
+
+GET / -> api json {
+  blobs = "/blobs/{hash}"
+  trees = "/trees/{hash}"
+  packages = "/packages{/author}{/tag}{/version}"
+}
+GET /blobs/$HASH -> raw data
+GET /trees/$HASH -> tree json {
+ foo = { mode = 0644, hash = "...", url="/blobs/..." }
+ bar = { mode = 0755, hash = "...", url="/trees/..." }
+ ...
+}
+GET /packages -> authors json {
+  creationix = "/packages/creationix"
+  ...
+}
+GET /packages/$AUTHOR -> tags json {
+  git = "/packages/creationix/git"
+  ...
+}
+GET /packages/$AUTHOR/$TAG -> versions json {
+  v0.1.2 = "/packages/creationix/git/v0.1.2"
+  ...
+}
+GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
+  hash = "..."
+  object = "..."
+  object_url = "/trees/..."
+  type = "tree"
+  tag = "v0.2.3"
+  tagger = {
+    name = "Tim Caswell",
+    email = "tim@creationix.com",
+    date = {
+      seconds = 1423760148
+      offset = -0600
+    }
+  }
+  message = "..."
+}
+
 Server API Handlers
 ===================
 
