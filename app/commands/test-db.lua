@@ -44,3 +44,8 @@ for owner in db.owners("luvit") do
 end
 
 db.removeOwner("luvit", "creationix")
+
+local kind
+kind, hash = db.import("app")
+p(kind, hash)
+db.export(hash, "test/app2")

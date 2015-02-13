@@ -40,10 +40,13 @@ return function (path)
   local digest = require('openssl').digest.digest
   local deflate = require('miniz').deflate
   local inflate = require('miniz').inflate
+  local fs = require('coro-fs')
   local deframe = git.deframe
   local frame = git.frame
   local decoders = git.decoders
   local encoders = git.encoders
+  local modes = git.modes
+  local pathJoin = require('luvi').path.join
 
   local db = {}
 
@@ -206,12 +209,71 @@ return function (path)
     storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
   end
 
+  local importEntry, importTree
+
+  function importEntry(path, stat)
+    if stat.type == "directory" then
+      return modes.tree, importTree(path)
+    end
+    if stat.type == "file" then
+      stat = stat.mode and stat or fs.stat(path)
+      local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
+      return mode, db.save("blob", assert(fs.readFile(path)))
+    end
+    if stat.type == "link" then
+      return modes.sym, db.save("blob", assert(fs.readlink(path)))
+    end
+    error("Unsupported type at " .. path .. ": " .. stat.type)
+  end
+
+  function importTree(path)
+    local items = {}
+    for entry in assert(fs.scandir(path)) do
+      if string.sub(entry.name, 1, 1) ~= '.' and entry.name ~= "modules" then
+        local fullPath = pathJoin(path, entry.name)
+        entry.mode, entry.hash = importEntry(fullPath, entry)
+        items[#items + 1] = entry
+      end
+    end
+    return db.save("tree", items)
+  end
+
   function db.import(path)
--- db.import(path) -> kind, hash          - Import a file or tree into database
+    local mode, hash = importEntry(path, assert(fs.stat(path)))
+    return modes.toType(mode), hash
+  end
+
+  local exportEntry, exportTree
+
+  function exportEntry(path, mode, value)
+    if mode == modes.tree then
+      exportTree(path, value)
+    elseif mode == modes.sym then
+      assert(fs.symlink(value, path))
+    elseif modes.isFile(mode) then
+      assert(fs.writeFile(path, value))
+      assert(fs.chmod(path, mode))
+    else
+      error("Unsupported mode at " .. path .. ": " .. mode)
+    end
+  end
+
+  function exportTree(path, tree)
+    assert(fs.mkdirp(path))
+    for i = 1, #tree do
+      local entry = tree[i]
+      local newPath = pathJoin(path, entry.name)
+      local kind, value = db.load(entry.hash)
+      assert(modes.toType(entry.mode) == kind, "Git kind mismatch")
+      exportEntry(newPath, entry.mode, value)
+    end
   end
 
   function db.export(hash, path)
--- db.export(hash, path) -> kind          - Export a hash to a path
+    local kind, value = db.load(hash)
+    if not kind then error(value or "No such hash") end
+    exportEntry(path, kind == "tree" and modes.tree or modes.blob, value)
+    return kind
   end
 
   return db
