@@ -50,9 +50,18 @@ db.export(hash, path) -> kind          - Export a hash to a path
 Package Commands
 ================
 
-package.query(path) -> author, tag, version - Query an on-disk path for package info.
-package.tag(config, hash) -> hash           - Create a signed tag and return the hash.
+These commands work with packages as units.  Consumes the db interface.
 
+pkg.query(path) -> path, meta               - Query an on-disk path for package info.
+pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
+
+Core Functions
+==============
+
+These are the high-level actions.  This consumes a database instance
+
+core.tag(path, name, email, key)
+  -> author, tag, version, hash          - Import a package complete with signed tag.
 
 Server API Handlers
 ===================

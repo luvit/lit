@@ -35,18 +35,18 @@ db.export(hash, path) -> kind          - Export a hash to a path
 
 return function (path)
   local storage = require('./storage')(path)
-  local git = require('git')
   local normalize = require('semver').normalize
   local digest = require('openssl').digest.digest
   local deflate = require('miniz').deflate
   local inflate = require('miniz').inflate
+  local pathJoin = require('luvi').path.join
   local fs = require('coro-fs')
-  local deframe = git.deframe
-  local frame = git.frame
+  local git = require('git')
   local decoders = git.decoders
   local encoders = git.encoders
+  local deframe = git.deframe
+  local frame = git.frame
   local modes = git.modes
-  local pathJoin = require('luvi').path.join
 
   local db = {}
 
@@ -73,7 +73,10 @@ return function (path)
   end
 
   function db.save(kind, value)
-    local framed = frame(kind, encoders[kind](value))
+    if type(value) ~= "string" then
+      value = encoders[kind](value)
+    end
+    local framed = frame(kind, value)
     local hash = digest("sha1", framed)
     -- 0x1000 = TDEFL_WRITE_ZLIB_HEADER
     -- 4095 = Huffman+LZ (slowest/best compression)
@@ -111,7 +114,6 @@ return function (path)
     version = normalize(version)
     assertHash(hash)
     local path = string.format("refs/tags/%s/%s/v%s", author, tag, version)
-    p(path, hash)
     storage.write(path, hash .. "\n")
   end
 
