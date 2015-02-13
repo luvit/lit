@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.2.2"
+exports.version = "1.2.3"
 
 local uv = require('uv')
 local fs = exports
@@ -38,12 +38,20 @@ function fs.lstat(path)
   uv.fs_lstat(path, makeCallback())
   return coroutine.yield()
 end
+function fs.symlink(target, path)
+  uv.fs_symlink(target, path, makeCallback())
+  return coroutine.yield()
+end
 function fs.readlink(path)
   uv.fs_readlink(path, makeCallback())
   return coroutine.yield()
 end
 function fs.fstat(fd)
   uv.fs_fstat(fd, makeCallback())
+  return coroutine.yield()
+end
+function fs.chmod(fd, path)
+  uv.fs_chmod(fd, path, makeCallback())
   return coroutine.yield()
 end
 function fs.fchmod(fd, mode)
@@ -153,8 +161,15 @@ function fs.chroot(base)
   function chroot.lstat(path)
     return fs.lstat(resolve(path))
   end
+  function chroot.symlink(target, path)
+    -- TODO: should we resolve absolute target paths or treat it as opaque data?
+    return fs.symlink(target, resolve(path))
+  end
   function chroot.readlink(path)
     return fs.readlink(resolve(path))
+  end
+  function chroot.chmod(path, mode)
+    return fs.chmod(resolve(path), mode)
   end
   function chroot.access(path, flags)
     return fs.access(resolve(path), flags)
