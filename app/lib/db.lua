@@ -251,9 +251,17 @@ return function (path)
     if mode == modes.tree then
       exportTree(path, value)
     elseif mode == modes.sym then
-      assert(fs.symlink(value, path))
+      local success, err = fs.symlink(value, path)
+      if not success and err:match("^ENOENT:") then
+        assert(fs.mkdirp(pathJoin(path, "..")))
+        assert(fs.symlink(value, path))
+      end
     elseif modes.isFile(mode) then
-      assert(fs.writeFile(path, value))
+      local success, err = fs.writeFile(path, value)
+      if not success and err:match("^ENOENT:") then
+        assert(fs.mkdirp(pathJoin(path, "..")))
+        assert(fs.writeFile(path, value))
+      end
       assert(fs.chmod(path, mode))
     else
       error("Unsupported mode at " .. path .. ": " .. mode)
