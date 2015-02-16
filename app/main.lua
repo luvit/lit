@@ -8,7 +8,7 @@ coroutine.wrap(function ()
   local success, err = xpcall(function ()
     log("lit version", version)
     args[1] = args[1] or "help"
-    log("command", table.concat(args, " "))
+    log("command", table.concat(args, " "), "highlight")
     require("./commands/" .. args[1] .. ".lua")
   end, debug.traceback)
   if success then

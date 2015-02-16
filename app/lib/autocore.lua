@@ -54,24 +54,14 @@ end
 
 if dirty then save() end
 
-local db = makeDb(config.database)
-local core = makeCore(db)
-
 local privateKey
-return setmetatable(config, {
-  __index = function (_, name)
-    if name == "save" then
-      return save
-    elseif name == "db" then
-      return db
-    elseif name == "core" then
-      return core
-    elseif name == "key" then
-      if not config.privateKey then return end
-      if privateKey then return privateKey end
-      local keyData = assert(fs.readFile(config.privateKey))
-      privateKey = require('openssl').pkey.read(keyData, true)
-      return privateKey
-    end
-  end
-})
+local function getKey()
+  if not config.privateKey then return end
+  if privateKey then return privateKey end
+  local keyData = assert(fs.readFile(config.privateKey))
+  privateKey = require('openssl').pkey.read(keyData, true)
+  return privateKey
+end
+
+return makeCore(makeDb(config.database), config, getKey)
+
