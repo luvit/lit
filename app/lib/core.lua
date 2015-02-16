@@ -23,16 +23,20 @@ local function now()
   }
 end
 
-local log = require('./log')
 
 return function (db, config, getKey)
 
+  local log = require('./log')
+  local githubQuery = require('./github-request')
   local pkg = require('./pkg')
   local sshRsa = require('ssh-rsa')
   local git = require('git')
   local encoders = git.encoders
 
   local core = {}
+
+  core.config = config
+  core.db = db
 
   function core.add(path)
     local author, tag, version = pkg.normalize(pkg.query(path))
@@ -67,6 +71,70 @@ return function (db, config, getKey)
     db.write(author, tag, version, tagHash)
     log("new tag", fullTag, "success")
     return author, tag, version, tagHash
+  end
+
+  function core.importKeys(username)
+
+    local path = "/users/" .. username .. "/keys"
+    local etag = db.getEtag(username)
+    local head, keys, url = githubQuery(path, etag)
+
+    if head.code == 304 then return url end
+    if head.code == 404 then
+      error("No such username at github: " .. username)
+    end
+
+    if head.code ~= 200 then
+      p(head)
+      error("Invalid http response from github API: " .. head.code)
+    end
+
+    local fingerprints = {}
+    for i = 1, #keys do
+      local sshKey = sshRsa.loadPublic(keys[i].key)
+      if sshKey then
+        local fingerprint = sshRsa.fingerprint(sshKey)
+        fingerprints[fingerprint] = sshKey
+      end
+    end
+
+    local iter = db.fingerprints(username)
+    if iter then
+      for fingerprint in iter do
+        if fingerprints[fingerprint] then
+          fingerprints[fingerprint]= nil
+        else
+          log("revoking key", username .. ' ' .. fingerprint, "error")
+          db.revokeKey(username, fingerprint)
+        end
+      end
+    end
+
+    for fingerprint, sshKey in pairs(fingerprints) do
+      db.putKey(username, fingerprint, sshRsa.writePublic(sshKey))
+      log("imported key", username .. ' ' .. fingerprint, "highlight")
+    end
+
+    for i = 1, #head do
+      local name, value = unpack(head[i])
+      if name:lower() == "etag" then etag = value end
+    end
+    db.setEtag(username, etag)
+
+    return url
+  end
+
+  function core.authUser()
+    local key = assert(getKey(), "No private key")
+    local rsa = key:parse().rsa:parse()
+    local sshKey = sshRsa.encode(rsa.e, rsa.n)
+    local fingerprint = sshRsa.fingerprint(sshKey)
+    log("checking ssh fingerprint", fingerprint)
+    local url = core.importKeys(config.username)
+
+    if not db.readKey(config.username, fingerprint) then
+      error("Private key doesn't match keys at " .. url)
+    end
   end
 
   return core

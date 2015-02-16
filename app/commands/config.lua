@@ -1,5 +1,5 @@
 local log = require('../lib/log')
-local config = require('../lib/config')
-for key, value in pairs(config) do
+local core = require('../lib/autocore')
+for key, value in pairs(core.config) do
   log(key, value, "string")
 end

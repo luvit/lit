@@ -19,7 +19,7 @@ Mid Level Storage Commands
 
 These commands work at a higher level and consume the low-level storage APIs.
 
-db.load(hash) -> kind, value           - nil if not found
+db.load(hash) -> kind, value           - error if not found
 db.loadAs(kind, hash) -> value         - error if not found or wrong type
 db.save(kind, value) -> hash           - encode and save to objects/$ha/$sh
 db.hashes() -> iter                    - Iterate over all hashes
@@ -30,16 +30,15 @@ db.authors() -> iter                   - Iterate over refs/tags/*
 db.tags(author) -> iter                - Iterate nodes in refs/tags/$author/**
 db.versions(author, tag) -> iter       - Iterate leaves in refs/tags/$author/$tag/*
 
-
 db.readKey(author, fingerprint) -> key - Read from keys/$author/$fingerprint
-db.writeKey(author, fingerprint, key)  - Write to keys/$author/$fingerprint
+db.putKey(author, fingerprint, key)    - Write to keys/$author/$fingerprint
 db.revokeKey(author, fingerprint)      - Delete keys/$author/$fingerprint
 db.fingerprints(author) -> iter        - iter of fingerprints
 
-db.getEtag(author) -> etag             - Read keys/$author/etag
-db.setEtag(author, etag)               - Writes keys/$author/etag
+db.getEtag(author) -> etag             - Read keys/$author.etag
+db.setEtag(author, etag)               - Writes keys/$author.etag
 
-db.owners(org) -> iter                 - Iterates lines of keys/$org/owners
+db.owners(org) -> iter                 - Iterates lines of keys/$org.owners
 db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner

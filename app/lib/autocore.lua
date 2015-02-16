@@ -54,6 +54,10 @@ end
 
 if dirty then save() end
 
+setmetatable(config, {
+  __index = {save = save}
+})
+
 local privateKey
 local function getKey()
   if not config.privateKey then return end
