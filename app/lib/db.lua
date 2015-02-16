@@ -35,7 +35,8 @@ db.export(hash, path) -> kind          - Export a hash to a path
 
 return function (path)
   local storage = require('./storage')(path)
-  local normalize = require('semver').normalize
+  local semver = require('semver')
+  local normalize = semver.normalize
   local digest = require('openssl').digest.digest
   local deflate = require('miniz').deflate
   local inflate = require('miniz').inflate
@@ -60,7 +61,8 @@ return function (path)
 
   function db.load(hash)
     assertHash(hash)
-    local compressed = assert(storage.read(hashPath(hash)), "No such hash")
+    local compressed, err = storage.read(hashPath(hash))
+    if not compressed then return nil, err end
     local kind, raw = deframe(inflate(compressed, 1))
     return kind, decoders[kind](raw)
   end
@@ -100,6 +102,12 @@ return function (path)
         iter = storage.leaves("objects/" .. prefix)
       end
     end
+  end
+
+  function db.match(author, tag, version)
+    local match = semver.match(version, db.versions(author, tag))
+    if not match then return end
+    return match, assert(db.read(author, tag, match))
   end
 
   function db.read(author, tag, version)

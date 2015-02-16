@@ -40,6 +40,9 @@ return function (db, config, getKey)
 
   core.config = config
   core.db = db
+  if config.upstream then
+    db = require('./rdb')(db, config.upstream)
+  end
 
   function core.add(path)
     local author, tag, version = pkg.normalize(pkg.query(path))
@@ -140,29 +143,10 @@ return function (db, config, getKey)
     end
   end
 
-  function core.match(author, tag, version)
-    local match = semver.match(version, db.versions(author, tag))
-    -- if host then
-    --   -- If we're online, check the remote for a possibly better match.
-    --   local upMatch, hash
-    --   connect()
-    --   upMatch, hash = upstream.match(name, version)
-    --   disconnect()
-    --   if not upMatch then return nil, hash end
-    --   if not semver.gte(match, upMatch) then
-    --     return upMatch, hash
-    --   end
-    -- end
-    if not match then return end
-    local hash = db.read(author, tag, match)
-    if not hash then return end
-    return match, hash
-  end
-
   function core.addDep(deps, modulesDir, alias, author, name, version)
 
     -- Find best match in local and remote databases
-    local match, hash = core.match(author, name, version)
+    local match, hash = db.match(author, name, version)
     if not match then
       if version then
         error("No matching package: " .. author .. "/" .. name .. '@' .. version)

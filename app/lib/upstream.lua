@@ -14,7 +14,7 @@ local wrapper = require('./wrapper')
 local tlsWrap = require('coro-tls').wrap
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 
-return function (storage, url)
+return function (db, url)
   local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
   local tls
   if protocol == "ws" then
@@ -166,7 +166,6 @@ return function (storage, url)
     remote.writeAs("wants", {hash})
     local data = remote.readAs("send")
     assert(digest("sha1", data) == hash, "hash mismatch in result object")
-    storage.save(data)
     return data
   end
 
