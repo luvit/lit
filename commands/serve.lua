@@ -9,8 +9,6 @@ local makeRemote = require('../lib/codec').makeRemote
 local handlers = require('../lib/handlers')
 local handleRequest = require('../lib/api')(args[2])
 
-
-
 tcp.createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
 
   -- Handle the websocket handshake at the HTTP level

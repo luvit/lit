@@ -1,5 +1,6 @@
 local log = require('../lib/log')
 local core = require('../lib/autocore')
+local db = core.db
 local git = require('git')
 local digest = require('openssl').digest.digest
 local sshRsa = require('ssh-rsa')
@@ -16,17 +17,21 @@ end
 
 function exports.read(remote, data)
   local name, version = split(data)
+  local author
+  author, name = name:match("([^/]+)/(.*)")
   -- TODO: check for mismatch
-  local hash = db.read(name, version)
+  local hash = db.read(author, name, version)
   remote.writeAs("reply", hash)
 end
 
 function exports.match(remote, data)
   local name, version = split(data)
+  local author
+  author, name = name:match("([^/]+)/(.*)")
   if not name then
     return remote.writeAs("error", "Missing name parameter")
   end
-  local match, hash = db.match(name, version)
+  local match, hash = db.match(author, name, version)
   if not match and hash then
     error(hash)
   end
@@ -56,7 +61,7 @@ function exports.want(remote, hash)
 end
 
 local function verifySignature(username, raw)
-  importKeys(storage, username)
+  core.importKeys(username)
   local body, fingerprint, signature = string.match(raw, "^(.*)"
     .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
     .. "Format: sha256%-ssh%-rsa\n"
@@ -68,13 +73,13 @@ local function verifySignature(username, raw)
     error("Missing sha256-ssh-rsa signature")
   end
   signature = signature:gsub("\n", "")
-  local sshKey = storage.readKey(username, fingerprint)
+  local sshKey = db.readKey(username, fingerprint)
   if not sshKey then
-    local owners = storage.readKey(username, 'owners')
+    local owners = db.readKey(username, 'owners')
     if owners then
       for owner in owners:gmatch("[^\n]+") do
-        importKeys(storage, owner)
-        sshKey = storage.readKey(owner, fingerprint)
+        core.importKeys(owner)
+        sshKey = db.readKey(owner, fingerprint)
         if sshKey then break end
       end
       if not sshKey then
@@ -126,7 +131,7 @@ function exports.send(remote, data)
   local wants = {}
   for i = 1, #hashes do
     local hash = hashes[i]
-    if not storage.has(hash) then
+    if not db.has(hash) then
       wants[#wants + 1] = hash
       authorized[hash] = true
     end
@@ -136,8 +141,8 @@ function exports.send(remote, data)
     remote.writeAs("wants", wants)
   elseif not next(authorized) then
     local tag = remote.tag
-    local name, version = string.match(tag.tag, "(.*)/v(.*)")
-    storage.writeTag(name, version, tag.hash)
+    local author, name, version = string.match(tag.tag, "([^/]+)/(.*)/v(.*)")
+    db.write(author, name, version, tag.hash)
     log("new package", tag.tag)
     remote.writeAs("done", tag.hash)
     remote.tag = nil
@@ -158,8 +163,8 @@ function exports.claim(remote, raw)
   local data = verifyRequest(raw)
   local username, org = data.username, data.org
 
-  if storage.readKey(org, "owners") then
-    error("Org already claimed: " .. org)
+  if db.isOwner(org, username) then
+    error("Already an owner in org: " .. org)
   end
 
   local head, members = githubQuery("/orgs/" .. org .. "/public_members")
@@ -174,34 +179,23 @@ function exports.claim(remote, raw)
     end
   end
   if not member then
-    error("Not a public member of: " .. org)
+    error("Not a public member of org: " .. org)
   end
 
-  assert(storage.writeKey(org, "owners", username))
+  db.addOwner(org, username)
   remote.writeAs("reply", "claimed")
 end
 
 function exports.share(remote, raw)
   local data = verifyRequest(raw)
   local username, org, friend = data.username, data.org, data.friend
-  local owners = storage.readKey(org, "owners")
-  if not owners then
-    error("No such claimed group: " .. org)
+  if not db.isOwner(org, username) then
+    error("Can't share a org you're not in: " .. org)
   end
-  local found = false
-  for owner in owners:gmatch("[^\n]+") do
-    if owner == username then
-      found = true
-    end
-    if owner == friend then
-      error("Friend already in group: " .. friend)
-    end
+  if (db.isOwner(org, friend)) then
+    error("Friend already in org: " .. friend)
   end
-  if not found then
-    error("Can't share a group you're not in: " .. org)
-  end
-
-  assert(storage.writeKey(org, "owners", owners .. "\n" .. friend))
+  db.addOwner(org, friend)
 
   remote.writeAs("reply", "shared")
 end
@@ -210,24 +204,11 @@ function exports.unclaim(remote, raw)
   local data = verifyRequest(raw)
   local username, org = data.username, data.org
 
-  local found
-  local owners = {}
-  for owner in storage.readKey(org, "owners"):gmatch("[^\n]+") do
-    if owner == username then
-      found = true
-    else
-      owners[#owners + 1] = owner
-    end
+  if not db.isOwner(org, username) then
+    error("Non a member of org: " .. org)
   end
-  if not found then
-    error("Non a member of group: " .. org)
-  end
+  db.removeOwner(org, username)
 
-  if #owners > 0 then
-    assert(storage.writeKey(org, "owners", table.concat(owners, "\n")))
-  else
-    assert(storage.revokeKey(org, "owners"))
-  end
 
   remote.writeAs("reply", "unshared")
 end

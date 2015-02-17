@@ -130,6 +130,9 @@ return function (prefix)
       local key, value = unpack(req[i])
       headers[key:lower()] = value
     end
+    if not prefix then
+      prefix = "http://" .. headers.host
+    end
     local body, extra
     for i = 1, #routes, 2 do
       local match = {path:match(routes[i])}
