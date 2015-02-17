@@ -8,7 +8,6 @@ local importKeys = require('../lib/import-keys')
 local sshRsa = require('ssh-rsa')
 local githubQuery = require('./github-request')
 local jsonParse = require('json').parse
-local jsonStringify = require('json').stringify
 
 local function split(line)
   local args = {}

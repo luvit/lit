@@ -5,16 +5,21 @@ Mid Level Storage Commands
 
 These commands work at a higher level and consume the low-level storage APIs.
 
-db.load(hash) -> kind, value           - error if not found
-db.loadAs(kind, hash) -> value         - error if not found or wrong type
-db.save(kind, value) -> hash           - encode and save to objects/$ha/$sh
+db.has(hash) -> bool                   - check if db has an object
+db.load(hash) -> raw                   - load raw data, nil if not found
+db.loadAny(hash) -> kind, value        - pre-decode data, error if not found
+db.loadAs(kind, hash) -> value         - pre-decode and check type or error
+db.save(raw) -> hash                   - save pre-encoded and framed data
+db.saveAs(kind, value) -> hash         - encode, frame and save to objects/$ha/$sh
 db.hashes() -> iter                    - Iterate over all hashes
 
-db.read(author, tag, version) -> hash  - Read from refs/tags/$author/$tag/v$version
-db.write(author, tag, version, hash)   - Write to refs/tags/$suthor/$tag/v$version
+db.match(author, name, version)
+  -> match, hash                       - Find the best version matching the query.
+db.read(author, name, version) -> hash - Read from refs/tags/$author/$tag/v$version
+db.write(author, name, version, hash)  - Write to refs/tags/$suthor/$tag/v$version
 db.authors() -> iter                   - Iterate over refs/tags/*
-db.tags(author) -> iter                - Iterate nodes in refs/tags/$author/**
-db.versions(author, tag) -> iter       - Iterate leaves in refs/tags/$author/$tag/*
+db.names(author) -> iter               - Iterate nodes in refs/tags/$author/**
+db.versions(author, name) -> iter      - Iterate leaves in refs/tags/$author/$tag/*
 
 db.readKey(author, fingerprint) -> key - Read from keys/$author/$fingerprint
 db.putKey(author, fingerprint, key)    - Write to keys/$author/$fingerprint
@@ -59,37 +64,43 @@ return function (path)
     return string.format("objects/%s/%s", hash:sub(1, 2), hash:sub(3))
   end
 
-  function db.load(hash)
-    assertHash(hash)
-    local compressed, err = storage.read(hashPath(hash))
-    if not compressed then return nil, err end
-    local kind, raw = deframe(inflate(compressed, 1))
-    return kind, decoders[kind](raw)
-  end
-
   function db.has(hash)
     assertHash(hash)
     return storage.read(hashPath(hash)) and true or false
   end
 
+  function db.load(hash)
+    assertHash(hash)
+    local compressed, err = storage.read(hashPath(hash))
+    if not compressed then return nil, err end
+    return inflate(compressed, 1)
+  end
+
+  function db.loadAny(hash)
+    local raw = assert(db.load(hash), "no such hash")
+    local kind, value = deframe(raw)
+    return kind, decoders[kind](value)
+  end
 
   function db.loadAs(kind, hash)
-    assertHash(hash)
-    local actualKind, value = db.load(hash)
+    local actualKind, value = db.loadAny(hash)
     assert(kind == actualKind, "Kind mismatch")
     return value
   end
 
-  function db.save(kind, value)
+  function db.save(raw)
+    local hash = digest("sha1", raw)
+    -- 0x1000 = TDEFL_WRITE_ZLIB_HEADER
+    -- 4095 = Huffman+LZ (slowest/best compression)
+    storage.put(hashPath(hash), deflate(raw, 0x1000 + 4095))
+    return hash
+  end
+
+  function db.saveAs(kind, value)
     if type(value) ~= "string" then
       value = encoders[kind](value)
     end
-    local framed = frame(kind, value)
-    local hash = digest("sha1", framed)
-    -- 0x1000 = TDEFL_WRITE_ZLIB_HEADER
-    -- 4095 = Huffman+LZ (slowest/best compression)
-    storage.put(hashPath(hash), deflate(framed, 0x1000 + 4095))
-    return hash
+    return db.save(frame(kind, value))
   end
 
   function db.hashes()
@@ -110,24 +121,24 @@ return function (path)
     end
   end
 
-  function db.match(author, tag, version)
-    local match = semver.match(version, db.versions(author, tag))
+  function db.match(author, name, version)
+    local match = semver.match(version, db.versions(author, name))
     if not match then return end
-    return match, assert(db.read(author, tag, match))
+    return match, assert(db.read(author, name, match))
   end
 
-  function db.read(author, tag, version)
+  function db.read(author, name, version)
     version = normalize(version)
-    local path = string.format("refs/tags/%s/%s/v%s", author, tag, version)
+    local path = string.format("refs/tags/%s/%s/v%s", author, name, version)
     local hash = storage.read(path)
     if not hash then return end
     return hash:sub(1, 40)
   end
 
-  function db.write(author, tag, version, hash)
+  function db.write(author, name, version, hash)
     version = normalize(version)
     assertHash(hash)
-    local path = string.format("refs/tags/%s/%s/v%s", author, tag, version)
+    local path = string.format("refs/tags/%s/%s/v%s", author, name, version)
     storage.write(path, hash .. "\n")
   end
 
@@ -135,16 +146,16 @@ return function (path)
     return storage.nodes("refs/tags")
   end
 
-  function db.tags(author)
+  function db.names(author)
     local prefix = "refs/tags/" .. author .. "/"
     local stack = {storage.nodes(prefix)}
     return function ()
       while true do
         if #stack == 0 then return end
-        local tag = stack[#stack]()
-        if tag then
+        local name = stack[#stack]()
+        if name then
           local path = stack[#stack - 1]
-          local newPath = path and path .. "/" .. tag or tag
+          local newPath = path and path .. "/" .. name or name
           stack[#stack + 1] = newPath
           stack[#stack + 1] = storage.nodes(prefix .. newPath)
           return newPath
@@ -155,8 +166,8 @@ return function (path)
     end
   end
 
-  function db.versions(author, tag)
-    local path = string.format("refs/tags/%s/%s", author, tag)
+  function db.versions(author, name)
+    local path = string.format("refs/tags/%s/%s", author, name)
     return storage.leaves(path)
   end
 
@@ -234,10 +245,10 @@ return function (path)
     if stat.type == "file" then
       stat = stat.mode and stat or fs.stat(path)
       local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
-      return mode, db.save("blob", assert(fs.readFile(path)))
+      return mode, db.saveAs("blob", assert(fs.readFile(path)))
     end
     if stat.type == "link" then
-      return modes.sym, db.save("blob", assert(fs.readlink(path)))
+      return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
     end
     error("Unsupported type at " .. path .. ": " .. stat.type)
   end
@@ -251,7 +262,7 @@ return function (path)
         items[#items + 1] = entry
       end
     end
-    return db.save("tree", items)
+    return db.saveAs("tree", items)
   end
 
   function db.import(path)
@@ -287,14 +298,14 @@ return function (path)
     for i = 1, #tree do
       local entry = tree[i]
       local newPath = pathJoin(path, entry.name)
-      local kind, value = db.load(entry.hash)
+      local kind, value = db.loadAny(entry.hash)
       assert(modes.toType(entry.mode) == kind, "Git kind mismatch")
       exportEntry(newPath, entry.mode, value)
     end
   end
 
   function db.export(hash, path)
-    local kind, value = db.load(hash)
+    local kind, value = db.loadAny(hash)
     if not kind then error(value or "No such hash") end
     exportEntry(path, kind == "tree" and modes.tree or modes.blob, value)
     return kind

@@ -1,6 +1,5 @@
-local config = require('../lib/config')
-local db = config.db
+local core = require('../lib/autocore')
 if #args ~= 2 then
   error("Usage: lit claim orgname")
 end
-assert(db.claim(config, args[2]))
+assert(core.claim(args[2]))

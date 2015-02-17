@@ -19,7 +19,7 @@ for i = 2, #args do
   newArgs[i - 1] = args[i]
 end
 
-local child = uv.spawn(uv.exepath(), {
+uv.spawn(uv.exepath(), {
   args = newArgs,
   env = newEnv,
   stdio = {0,1,2}

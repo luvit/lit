@@ -97,7 +97,7 @@ function exports.makeRemote(webRead, webWrite, isClient)
 
   local function read()
     local name, data = innerRead()
-    -- p("network read", name, data and (#data <= 60 and data or # data))
+    p("network read", name, data and (#data <= 60 and data or # data))
     return name, data
   end
 
@@ -109,7 +109,7 @@ function exports.makeRemote(webRead, webWrite, isClient)
   end
 
   local function writeAs(name, data)
-    -- p("network write", name, data and (#data <= 60 and data or #data))
+    p("network write", name, data and (#data <= 60 and data or #data))
     if not name then return webWrite() end
     local frame = encode(name, data)
     frame.mask = isClient

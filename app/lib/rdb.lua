@@ -1,11 +1,6 @@
 local uv = require('uv')
 local semver = require('semver')
-local git = require('git')
-local deframe = git.deframe
-local decoders = git.decoders
-local openssl = require('openssl')
 local log = require('./log')
-local digest = openssl.digest.digest
 local connect = require('coro-tcp').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
@@ -64,34 +59,48 @@ return function(db, url)
   -- Implement very basic connection keepalive using an uv_idle timer
   -- This will disconnect very quickly if a connect() isn't called
   -- soon after a disconnect()
-  local timeout = uv.new_timer()
-  local remote, socket
+  local timeout, remote, socket
   local function connect()
-    uv.timer_stop(timeout)
-    if not remote then
+    if remote then
+      timeout:stop()
+    else
       log("connecting", url)
       socket, remote = connectRemote(url)
+      timeout = uv.new_timer()
     end
   end
   local function close()
-    uv.timer_stop(timeout)
     if remote then
       log("disconnecting", url)
       socket:close()
+      timeout:close()
+      timeout = nil
       remote = nil
       socket = nil
     end
   end
   local function disconnect()
-    uv.timer_start(timeout, 100, 0, close)
+    timeout:start(10, 0, close)
+  end
+
+  function db.readRemote(author, name, version)
+    local tag = author .. "/" .. name
+    connect()
+    local query = version and (tag .. " " .. version) or tag
+    remote.writeAs("read", query)
+    local data = remote.readAs("reply")
+    disconnect()
+    return data
   end
 
   local rawMatch = db.match
-  function db.match(author, tag, version)
-    local match, hash = rawMatch(author, tag, version)
-    local name = author .. "/" .. tag
+  function db.match(author, name, version)
+    local match, hash = rawMatch(author, name, version)
+    local tag = author .. "/" .. name
     connect()
-    remote.writeAs("match", version and (name .. " " .. version) or name)
+    local query = version and (tag .. " " .. version) or tag
+    log("matching", query)
+    remote.writeAs("match", query)
     local data = remote.readAs("reply")
     disconnect()
     local upMatch, upHash
@@ -101,30 +110,19 @@ return function(db, url)
     if semver.gte(match, upMatch) then
       return match, hash
     end
-    log("fetching", author .. '/' .. tag .. '@' .. upMatch)
     return upMatch, upHash
   end
 
   local rawLoad = db.load
   function db.load(hash)
-    local kind, value = rawLoad(hash)
-    if kind then return kind, value end
-    connect()
-    remote.writeAs("wants", {hash})
-    kind, value = deframe(remote.readAs("send"))
-    disconnect()
-    assert(db.save(kind, value) == hash)
-    value = decoders[kind](value)
-    if kind == "tag" then
-      local author, name, version = string.match(value.tag, "^([^/]+)/(.*)/v(.*)$")
-      db.write(author, name, version, hash)
-    end
-    return kind, value
+    local raw = rawLoad(hash)
+    if raw then return raw end
+    db.fetch({hash})
+    return assert(rawLoad(hash))
   end
 
   function db.fetch(list)
     local refs = {}
-    connect()
     repeat
       local hashes = list
       list = {}
@@ -139,19 +137,20 @@ return function(db, url)
         end
       end
       if #wants > 0 then
-        log("fetching", #wants .. " inner objects")
+        log("fetching", #wants .. " object" .. (#wants == 1 and "" or "s"))
+        connect()
         remote.writeAs("wants", wants)
         for i = 1, #wants do
           local hash = wants[i]
-          local kind, value = deframe(remote.readAs("send"))
-          assert(db.save(kind, value) == hash, "hash mismatch in result object")
+          assert(db.save(remote.readAs("send")) == hash, "hash mismatch in result object")
         end
+        disconnect()
       end
 
       -- Process the hashes looking for child nodes
       for i = 1, #hashes do
         local hash = hashes[i]
-        local kind, value = db.load(hash)
+        local kind, value = db.loadAny(hash)
         if kind == "tag" then
           -- TODO: verify tag
           refs[value.tag] = hash
@@ -164,12 +163,37 @@ return function(db, url)
         end
       end
     until #list == 0
-    disconnect()
     for ref, hash in pairs(refs) do
       local author, name, version = string.match(ref, "^([^/]+)/(.*)/v(.*)$")
       db.write(author, name, version, hash)
     end
     return refs
+  end
+
+  function db.push(hash)
+    connect();
+    remote.writeAs("send", db.load(hash))
+    while true do
+      local name, data = remote.read()
+      if name == "wants" then
+        for i = 1, #data do
+          remote.writeAs("send", db.load(data[i]))
+        end
+      elseif name == "done" then
+        return data
+      else
+        error("Expected more wants or done in reply to send to server")
+      end
+    end
+    disconnect();
+  end
+
+  function db.upquery(name, request)
+    connect();
+    remote.writeAs(name, request)
+    local reply, err = remote.readAs("reply")
+    disconnect()
+    return reply, err
   end
 
   return db

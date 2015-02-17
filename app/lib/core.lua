@@ -5,7 +5,7 @@ Core Functions
 
 These are the high-level actions.  This consumes a database instance
 
-core.add(path) -> author, tag, version, hash - Import a package complete with signed tag.
+core.add(path) -> author, name, version, hash - Import a package complete with signed tag.
 ]]
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -26,6 +26,7 @@ end
 
 return function (db, config, getKey)
 
+  local jsonStringify = require('json').stringify
   local log = require('./log')
   local githubQuery = require('./github-request')
   local pkg = require('./pkg')
@@ -45,23 +46,23 @@ return function (db, config, getKey)
   end
 
   function core.add(path)
-    local author, tag, version = pkg.normalize(pkg.query(path))
+    local author, name, version = pkg.normalize(pkg.query(path))
     local kind, hash = db.import(path)
-    local oldTagHash = db.read(author, tag, version)
-    local fullTag = author .. "/" .. tag .. '/v' .. version
+    local oldTagHash = db.read(author, name, version)
+    local fullTag = author .. "/" .. name .. '/v' .. version
     if oldTagHash then
       local old = db.loadAs("tag", oldTagHash)
       if old.type == kind and old.object == hash then
         -- This package is already imported and tagged
         log("no change", fullTag)
-        return author, tag, version, oldTagHash
+        return author, name, version, oldTagHash
       end
       log("replacing tag with new contents", fullTag, "failure")
     end
     local encoded = encoders.tag({
       object = hash,
       type = kind,
-      tag = author .. '/' .. tag .. "/v" .. version,
+      tag = author .. '/' .. name .. "/v" .. version,
       tagger = {
         name = config.name,
         email = config.email,
@@ -73,10 +74,39 @@ return function (db, config, getKey)
     if key then
       encoded = sshRsa.sign(encoded, key)
     end
-    local tagHash = db.save("tag", encoded)
-    db.write(author, tag, version, tagHash)
+    local tagHash = db.saveAs("tag", encoded)
+    db.write(author, name, version, tagHash)
     log("new tag", fullTag, "success")
-    return author, tag, version, tagHash
+    return author, name, version, tagHash
+  end
+
+  function core.publish(path)
+    if not config.upstream then
+      error("Must be configured with upstream to publish")
+    end
+    local author, name= core.add(path)
+    local tag = author .. '/' .. name
+
+    -- Loop through all local versions that aren't upstream
+    local queue = {}
+    for version in db.versions(author, name) do
+      if not db.readRemote(author, name, version) then
+        local hash = db.read(author, name, version)
+        queue[#queue + 1] = {tag, version, hash}
+      end
+    end
+
+    if #queue == 0 then
+      log("nothing to publish", tag)
+      return
+    end
+
+    for i = 1, #queue do
+      local tag, version, hash = unpack(queue[i])
+      log("publishing", tag .. '@' .. version)
+      db.push(hash)
+    end
+
   end
 
   function core.importKeys(username)
@@ -205,20 +235,14 @@ return function (db, config, getKey)
       end
     end
 
-    local tag = db.loadAs("tag", hash)
-
     deps[alias] = {
       author = author,
       name = name,
       version = version,
-      hash = tag.object,
-      kind = tag.type
+      hash = hash
     }
 
-    local meta = pkg.queryDb(db, tag.object)
-    if meta.dependencies then
-      return core.processDeps(deps, modulesDir, meta.dependencies)
-    end
+    deps[#deps + 1] = hash
   end
 
   function core.processDeps(deps, modulesDir, list)
@@ -231,25 +255,42 @@ return function (db, config, getKey)
       if version then version = normalize(version) end
       core.addDep(deps, modulesDir, alias, author, name, version)
     end
+    local hashes = {}
+    for i = 1, #deps do
+      hashes[i] = deps[i]
+      deps[i] = nil
+    end
+    if db.fetch then
+      db.fetch(hashes)
+    end
+    for i = 1, #hashes do
+      local meta = pkg.queryDb(db, hashes[i])
+      if meta.dependencies then
+        core.processDeps(deps, modulesDir, meta.dependencies)
+      end
+    end
+
   end
 
   local function install(modulesDir, deps)
     if db.fetch then
       local hashes = {}
       for _, dep in pairs(deps) do
-        hashes[#hashes + 1] = dep.hash
+        if dep.hash then
+          hashes[#hashes + 1] = dep.hash
+        end
       end
       db.fetch(hashes)
     end
     for alias, dep in pairs(deps) do
-
-      if dep.kind then
+      if dep.hash then
+        local tag = db.loadAs("tag", dep.hash)
         local target = pathJoin(modulesDir, alias) ..
-          (dep.kind == "blob" and ".lua" or "")
-        local filename = "modules/" .. alias .. (dep.kind == "blob" and ".lua" or "/")
+          (tag.type == "blob" and ".lua" or "")
+        local filename = "modules/" .. alias .. (tag.type == "blob" and ".lua" or "/")
         log("installing", string.format("%s/%s@%s -> %s",
           dep.author, dep.name, dep.version, filename), "highlight")
-        db.export(dep.hash, target)
+        db.export(tag.object, target)
       end
     end
   end
@@ -272,6 +313,30 @@ return function (db, config, getKey)
     local modulesDir = pathJoin(path, "modules")
     core.processDeps(deps, modulesDir, meta.dependencies)
     return install(modulesDir, deps)
+  end
+
+  local function makeRequest(name, req)
+    local key = getKey()
+    if not (key and config.name and config.email) then
+      error("Please run `lit auth` to configure your username")
+    end
+    assert(db.upquery, "upstream required to publish")
+    req.username = config.username
+    local json = jsonStringify(req) .. "\n"
+    local signature = sshRsa.sign(json, key)
+    return db.upquery(name, signature)
+  end
+
+  function core.claim(org)
+    return makeRequest("claim", { org = org })
+  end
+
+  function core.share(org, friend)
+    return makeRequest("share", { org = org, friend = friend })
+  end
+
+  function core.unclaim(org)
+    return makeRequest("unclaim", { org = org })
   end
 
   return core

@@ -1,10 +1,11 @@
 --[[
-Package Commands
+Package Metadata Commands
 ================
 
-These commands work with packages as units.  Consumes the db interface.
+These commands work with packages metadata.
 
-pkg.query(path) -> path, meta               - Query an on-disk path for package info.
+pkg.query(path) -> meta, path               - Query an on-disk path for package info.
+pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
 pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
 ]]
 
@@ -69,9 +70,9 @@ function exports.query(path)
 end
 
 function exports.queryDb(db, hash)
-  local kind, value = db.load(hash)
+  local kind, value = db.loadAny(hash)
   if kind == "tag" then
-    kind, value = db.load(value.object)
+    kind, value = db.loadAny(value.object)
   end
   local meta
   if kind == "tree" then

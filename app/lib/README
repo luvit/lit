@@ -19,16 +19,21 @@ Mid Level Storage Commands
 
 These commands work at a higher level and consume the low-level storage APIs.
 
-db.load(hash) -> kind, value           - error if not found
-db.loadAs(kind, hash) -> value         - error if not found or wrong type
-db.save(kind, value) -> hash           - encode and save to objects/$ha/$sh
+db.has(hash) -> bool                   - check if db has an object
+db.load(hash) -> raw                   - load raw data, nil if not found
+db.loadAny(hash) -> kind, value        - pre-decode data, error if not found
+db.loadAs(kind, hash) -> value         - pre-decode and check type or error
+db.save(raw) -> hash                   - save pre-encoded and framed data
+db.saveAs(kind, value) -> hash         - encode, frame and save to objects/$ha/$sh
 db.hashes() -> iter                    - Iterate over all hashes
 
-db.read(author, tag, version) -> hash  - Read from refs/tags/$author/$tag/v$version
-db.write(author, tag, version, hash)   - Write to refs/tags/$suthor/$tag/v$version
+db.match(author, name, version)
+  -> match, hash                       - Find the best version matching the query.
+db.read(author, name, version) -> hash - Read from refs/tags/$author/$tag/v$version
+db.write(author, name, version, hash)  - Write to refs/tags/$suthor/$tag/v$version
 db.authors() -> iter                   - Iterate over refs/tags/*
-db.tags(author) -> iter                - Iterate nodes in refs/tags/$author/**
-db.versions(author, tag) -> iter       - Iterate leaves in refs/tags/$author/$tag/*
+db.names(author) -> iter               - Iterate nodes in refs/tags/$author/**
+db.versions(author, name) -> iter      - Iterate leaves in refs/tags/$author/$tag/*
 
 db.readKey(author, fingerprint) -> key - Read from keys/$author/$fingerprint
 db.putKey(author, fingerprint, key)    - Write to keys/$author/$fingerprint
@@ -46,12 +51,29 @@ db.removeOwner(org, author)            - Remove an owner
 db.import(path) -> kind, hash          - Import a file or tree into database
 db.export(hash, path) -> kind          - Export a hash to a path
 
-Package Commands
+
+Remote Enhanced DB
+==================
+
+When an upstream is configured, the db interface has the following additions.
+
+rdb.load(hash) -> raw             - calls fetch when not found and tries a second time.
+rdb.match(author, name, version)
+  -> match, hash                  - Also checks upstream for match and uses higher of the two
+rdb.readRemote(author, name, version)
+  -> hash                         - Read hash from remote only.
+rdb.fetch(hash)                   - fetch a hash and all dependents from upstream.
+rdb.push(hash)                    - push a hash and all children to upstream.
+rdb.upquery(name, request)        - send arbitrary queries to the upstream server.
+
+
+Package Metadata Commands
 ================
 
-These commands work with packages as units.  Consumes the db interface.
+These commands work with packages metadata.
 
-pkg.query(path) -> path, meta               - Query an on-disk path for package info.
+pkg.query(path) -> meta, path               - Query an on-disk path for package info.
+pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
 pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
 
 Core Functions
