@@ -241,7 +241,9 @@ return function (path)
 
   function importEntry(path, stat, filter)
     if stat.type == "directory" then
-      return modes.tree, importTree(path, filter)
+      local hash = importTree(path, filter)
+      if not hash then return end
+      return modes.tree, hash
     end
     if stat.type == "file" then
       stat = stat.mode and stat or fs.stat(path)
@@ -282,7 +284,7 @@ return function (path)
       }
     end
     return function (name, isTree)
-      local allowed = isTree or not rules[1].allowed
+      local allowed = defaultFilter(name) and (isTree or not rules[1].allowed)
       for i = 1, #rules do
         local rule = rules[i]
         if name:match(rule.pattern) then
@@ -308,15 +310,17 @@ return function (path)
       local fullPath = pathJoin(path, entry.name)
       if filter(entry.name, entry.type == "directory") then
         entry.mode, entry.hash = importEntry(fullPath, entry, filter)
-        items[#items + 1] = entry
-        if not black then
-          log("including", fullPath)
+        if entry.hash then
+          items[#items + 1] = entry
+          if not black and entry.type ~= "directory" then
+            log("including", fullPath)
+          end
         end
       elseif black then
         log("skipping", fullPath)
       end
     end
-    return db.saveAs("tree", items)
+    return #items > 0 and db.saveAs("tree", items)
   end
 
   function db.import(path)

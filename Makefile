@@ -1,8 +1,8 @@
-APP_FILES=$(shell find app -type f -name '*.lua')
+APP_FILES=$(shell find -type f -name '*.lua')
 LUVI_BIN=luvi-binaries/$(shell uname -s)_$(shell uname -m)/luvi
 
 lit: $(LUVI_BIN) $(APP_FILES)
-	LUVI_APP=app LUVI_TARGET=$@ $(LUVI_BIN)
+	LUVI_APP=. $(LUVI_BIN) make
 
 $(LUVI_BIN):
 	git submodule init

@@ -1,6 +1,6 @@
 return {
-  name = "lit",
-  version = "0.2.1",
+  name = "creationix/lit",
+  version = "1.0.0",
   dependencies = {
     "creationix/pretty-print@0.1.0",
     "creationix/require@1.0.2",
@@ -16,4 +16,8 @@ return {
     "creationix/websocket-codec@1.0.0",
     "creationix/json@2.5.0",
   },
+  files = {
+    "*.lua",
+    "!test*",
+  }
 }
