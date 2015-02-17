@@ -180,35 +180,30 @@ return function (db, config, getKey)
 
     -- Find best match in local and remote databases
     local match, hash = db.match(author, name, version)
-    if not match then
-      if version then
-        error("No matching package: " .. author .. "/" .. name .. '@' .. version)
-      else
-        error("No such package: " .. author .. '/' .. name)
-      end
-    end
-    version = match
+    if match then
+      version = match
 
-    -- Check for conflicts with already added dependencies
-    local existing = deps[alias]
-    if existing then
-      if existing.author == author and existing.name == name then
-        -- If this exact version is already done, stop recursion here.
-        if existing.version == version then return end
+      -- Check for conflicts with already added dependencies
+      local existing = deps[alias]
+      if existing then
+        if existing.author == author and existing.name == name then
+          -- If this exact version is already done, stop recursion here.
+          if existing.version == version then return end
 
-        -- Warn about incompatable versions being required
-        local message = string.format("%s %s ~= %s",
-          alias, existing.version, version)
-        log("version mismatch", message, "failure")
-        -- Use the newer version in case of mismatch
-        if semver.gte(existing.version, version) then return end
-      else
-        -- Warn about alias name conflicts
-        local message = string.format("%s %s/%s ~= %s/%s",
-          alias, existing.author, existing.name, author, name)
-        log("alias conflict", message, "failure")
-        -- Use the first added in case of mismatch
-        return
+          -- Warn about incompatable versions being required
+          local message = string.format("%s %s ~= %s",
+            alias, existing.version, version)
+          log("version mismatch", message, "failure")
+          -- Use the newer version in case of mismatch
+          if semver.gte(existing.version, version) then return end
+        else
+          -- Warn about alias name conflicts
+          local message = string.format("%s %s/%s ~= %s/%s",
+            alias, existing.author, existing.name, author, name)
+          log("alias conflict", message, "failure")
+          -- Use the first added in case of mismatch
+          return
+        end
       end
     end
 
@@ -235,6 +230,14 @@ return function (db, config, getKey)
 
         if not meta.dependencies then return end
         return core.processDeps(deps, modulesDir, meta.dependencies)
+      end
+    end
+
+    if not match then
+      if version then
+        error("No matching package: " .. author .. "/" .. name .. '@' .. version)
+      else
+        error("No such package: " .. author .. '/' .. name)
       end
     end
 
@@ -349,7 +352,6 @@ return function (db, config, getKey)
   end
 
   function core.make(path, target)
-    p(path, target)
     local meta = pkg.query(path)
     if not target then
       target = meta.target or meta.name:match("[^/]+$")
