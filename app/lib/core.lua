@@ -8,6 +8,20 @@ These are the high-level actions.  This consumes a database instance
 core.add(path) -> author, name, version, hash - Import a package complete with signed tag.
 ]]
 
+local uv = require('uv')
+local jsonStringify = require('json').stringify
+local log = require('./log')
+local githubQuery = require('./github-request')
+local pkg = require('./pkg')
+local sshRsa = require('ssh-rsa')
+local git = require('git')
+local modes = git.modes
+local encoders = git.encoders
+local semver = require('semver')
+local normalize = semver.normalize
+local pathJoin = require('luvi').path.join
+local miniz = require('miniz')
+
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
 -- Trickier than you'd think because os.time assumes the struct is in local time.
@@ -25,17 +39,6 @@ end
 
 
 return function (db, config, getKey)
-
-  local jsonStringify = require('json').stringify
-  local log = require('./log')
-  local githubQuery = require('./github-request')
-  local pkg = require('./pkg')
-  local sshRsa = require('ssh-rsa')
-  local git = require('git')
-  local encoders = git.encoders
-  local semver = require('semver')
-  local normalize = semver.normalize
-  local pathJoin = require('luvi').path.join
 
   local core = {}
 
@@ -226,7 +229,7 @@ return function (db, config, getKey)
         deps[alias] = {
           author = author,
           name = name,
-          version = version,
+          version = meta.version,
           disk = path
         }
 
@@ -313,6 +316,101 @@ return function (db, config, getKey)
     local modulesDir = pathJoin(path, "modules")
     core.processDeps(deps, modulesDir, meta.dependencies)
     return install(modulesDir, deps)
+  end
+
+  local function importBlob(writer, path, hash)
+    local data = db.loadAs("blob", hash)
+    writer:add(path, data, 9)
+  end
+
+  local function importTree(writer, path, hash)
+    local tree = db.loadAs("tree", hash)
+    if path then
+      writer:add(path .. "/", "")
+    end
+    for i = 1, #tree do
+      local entry = tree[i]
+      local newPath = path and path .. '/' .. entry.name or entry.name
+      if entry.mode == modes.tree then
+        importTree(writer, newPath, entry.hash)
+      else
+        importBlob(writer, newPath, entry.hash)
+      end
+    end
+  end
+
+  local function importPath(writer, root, path)
+    local kind, hash = db.import(pathJoin(root, path))
+    if kind == "tree" then
+      importTree(writer, path, hash)
+    else
+      importBlob(writer, path, hash)
+    end
+  end
+
+  function core.make(path, target)
+    p(path, target)
+    local meta = pkg.query(path)
+    if not target then
+      target = meta.target or meta.name:match("[^/]+$")
+      if require('ffi').os == "Windows" then
+        target = target .. ".exe"
+      end
+    end
+    log("creating binary", target, "highlight")
+
+    local fd = assert(uv.fs_open(target, "w", 511)) -- 0777
+
+    -- Copy base binary
+    local binSize
+    do
+      local source = uv.exepath()
+
+      local reader = miniz.new_reader(source)
+      if reader then
+        -- If contains a zip, find where the zip starts
+        binSize = reader:get_offset()
+      else
+        -- Otherwise just read the file size
+        binSize = uv.fs_stat(source).size
+      end
+      local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
+      log("copying binary prefix", binSize .. " bytes")
+      uv.fs_sendfile(fd, fd2, 0, binSize)
+      uv.fs_close(fd2)
+    end
+
+    local writer = miniz.new_writer()
+
+    importPath(writer, path)
+
+    if meta.dependencies then
+      local deps = {}
+      local modulesDir = pathJoin(path, "modules")
+      writer:add("modules/", "")
+      core.processDeps(deps, modulesDir, meta.dependencies)
+      for alias, dep in pairs(deps) do
+        local tag = dep.author .. '/' .. dep.name .. '@' .. dep.version
+        if dep.disk then
+          local name = "modules/" .. (dep.disk:match("([^/\\]+)$") or alias)
+          log("importing", tag .. ' (' .. dep.disk .. ')', "highlight")
+          importPath(writer, path, name)
+        elseif dep.hash then
+          log("importing", tag, "highlight")
+          local tag = db.loadAs("tag", dep.hash)
+          if tag.type == "tree" then
+            importTree(writer, "modules/" .. alias, tag.object)
+          elseif tag.type == "blob" then
+            importBlob(writer, "modules/" .. alias .. ".lua", tag.object)
+          end
+        end
+      end
+    end
+
+    uv.fs_write(fd, writer:finalize(), binSize)
+    uv.fs_close(fd)
+    log("done building", target)
+
   end
 
   local function makeRequest(name, req)

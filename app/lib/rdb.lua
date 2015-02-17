@@ -71,7 +71,7 @@ return function(db, url)
   end
   local function close()
     if remote then
-      log("disconnecting", url)
+      -- log("disconnecting", url)
       socket:close()
       timeout:close()
       timeout = nil
