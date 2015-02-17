@@ -17,6 +17,11 @@ clean:
 install: lit
 	install lit /usr/local/bin
 
+deploy: lit
+	sudo systemctl stop lit
+	install lit /usr/local/bin
+	sudo systemctl start lit
+
 uninstall:
 	rm -f /usr/local/bin/lit
 
