@@ -1,0 +1,6 @@
+This folder contains various standalone modules used by lit.  They are
+included here to help with bootstrapping since the libraries are needed to
+talk to the server and get libraries.
+
+This folder is not included directly by `lit make`, but it is a source of code
+for when lit is resolving dependencies to bundle.
