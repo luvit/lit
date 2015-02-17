@@ -53,6 +53,7 @@ return function (path)
   local deframe = git.deframe
   local frame = git.frame
   local modes = git.modes
+  local log = require('./log')
 
   local db = {}
 
@@ -238,9 +239,9 @@ return function (path)
 
   local importEntry, importTree
 
-  function importEntry(path, stat)
+  function importEntry(path, stat, filter)
     if stat.type == "directory" then
-      return modes.tree, importTree(path)
+      return modes.tree, importTree(path, filter)
     end
     if stat.type == "file" then
       stat = stat.mode and stat or fs.stat(path)
@@ -253,20 +254,73 @@ return function (path)
     error("Unsupported type at " .. path .. ": " .. stat.type)
   end
 
-  function importTree(path)
+  -- By default, ignore hidden files and the "modules" folder
+  local function defaultFilter(name)
+    return name:sub(1, 1) ~= '.'
+       and name ~= "modules"
+  end
+
+  local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
+
+  local function compileFilter(rules)
+    assert(#rules > 0, "Empty files rule list not allowed")
+    for i = 1, #rules do
+      local skip, pattern = rules[i]:match("(!*)(.*)")
+      local parts = {"^"}
+      for glob, text in pattern:gmatch("(%**)([^%*]*)") do
+        if #glob > 0 then
+          parts[#parts + 1] = ".*"
+        end
+        if #text > 0 then
+          parts[#parts + 1] = text:gsub(quotepattern, "%%%1")
+        end
+      end
+      parts[#parts + 1] = "$"
+      rules[i] = {
+        allowed = #skip == 0,
+        pattern = table.concat(parts)
+      }
+    end
+    return function (name, isTree)
+      local allowed = isTree or not rules[1].allowed
+      for i = 1, #rules do
+        local rule = rules[i]
+        if name:match(rule.pattern) then
+          allowed = rule.allowed
+        end
+      end
+      return allowed
+    end
+  end
+
+  function importTree(path, filter)
     local items = {}
+    local meta = fs.readFile(pathJoin(path, "package.lua"))
+    if meta then meta = loadstring(meta)() end
+    if meta and meta.files then
+      filter = compileFilter(meta.files)
+    end
+
+    -- Detect if this list defaults to include or exclude
+    local black = filter("")
+
     for entry in assert(fs.scandir(path)) do
-      if string.sub(entry.name, 1, 1) ~= '.' and entry.name ~= "modules" then
-        local fullPath = pathJoin(path, entry.name)
-        entry.mode, entry.hash = importEntry(fullPath, entry)
+      local fullPath = pathJoin(path, entry.name)
+      if filter(entry.name, entry.type == "directory") then
+        entry.mode, entry.hash = importEntry(fullPath, entry, filter)
         items[#items + 1] = entry
+        if not black then
+          log("including", fullPath)
+        end
+      elseif black then
+        log("skipping", fullPath)
       end
     end
     return db.saveAs("tree", items)
   end
 
   function db.import(path)
-    local mode, hash = importEntry(path, assert(fs.stat(path)))
+    local mode, hash = importEntry(path, assert(fs.stat(path)), defaultFilter)
     return modes.toType(mode), hash
   end
 
