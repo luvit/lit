@@ -49,7 +49,9 @@ return function (db, config, getKey)
   end
 
   function core.add(path)
-    local author, name, version = pkg.normalize(pkg.query(path))
+    local meta = pkg.query(path)
+    assert(not meta.private, "Can't tag private package")
+    local author, name, version = pkg.normalize(meta)
     local kind, hash = db.import(path)
     local oldTagHash = db.read(author, name, version)
     local fullTag = author .. "/" .. name .. '/v' .. version
