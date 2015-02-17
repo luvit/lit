@@ -171,7 +171,7 @@ return function(db, url)
   end
 
   function db.push(hash)
-    connect();
+    connect()
     remote.writeAs("send", db.load(hash))
     while true do
       local name, data = remote.read()
@@ -185,11 +185,11 @@ return function(db, url)
         error("Expected more wants or done in reply to send to server")
       end
     end
-    disconnect();
+    disconnect()
   end
 
   function db.upquery(name, request)
-    connect();
+    connect()
     remote.writeAs(name, request)
     local reply, err = remote.readAs("reply")
     disconnect()
