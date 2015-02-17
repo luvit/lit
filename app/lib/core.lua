@@ -234,7 +234,15 @@ return function (db, config, getKey)
   end
 
   local function install(modulesDir, deps)
+    if db.fetch then
+      local hashes = {}
+      for _, dep in pairs(deps) do
+        hashes[#hashes + 1] = dep.hash
+      end
+      db.fetch(hashes)
+    end
     for alias, dep in pairs(deps) do
+
       if dep.kind then
         local target = pathJoin(modulesDir, alias) ..
           (dep.kind == "blob" and ".lua" or "")

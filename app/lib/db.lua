@@ -67,6 +67,12 @@ return function (path)
     return kind, decoders[kind](raw)
   end
 
+  function db.has(hash)
+    assertHash(hash)
+    return storage.read(hashPath(hash)) and true or false
+  end
+
+
   function db.loadAs(kind, hash)
     assertHash(hash)
     local actualKind, value = db.load(hash)
