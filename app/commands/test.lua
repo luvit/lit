@@ -13,6 +13,7 @@ for i = 1, #keys do
   end
 end
 newEnv[#newEnv + 1] = "LUVI_APP=" .. uv.cwd()
+newEnv[#newEnv + 1] = "LUVI_MAIN=test-main.lua"
 
 local newArgs = {}
 for i = 2, #args do
