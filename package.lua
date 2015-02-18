@@ -18,6 +18,7 @@ return {
   },
   files = {
     "*.lua",
+    "README",
     "!test*",
   }
 }
