@@ -253,7 +253,7 @@ return function (path)
     if stat.type == "link" then
       return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
     end
-    error("Unsupported type at " .. path .. ": " .. stat.type)
+    error("Unsupported type at " .. path .. ": " .. toString(stat.type))
   end
 
   -- By default, ignore hidden files and the "modules" folder
