@@ -1,4 +1,4 @@
-APP_FILES=$(shell find -type f -name '*.lua')
+APP_FILES=$(shell find . -name '*.lua')
 LUVI_BIN=luvi-binaries/$(shell uname -s)_$(shell uname -m)/luvi
 
 lit: $(LUVI_BIN) $(APP_FILES)
