@@ -1,6 +1,6 @@
 std = "luajit"
 globals = {
-  "p", "exports", "args"
+  "bit", "setfenv", "p", "exports", "args"
 }
 unused_args = false
 

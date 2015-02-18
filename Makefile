@@ -1,12 +1,12 @@
-APP_FILES=$(shell find app -type f)
+APP_FILES=$(shell find . -name '*.lua')
 LUVI_BIN=luvi-binaries/$(shell uname -s)_$(shell uname -m)/luvi
 
 lit: $(LUVI_BIN) $(APP_FILES)
-	LUVI_APP=app LUVI_TARGET=$@ $(LUVI_BIN)
+	LUVI_APP=. $(LUVI_BIN) make
 
 $(LUVI_BIN):
 	git submodule init
-	git submodule update --depth 10
+	git submodule update
 
 test: lit
 	tests/run.sh
@@ -16,6 +16,11 @@ clean:
 
 install: lit
 	install lit /usr/local/bin
+
+deploy: lit
+	sudo systemctl stop lit
+	install lit /usr/local/bin
+	sudo systemctl start lit
 
 uninstall:
 	rm -f /usr/local/bin/lit
