@@ -9,7 +9,7 @@ param (
   $downloader.DownloadFile($url, $file)
 }
 
-$LIT_VERSION = "0.9.3"
+$LIT_VERSION = "0.9.4"
 $LUVI_VERSION = "0.7.0"
 
 if ($env:TEMP -eq $null) {
