@@ -12,7 +12,7 @@ test: lit
 	tests/run.sh
 
 clean:
-	rm -rf lit test-offline test-pull test-push test-server
+	rm -rf lit luvi test-offline test-pull test-push test-server
 
 install: lit
 	install lit /usr/local/bin
