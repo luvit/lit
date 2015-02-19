@@ -1,12 +1,12 @@
 APP_FILES=$(shell find . -name '*.lua')
-LUVI_BIN=luvi-binaries/$(shell uname -s)_$(shell uname -m)/luvi
+LUVI_URL=https://github.com/luvit/luvi/releases/download/$LUVI_VERSION/luvi-static-`uname -s`_`uname -m`
 
-lit: $(LUVI_BIN) $(APP_FILES)
-	LUVI_APP=. $(LUVI_BIN) make
+lit: luvi $(APP_FILES)
+	LUVI_APP=. ./luvi make
 
-$(LUVI_BIN):
-	git submodule init
-	git submodule update
+luvi:
+	curl -L $(LUVI_URL) > luvi
+	chmod +x luvi
 
 test: lit
 	tests/run.sh
