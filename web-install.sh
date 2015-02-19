@@ -10,7 +10,7 @@ chmod +x luvi
 
 # Download lit source and build self
 LIT_ZIP=https://github.com/luvit/lit/archive/$LIT_VERSION.tar.gz
-curl -L $LIT_ZIP | tar -xzv
+curl -L $LIT_ZIP | tar -xzvf -
 BASE=lit-$LIT_VERSION
 LIT_CONFIG=$BASE/litconfig
 echo "database: $BASE/litdb.git" > $LIT_CONFIG

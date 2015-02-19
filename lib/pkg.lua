@@ -46,9 +46,10 @@ end
 
 function exports.query(path)
   local packagePath = path
-  local data, err = fs.readFile(path)
-  if err then
-    if err:match("^EISDIR:") then
+  local stat, data, err
+  stat, err = fs.stat(path)
+  if stat then
+    if stat.type == "directory" then
       packagePath = path .. "/"
       data, err = fs.readFile(pathJoin(path, "package.lua"))
       if err and not err:match("^ENOENT:") then error(err) end
@@ -56,10 +57,12 @@ function exports.query(path)
         data, err = fs.readFile(pathJoin(path, "init.lua"))
         if err and not err:match("^ENOENT:") then error(err) end
       end
-    elseif err:match("^ENOENT:") then
-      packagePath = packagePath .. ".lua"
+    else
       data, err = fs.readFile(packagePath)
     end
+  elseif err:match("^ENOENT:") then
+    packagePath = packagePath .. ".lua"
+    data, err = fs.readFile(packagePath)
   end
   if not data then
     return data, err or "Can't find package at " .. path
