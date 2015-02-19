@@ -75,9 +75,9 @@ local function verifySignature(username, raw)
   signature = signature:gsub("\n", "")
   local sshKey = db.readKey(username, fingerprint)
   if not sshKey then
-    local owners = db.readKey(username, 'owners')
-    if owners then
-      for owner in owners:gmatch("[^\n]+") do
+    local iter = db.owners(username)
+    if iter then
+      for owner in iter do
         core.importKeys(owner)
         sshKey = db.readKey(owner, fingerprint)
         if sshKey then break end

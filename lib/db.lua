@@ -206,9 +206,7 @@ return function (path)
 
   function db.owners(org)
     local owners = storage.read(ownersPath(org))
-    if not owners then
-      return function() end
-    end
+    if not owners then return end
     return owners:gmatch("[^\n]+")
   end
 
