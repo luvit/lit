@@ -260,6 +260,9 @@ return function (db, config, getKey)
       end
       local author, name = string.match(dep, "^([^/@]+)/([^@]+)")
       local version = string.match(dep, "@(.+)")
+      if not author then
+        error("Package names must include owner/name at a minimum")
+      end
       if version then version = normalize(version) end
       core.addDep(deps, modulesDir, alias, author, name, version)
     end
