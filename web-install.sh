@@ -1,7 +1,7 @@
 #!/bin/sh
 # Set versions
 LUVI_VERSION=v0.7.0
-LIT_VERSION=0.9.2
+LIT_VERSION=0.9.3
 
 # Download luvi binary
 LUVI_URL=https://github.com/luvit/luvi/releases/download/$LUVI_VERSION/luvi-static-`uname -s`_`uname -m`
