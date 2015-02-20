@@ -1,6 +1,10 @@
 
-$LIT_VERSION = "0.9.7"
 $LUVI_VERSION = "0.7.0"
+$LIT_VERSION = "0.9.7"
+
+$LUVI_ARCH = "Windows-amd64"
+$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-static-$LUVI_ARCH.exe"
+$LIT_URL = "https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
 
 function Download-File {
 param (
@@ -13,17 +17,15 @@ param (
   $downloader.DownloadFile($url, $file)
 }
 
-# download the package
-Write-Host "Download Luvi"
-$luviUrl = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-static-Windows-amd64.exe"
-Download-File $luviUrl "luvi.exe"
+# Download Files
+Download-File $LUVI_URL "luvi.exe"
+Download-File $LIT_URL "lit.zip"
 
-# lit package
-$litPackage = "https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
-$litFile = "lit.zip"
-Download-File $litPackage $litFile
-
-# Create Lit.exe
-$env:LUVI_APP="$litFile"
-Start-Process "luvi.exe" -ArgumentList "make $litFile" -Wait -NoNewWindow
+# Create lit.exe using lit
+$env:LUVI_APP="lit.zip"
+Start-Process "luvi.exe" -ArgumentList "make lit.zip" -Wait -NoNewWindow
 $env:LUVI_APP=""
+
+# Cleanup
+Remove-Item "luvi.exe"
+Remove-Item "lit.zip"

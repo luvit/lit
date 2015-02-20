@@ -1,17 +1,21 @@
 #!/bin/sh
-# Set versions
-LUVI_VERSION=v0.7.0
+set -eu
+LUVI_VERSION=0.7.0
 LIT_VERSION=0.9.7
 
-# Download luvi binary
-LUVI_URL=https://github.com/luvit/luvi/releases/download/$LUVI_VERSION/luvi-static-`uname -s`_`uname -m`
+LUVI_ARCH=`uname -s`_`uname -m`
+LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-static-$LUVI_ARCH"
+LIT_URL="https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
+
+# Download Files
+echo "Downloading $LUVI_URL to luvi"
 curl -L $LUVI_URL > luvi
 chmod +x luvi
+echo "Downloading $LIT_URL to lit.zip"
+curl -L $LIT_URL > lit.zip
 
-# Download lit source and build self
-LIT_ZIP=https://github.com/luvit/lit/archive/$LIT_VERSION.tar.gz
-curl -L $LIT_ZIP | tar -xzvf -
-BASE=lit-$LIT_VERSION
-LIT_CONFIG=$BASE/litconfig
-echo "database: $BASE/litdb.git" > $LIT_CONFIG
-LIT_CONFIG=$LIT_CONFIG LUVI_APP=$BASE ./luvi make $BASE
+# Create lit using lit
+LUVI_APP=lit.zip luvi make lit.zip
+
+# Cleanup
+rm lit.zip luvi
