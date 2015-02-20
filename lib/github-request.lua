@@ -2,7 +2,7 @@ local env = require('env')
 local httpCodec = require('http-codec')
 local connect = require('coro-tcp').connect
 local tlsWrap = require('coro-tls').wrap
-local wrapper = require('./wrapper')
+local wrapper = require('coro-wrapper')
 local log = require('./log')
 local jsonParse = require('json').parse
 

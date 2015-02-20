@@ -5,7 +5,7 @@ local connect = require('coro-tcp').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('./codec').makeRemote
-local wrapper = require('./wrapper')
+local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local tlsWrap = require('coro-tls').wrap
 

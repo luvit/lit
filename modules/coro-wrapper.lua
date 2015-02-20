@@ -1,3 +1,6 @@
+exports.name = "creationix/coro-wrapper"
+exports.version = "0.1.0"
+
 function exports.reader(read, decode)
   local buffer = ""
   return function ()

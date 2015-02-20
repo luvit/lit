@@ -3,7 +3,7 @@ local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 
 local log = require('../lib/log')
-local wrapper = require('../lib/wrapper')
+local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local makeRemote = require('../lib/codec').makeRemote
 local handlers = require('../lib/handlers')
