@@ -346,7 +346,7 @@ return function (path)
               log("including", subPath)
             end
           end
-        elseif default then
+        elseif default and subPath then
           log("skipping", subPath)
         end
       end
