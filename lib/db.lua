@@ -235,40 +235,17 @@ return function (path)
     storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
   end
 
-  local importEntry, importTree
-
-  function importEntry(path, stat, filter)
-    if stat.type == "directory" then
-      local hash = importTree(path, filter)
-      if not hash then return end
-      return modes.tree, hash
-    end
-    if stat.type == "file" then
-      stat = stat.mode and stat or fs.stat(path)
-      local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
-      return mode, db.saveAs("blob", assert(fs.readFile(path)))
-    end
-    if stat.type == "link" then
-      return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
-    end
-    error("Unsupported type at " .. path .. ": " .. toString(stat.type))
-  end
-
-  -- By default, ignore hidden files and the "modules" folder
-  local function defaultFilter(name)
-    return name:sub(1, 1) ~= '.'
-       and name ~= "modules"
-  end
-
   local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
 
-  local function compileFilter(rules)
+  local function compileFilter(path, rules)
     assert(#rules > 0, "Empty files rule list not allowed")
     for i = 1, #rules do
       local skip, pattern = rules[i]:match("(!*)(.*)")
       local parts = {"^"}
       for glob, text in pattern:gmatch("(%**)([^%*]*)") do
-        if #glob > 0 then
+        if #glob == 1 then
+          parts[#parts + 1] = "[^/]*"
+        elseif #glob > 1 then
           parts[#parts + 1] = ".*"
         end
         if #text > 0 then
@@ -281,48 +258,103 @@ return function (path)
         pattern = table.concat(parts)
       }
     end
-    return function (name, isTree)
-      local allowed = defaultFilter(name) and (isTree or not rules[1].allowed)
-      for i = 1, #rules do
-        local rule = rules[i]
-        if name:match(rule.pattern) then
-          allowed = rule.allowed
-        end
-      end
-      return allowed
-    end
-  end
-
-  function importTree(path, filter)
-    local items = {}
-    local meta = fs.readFile(pathJoin(path, "package.lua"))
-    if meta then meta = loadstring(meta)() end
-    if meta and meta.files then
-      filter = compileFilter(meta.files)
-    end
-
-    -- Detect if this list defaults to include or exclude
-    local black = filter("")
-
-    for entry in assert(fs.scandir(path)) do
-      local fullPath = pathJoin(path, entry.name)
-      if filter(entry.name, entry.type == "directory") then
-        entry.mode, entry.hash = importEntry(fullPath, entry, filter)
-        if entry.hash then
-          items[#items + 1] = entry
-          if not black and entry.type ~= "directory" then
-            log("including", fullPath)
+    return {
+      default = not rules[1].allowed,
+      prefix = "^" .. path:gsub(quotepattern, "%%%1") .. '/(.*)',
+      match = function (path)
+        local allowed
+        for i = 1, #rules do
+          local rule = rules[i]
+          if path:match(rule.pattern) then
+            allowed = rule.allowed
           end
         end
-      elseif black then
-        log("skipping", fullPath)
+        return allowed, path
       end
-    end
-    return #items > 0 and db.saveAs("tree", items)
+    }
   end
 
-  function db.import(path)
-    local mode, hash = importEntry(path, assert(fs.stat(path)), defaultFilter)
+  function db.import(path, rules)
+
+    local filters = {}
+    if rules then
+      filters[#filters + 1] = compileFilter(path, rules)
+    end
+
+    local importEntry, importTree
+
+    function importEntry(path, stat)
+      if stat.type == "directory" then
+        local hash = importTree(path)
+        if not hash then return end
+        return modes.tree, hash
+      end
+      if stat.type == "file" then
+        stat = stat.mode and stat or fs.stat(path)
+        local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
+        return mode, db.saveAs("blob", assert(fs.readFile(path)))
+      end
+      if stat.type == "link" then
+        return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
+      end
+      error("Unsupported type at " .. path .. ": " .. tostring(stat.type))
+    end
+
+    function importTree(path)
+      local items = {}
+      local meta = fs.readFile(pathJoin(path, "package.lua"))
+      if meta then meta = loadstring(meta)() end
+      if meta and meta.files then
+        filters[#filters + 1] = compileFilter(path, meta.files)
+      end
+
+      for entry in assert(fs.scandir(path)) do
+        local fullPath = pathJoin(path, entry.name)
+        -- Ignore all hidden files and folders always.
+        local allow, subPath, default
+        default = true
+        for i = 1, #filters do
+          local filter = filters[i]
+          local newPath = fullPath:match(filter.prefix)
+          if newPath then
+            default = filter.default
+            local newAllow = filter.match(newPath)
+            if newAllow ~= nil then
+              subPath = newPath
+              allow = newAllow
+            end
+          end
+        end
+        if allow == nil then
+          -- If nothing matched, fall back to defaults
+          if entry.name:match("^%.") then
+            -- Skip hidden files.
+            allow = false
+          elseif entry.type == "directory" then
+            -- Walk all trees except modules
+            allow = entry.name ~= "modules"
+          else
+            allow = default
+          end
+        end
+
+        if allow then
+          entry.mode, entry.hash = importEntry(fullPath, entry)
+          if entry.hash then
+            items[#items + 1] = entry
+            if entry.type ~= "directory" and not default then
+              log("including", subPath)
+            end
+          end
+        elseif default then
+          log("skipping", subPath)
+        end
+      end
+      return #items > 0 and db.saveAs("tree", items)
+    end
+
+    local mode, hash = importEntry(path, assert(fs.stat(path)))
+    if not hash then return end
     return modes.toType(mode), hash
   end
 

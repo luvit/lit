@@ -347,8 +347,8 @@ return function (db, config, getKey)
     end
   end
 
-  local function importPath(writer, root, path)
-    local kind, hash = db.import(pathJoin(root, path))
+  local function importPath(writer, root, path, rules)
+    local kind, hash = db.import(pathJoin(root, path), rules)
     if kind == "tree" then
       importTree(writer, path, hash)
     else
@@ -389,7 +389,8 @@ return function (db, config, getKey)
 
     local writer = miniz.new_writer()
 
-    importPath(writer, path)
+    log("importing", path, "highlight")
+    importPath(writer, path, nil, { "!" .. target })
 
     if meta.dependencies then
       local deps = {}
@@ -400,10 +401,10 @@ return function (db, config, getKey)
         local tag = dep.author .. '/' .. dep.name .. '@' .. dep.version
         if dep.disk then
           local name = "modules/" .. (dep.disk:match("([^/\\]+)$") or alias)
-          log("importing", tag .. ' (' .. dep.disk .. ')', "highlight")
+          log("adding", tag .. ' (' .. dep.disk .. ')', "highlight")
           importPath(writer, path, name)
         elseif dep.hash then
-          log("importing", tag, "highlight")
+          log("adding", tag, "highlight")
           local tag = db.loadAs("tag", dep.hash)
           if tag.type == "tree" then
             importTree(writer, "modules/" .. alias, tag.object)

@@ -17,8 +17,8 @@ return {
     "creationix/json@2.5.1",
   },
   files = {
-    "*.lua",
-    "README",
-    "!test*",
+    "commands/README",
+    "**.lua",
+    "!test*"
   }
 }
