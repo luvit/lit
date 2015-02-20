@@ -13,9 +13,11 @@ coroutine.wrap(function ()
   end, debug.traceback)
   if success then
     log("done", "success", "success")
+    print()
     os.exit(0)
   else
     log("fail", err, "failure")
+    print()
     os.exit(-1)
   end
 end)()
