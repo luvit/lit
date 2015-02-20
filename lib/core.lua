@@ -180,6 +180,32 @@ return function (db, config, getKey)
 
   function core.addDep(deps, modulesDir, alias, author, name, version)
 
+    -- Check for existing packages in the "modules" dir on disk
+    if modulesDir then
+      local meta, path = pkg.query(pathJoin(modulesDir, alias))
+      if meta then
+        if meta.name ~= author .. '/' .. name then
+          local message = string.format("%s %s ~= %s/%s",
+            alias, meta.name, author, name)
+          log("alias conflict (disk)", message, "failure")
+        elseif meta.version ~= version then
+          local message = string.format("%s %s ~= %s",
+            alias, meta.version, version)
+          log("version mismatch (disk)", message, "highlight")
+        end
+
+        deps[alias] = {
+          author = author,
+          name = name,
+          version = meta.version,
+          disk = path
+        }
+
+        if not meta.dependencies then return end
+        return core.processDeps(deps, modulesDir, meta.dependencies)
+      end
+    end
+
     -- Find best match in local and remote databases
     local match, hash = db.match(author, name, version)
     if match then
@@ -209,35 +235,9 @@ return function (db, config, getKey)
       end
     end
 
-    -- Check for existing packages in the "modules" dir on disk
-    if modulesDir then
-      local meta, path = pkg.query(pathJoin(modulesDir, alias))
-      if meta then
-        if meta.name ~= author .. '/' .. name then
-          local message = string.format("%s %s ~= %s/%s",
-            alias, meta.name, author, name)
-          log("alias conflict (disk)", message, "failure")
-        elseif meta.version ~= version then
-          local message = string.format("%s %s ~= %s",
-            alias, meta.version, version)
-          log("version mismatch (disk)", message, "highlight")
-        end
-
-        deps[alias] = {
-          author = author,
-          name = name,
-          version = meta.version,
-          disk = path
-        }
-
-        if not meta.dependencies then return end
-        return core.processDeps(deps, modulesDir, meta.dependencies)
-      end
-    end
-
     if not match then
       if version then
-        error("No matching package: " .. author .. "/" .. name .. '@' .. version)
+        error("No such version: " .. author .. "/" .. name .. '@' .. version)
       else
         error("No such package: " .. author .. '/' .. name)
       end
