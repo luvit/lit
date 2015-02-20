@@ -7,6 +7,7 @@ return {
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.1",
     "creationix/coro-tls@1.0.0",
+    "creationix/coro-wrapper@0.1.0",
     "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.1",
     "creationix/git@0.1.0",
