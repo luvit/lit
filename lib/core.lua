@@ -366,7 +366,8 @@ return function (db, config, getKey)
     end
     log("creating binary", target, "highlight")
 
-    local fd = assert(uv.fs_open(target, "w", 511)) -- 0777
+
+    local fd = assert(uv.fs_open(target .. ".temp", "w", 511)) -- 0777
 
     -- Copy base binary
     local binSize
@@ -382,7 +383,7 @@ return function (db, config, getKey)
         binSize = uv.fs_stat(source).size
       end
       local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
-      log("copying binary prefix", binSize .. " bytes")
+      log("copying binary prefix", binSize .. " bytes from " .. source)
       uv.fs_sendfile(fd, fd2, 0, binSize)
       uv.fs_close(fd2)
     end
@@ -417,6 +418,7 @@ return function (db, config, getKey)
 
     uv.fs_write(fd, writer:finalize(), binSize)
     uv.fs_close(fd)
+    uv.fs_rename(target .. ".temp", target)
     log("done building", target)
 
   end
