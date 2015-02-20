@@ -93,9 +93,9 @@ return function(db, url)
     return data
   end
 
-  local rawMatch = db.match
+  db.offlineMatch = db.match
   function db.match(author, name, version)
-    local match, hash = rawMatch(author, name, version)
+    local match, hash = db.offlineMatch(author, name, version)
     local tag = author .. "/" .. name
     connect()
     local query = version and (tag .. " " .. version) or tag
@@ -113,12 +113,12 @@ return function(db, url)
     return upMatch, upHash
   end
 
-  local rawLoad = db.load
+  db.offlineLoad = db.load
   function db.load(hash)
-    local raw = rawLoad(hash)
+    local raw = db.offlineLoad(hash)
     if raw then return raw end
     db.fetch({hash})
-    return assert(rawLoad(hash))
+    return assert(db.offlineLoad(hash))
   end
 
   function db.fetch(list)
