@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.0.1"
+exports.version = "1.0.2"
 
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
@@ -18,13 +18,32 @@ function exports.wrapStream(socket)
     end
     if paused then
       paused = false
-      socket:read_start(onRead)
+      assert(socket:read_start(onRead))
     end
     waiting = coroutine.running()
     return coroutine.yield()
   end
 
+  local flushing = false
+  local flushed = false
+  local function checkShutdown()
+    if socket:is_closing() then return end
+    if not flushing and not writing then
+      flushing = true
+      local thread = coroutine.running()
+      socket:shutdown(function (err)
+        flushed = true
+        coroutine.resume(thread, not err, err)
+      end)
+      assert(coroutine.yield())
+    end
+    if flushed and not reading then
+      socket:close()
+    end
+  end
+
   function onRead(err, chunk)
+    assert(not err, err)
     local data = err and {nil, err} or {chunk}
     if waiting then
       local thread = waiting
@@ -34,15 +53,13 @@ function exports.wrapStream(socket)
       queue[#queue + 1] = data
       if not paused then
         paused = true
-        socket:read_stop()
+        assert(socket:read_stop())
       end
     end
     if not chunk then
       reading = false
       -- Close the whole socket if the writing side is also closed already.
-      if not writing and not socket:is_closing() then
-        socket:close()
-      end
+      checkShutdown()
     end
   end
 
@@ -50,17 +67,11 @@ function exports.wrapStream(socket)
     if chunk == nil then
       -- Shutdown our side of the socket
       writing = false
-      if not socket:is_closing() then
-        socket:shutdown()
-        -- Close if we're done reading too
-        if not reading and not socket:is_closing() then
-          socket:close()
-        end
-      end
+      checkShutdown()
     else
       -- TODO: add backpressure by pausing and resuming coroutine
       -- when write buffer is full.
-      socket:write(chunk)
+      assert(socket:write(chunk))
     end
   end
 
