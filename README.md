@@ -1,13 +1,15 @@
 # Luvit Invention Toolkit
 
 Lit is a toolkit designed to make working in the new [luvit][] 2.0 ecosystem
-easy and even fun.  It serves multiple purposes.  Lit is what run the central
-package repository at `wss://lit.luvit.io/`.  It can be used to compile
-[luvi][] apps from folders or zip files into self-executing binaries.  Lit is
-used to publish new packages to the central repository and install
-dependencies into your local tree.
+easy and even fun.
 
-Lit is also a luvi app and luvi library itself and bootstraps fairly easily.
+ - Lit powers the central repository at `wss://lit.luvit.io/`.
+ - Lit is used to publish new packages to the central repository.
+ - Lit is used to download and install dependencies into your local tree.
+ - Lit can be used to compile [luvi][] apps from folders or zip files into
+   self-executing binaries.
+
+Lit is also a luvi app and library itself and bootstraps fairly easily.
 
 ## Installing Lit
 
