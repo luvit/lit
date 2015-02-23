@@ -3,8 +3,13 @@ set -eu
 LUVI_VERSION=0.7.1
 LIT_VERSION=0.9.8
 
-LUVI_ARCH=`uname -s`_`uname -m`
-LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-static-$LUVI_ARCH"
+
+LUVI_ARCH=large-`uname -s`_`uname -m`
+file `which file` | grep -q ARM
+if [ ! $? -eq 0 ]; then
+  LUVI_ARCH=static-`uname -s`_`uname -m`
+fi
+LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-$LUVI_ARCH"
 LIT_URL="https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
 
 # Download Files
