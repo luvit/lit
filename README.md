@@ -1,11 +1,11 @@
-# Lit - Luvit Invention Toolkit
+# Luvit Invention Toolkit
 
 Lit is a toolkit designed to make working in the new [luvit][] 2.0 ecosystem
 easy and even fun.  It serves multiple pusposes.  Lit is what run the central
-package repository at wss://lit.luvit.io/.  It can be used to compile [luvi][]
-apps from folders or zip files into self-executing binaries.  Lit is used to
-publish new packages to the central repository and install dependencies into
-your local tree.
+package repository at `wss://lit.luvit.io/`.  It can be used to compile
+[luvi][] apps from folders or zip files into self-executing binaries.  Lit is
+used to publish new packages to the central repository and install
+dependencies into your local tree.
 
 Lit is also a luvi app and luvi library itself and bootstraps fairly easily.
 
@@ -45,155 +45,168 @@ zip, it will build itself using the zip file as both code and input data.
 When done, you will have a `lit` or `lit.exe` executable in your directory
 that you can put somewhere in your path to install globally.
 
-## Using Lit
+## Command-Line Interface
 
-The command-line interface is is documented in [The Commands
-README](./commands/README).  A snapshot (possibly out of date) it duplicated
-here for convenience.
+Lit is a multi-functionality toolkit, it has many groups of commands via it's CLI.
 
+#### `lit help`
+
+This will print a [high-level cheatsheet](./commands/README) of all the commands in the interface to your terminal.
+
+#### `lit version`
+
+This simple command will print the lit version and exit.  It's useful to verify which version of lit you have installed from a script.
+
+### Local Configuration
+
+These commands are for working with your local lit config file.
+
+#### `lit auth username`
+
+This command is used to authenticate as a github user.  It assumes you have a RSA private key located at `$HOME/.ssh/id_rsa` and downloads your public keys from github looking for one that matches the private key on the disk.  Once verified you are the person you claim to be, this private key will be used to sign packages you create to be published.
+
+#### `lit up [url]`
+
+By default lit is configured to use `wss://lit.luvit.io` as it's upstream repository.  You can set a new custom upstream here.  If you're down (because of `lit down`) this will bring you back online.  If the url is ommitted, the `defaultUpstream` in your config will be used.
+
+When online, lit will check the upstream when looking for package matches and download and cache any new data on demand.
+
+#### `lit down`
+
+If your internet connection is slow or unreliable, you can use lit in offline mode.  This will skip all calls to the upstream and work as a standalone database using your cache.  This works suprizingly well once the packages you commonly use are cached locally.
+
+#### `lit config`
+
+This simple helper will dump the contents of your config file for easy viewing
+
+### Package Management
+
+Lit's primary usage is probably as a package manager and client to the package repository.
+
+#### `lit add path*`
+
+Given one or more paths to modules (folders or files containing lit metadata), lit will read the metadata, import the file or folders into the database and create a tagged release (signing if you're authenticated).
+
+These packages can then be later published to an upstream or installed locally in some other folder.
+
+#### `lit publish path*`
+
+Publish will first run `lit add path*` to ensure the latest version is imported into the database.  It will then iterate over the local versions and upload any that aren't yet on the upstream.
+
+#### `lit install`
+
+Running `lit install` in a folder containing lit metadata will install all it's dependencies recursivly to the local `modules` folder.  If any of the dependencies already exist there, they will be skipped, even if there is a new version in the database.
+
+#### `lit install names*`
+
+You can also install one or more lit packages directly by name without setting up a metadata file.
+
+For example, this will install the latest version of `creationix/git` to modules (even if there is something already there)
+
+```sh
+> lit install creationix/git`
 ```
-Lit CLI Commands
-================
- lit help                    Show usage information.
- lit version                 Show just the lit version.
 
-Local configuration
--------------------
- lit auth username           Verify local private key and set username.
- lit up [url]                Go online.  Uses default upstream or url.
- lit down                    Go offline (disable upstream).
- lit config                  Print configuration.
+#### `lit sync`
 
-Package Management
-------------------
- lit add path*               Import, tag, and sign packages from disk.
-                             to the local db.
- lit publish path*           Add and publish packages to upstream.
- lit install                 Install deps of package in cwd.
- lit install names*          Install dependencies.
- lit sync                    Sync down upstream updates for any locally cached
-                             packages.
+If you like to work offline a lot, it's useful to run `lit sync` when online to make sure the cached packages in your local database have the latest versions cached.
 
-Execution and Packaging
------------------------
- lit run appdir              Run app directly without building.
- lit test appdir             Run app directly, but with custom test main.
- lit make appdir             Build appdir into a single executable.
+Here is an example of going inline, checking for updates and then going back offline.
 
-Server
-------
- lit serve prefix            Start a lit package server (upstream or proxy).
-                             `prefix` is the protocol and host.
-                             EG: lit serve https://lit.luvit.io
-
-Upstream Organization Management
---------------------------------
- lit claim org               Claim a github organization that you are a public
-                             member of.
- lit share org user          Add collaborator who can push to this lit org.
- lit unclaim org             Remove yourself from a lit organization.
+```sh
+> lit up
+> lit sync
+> lit down
 ```
+
+### Upstream Organization Management
+
+By default, you can only publish to upstream prefixes that match your github username, but you can also publish to github organization names if you've set as an other of that org in the lit upstream.
+
+#### `lit claim org`
+
+If you're a public member of an org on github, you can add yourself as an owner to the corresponding org in the lit upstream.
+
+#### `lit share org username`
+
+Once you're an owner, you can add anyone as collaborators and co-owners with the share command.
+
+#### `lit unclaim org`
+
+You can remove yourself from the list of owners with this command.
+
+### Execution and Packaging
+
+Luvi apps can be run and created using the `LUVI_APP` and `LUVI_TARGET` environment variables, but lit provides easier interfaces to this and adds new functionality.
+
+#### `lit make path/to/app [target]`
+
+When you're ready to package your luvi app into a single binary, you can use lit's make command.  This is more than simply setting `LUVI_TARGET`.  It will read the `package.lua` metadata to get the name of the target.  Also it will inject any missing dependencies into the bundle embedded in the executable.
+
+Also the `package.lua` can contain a white-list of black-list of files to include in the final bundle.  See examples in [luvit](https://github.com/luvit/luvit/blob/luvi-up/package.lua) and [lit](https://github.com/luvit/lit/blob/master/package.lua).
+
+For example, lit's own bootstrap uses a combination of `LUVI_APP` and `lit make` to build itself with nothing more than the luvi executable and a zip file containing lit's source.
+
+```sh
+> LUVI_APP=lit.zip luvi make lit.zip
+```
+
+This will run the app contained in lit.zip passing in the arguments `make` and `lit.zip`.  The `make` will trigger lit's make command and it will build a lit executable from the contents of the zip file, installing any dependencies not found in the zip.
+
+#### `lit run args*`
+
+If you're in the root of a luvi app, you can run it here.  The following two commands are basically the same:
+
+
+Directly in luvi:
+
+```sh
+> LUVI_APP=. luvi arg1 arg2`
+```
+
+Using lit wrapper:
+
+```sh
+> lit run arg1 arg2
+```
+
+This is mostly for environments where setting temporary environment variables is less than ideal.
+
+#### lit test
+
+This is another convenience wrapper.  It is the same as `lit run` except is also sets a custom main to run.
+
+```sh
+> LUVI_APP=. LUVI_MAIN=tests/run.lua luvi
+```
+
+Is the same as:
+
+```sh
+> lit test
+```
+
+### Lit Server
+
+It's trivial to setup your own caching proxy or private repository of lit packages.  Simply install lit on the server and run `lit serve`.  If you have an upstream configured this server will act as a caching proxy.  Any requests not found locally will be fetched from the upstream and cached locally.  Any packages published locally will be kept local (private).
+
+It's highly encouraged to setup such proxies if you have deployments that depend on lit packages.  Never use the public repository directly for repetitive and/or mission critical scripts.
+
 
 ## Lit as a Library
 
 Also you can use lit as a library via it's core interface.
 
-This interface is is documented in [The lib README](./lib/README).  A snapshot
-(possibly out of date) it duplicated here for convenience.
+This interface is is documented in [The lib README](./lib/README).
 
-```
-List of all internal functions to be organized
+## REST API
 
-Low Level Storage Commands
-==========================
-
-These are the filesystem abstraction needed by lit's local database.
-
-storage.write(path, raw)     - Write mutable data by path
-storage.put(path, raw)       - Write immutable data by path
-storage.read(path) -> raw    - Read mutable data by path (nil if not found)
-storage.delete(path)         - Delete an entry (removes empty parent directories)
-storage.nodes(path) -> iter  - Iterate over node children of path
-                               (empty iter if not found)
-storage.leaves(path) -> iter - Iterate over node children of path
-                               (empty iter if not found)
-
-Mid Level Storage Commands
-=========================
-
-These commands work at a higher level and consume the low-level storage APIs.
-
-db.has(hash) -> bool                   - check if db has an object
-db.load(hash) -> raw                   - load raw data, nil if not found
-db.loadAny(hash) -> kind, value        - pre-decode data, error if not found
-db.loadAs(kind, hash) -> value         - pre-decode and check type or error
-db.save(raw) -> hash                   - save pre-encoded and framed data
-db.saveAs(kind, value) -> hash         - encode, frame and save to objects/$ha/$sh
-db.hashes() -> iter                    - Iterate over all hashes
-
-db.match(author, name, version)
-  -> match, hash                       - Find the best version matching the query.
-db.read(author, name, version) -> hash - Read from refs/tags/$author/$tag/v$version
-db.write(author, name, version, hash)  - Write to refs/tags/$suthor/$tag/v$version
-db.authors() -> iter                   - Iterate over refs/tags/*
-db.names(author) -> iter               - Iterate nodes in refs/tags/$author/**
-db.versions(author, name) -> iter      - Iterate leaves in refs/tags/$author/$tag/*
-
-db.readKey(author, fingerprint) -> key - Read from keys/$author/$fingerprint
-db.putKey(author, fingerprint, key)    - Write to keys/$author/$fingerprint
-db.revokeKey(author, fingerprint)      - Delete keys/$author/$fingerprint
-db.fingerprints(author) -> iter        - iter of fingerprints
-
-db.getEtag(author) -> etag             - Read keys/$author.etag
-db.setEtag(author, etag)               - Writes keys/$author.etag
-
-db.owners(org) -> iter                 - Iterates lines of keys/$org.owners
-db.isOwner(org, author) -> bool        - Check if a user is an org owner
-db.addOwner(org, author)               - Add a new owner
-db.removeOwner(org, author)            - Remove an owner
-
-db.import(fs, path) -> kind, hash      - Import a file or tree into database
-db.export(hash, path) -> kind          - Export a hash to a path
-
-
-Remote Enhanced DB
-==================
-
-When an upstream is configured, the db interface has the following additions.
-
-rdb.load(hash) -> raw             - calls fetch when not found and tries a second time.
-rdb.match(author, name, version)
-  -> match, hash                  - Also checks upstream for match and uses higher of the two
-rdb.readRemote(author, name, version)
-  -> hash                         - Read hash from remote only.
-rdb.fetch(hash)                   - fetch a hash and all dependents from upstream.
-rdb.push(hash)                    - push a hash and all children to upstream.
-rdb.upquery(name, request)        - send arbitrary queries to the upstream server.
-
-
-Package Metadata Commands
-================
-
-These commands work with packages metadata.
-
-pkg.query(fs, path) -> meta, path           - Query an on-disk path for package info.
-pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
-pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
-
-Core Functions
-==============
-
-These are the high-level actions.  This consumes a database instance
-
-core.tag(path, name, email, key)
-  -> author, tag, version, hash          - Import a package complete with signed tag.
-
-REST API
-========
+Lit servers export a simple REST based interface for browsing the package contents.
 
 This is a simple rest API for reading the remote database over HTTP.
 It uses hypermedia in the JSON responses to make linking between requests simple.
 
+```
 GET / -> api json {
   blobs = "/blobs/{hash}"
   trees = "/trees/{hash}"
@@ -233,18 +246,6 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
-
-Server API Handlers
-===================
-
-handlers.read
-handlers.match
-handlers.wants
-handlers.want
-handlers.send
-handlers.claim
-handlers.share
-handlers.unclaim
 ```
 
 ## Background Information
