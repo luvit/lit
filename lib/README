@@ -48,7 +48,7 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
-db.import(path) -> kind, hash          - Import a file or tree into database
+db.import(fs, path) -> kind, hash      - Import a file or tree into database
 db.export(hash, path) -> kind          - Export a hash to a path
 
 
@@ -72,7 +72,7 @@ Package Metadata Commands
 
 These commands work with packages metadata.
 
-pkg.query(path) -> meta, path               - Query an on-disk path for package info.
+pkg.query(fs, path) -> meta, path           - Query an on-disk path for package info.
 pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
 pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
 
