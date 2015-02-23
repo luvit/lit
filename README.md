@@ -569,3 +569,6 @@ run sync when you're online if you want to get updates.
 
 Running a sync will grab the latest versions and latest semver matches of all
 local packages in the db.
+
+[luvit]: https://github.com/luvit/luvit/
+[luvi]:https://github.com/luvit/luvi/
