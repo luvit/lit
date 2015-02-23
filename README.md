@@ -9,7 +9,7 @@ In most cases, you just want to install lit as quickly as possible, possibly in 
 On unix, do the following:
 
 ```sh
-curl -L https://github.com/luvit/lit/raw/master/web-install.sh | sh
+curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
 ```
 
 To get the latest version.  Or replace `master` with a tag to get that version of lit.
@@ -17,13 +17,13 @@ To get the latest version.  Or replace `master` with a tag to get that version o
 If you're on Windows, I've thought of you as well, in `cmd.exe` run:
 
 ```batch
-PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/web-install.ps1'))"
+PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
 ```
 
 Or in Powershell
 
 ```powershell
-iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/web-install.ps1'))
+iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))
 ```
 
 ## Background Information
