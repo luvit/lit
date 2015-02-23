@@ -42,7 +42,7 @@ iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw
 
 Both these scripts will attempt to download a pre-compiled [luvi][] binary and
 the source to lit as a zip file.  Then using the zip capabilities in luvi and
-zip, it will build itself using the zip file as both code and input data.
+lit, it will build itself using the zip file as both code and input data.
 
 When done, you will have a `lit` or `lit.exe` executable in your directory
 that you can put somewhere in your path to install globally.
