@@ -181,7 +181,7 @@ return function (db, config, getKey)
     end
   end
 
-  function core.addDep(deps, fs, modulesDir, alias, author, name, version)
+  local function addDep(deps, fs, modulesDir, alias, author, name, version)
     -- Check for existing packages in the "modules" dir on disk
     if modulesDir then
       local meta, path = pkg.query(fs, pathJoin(modulesDir, alias))
@@ -267,7 +267,7 @@ return function (db, config, getKey)
         error("Package names must include owner/name at a minimum")
       end
       if version then version = normalize(version) end
-      core.addDep(deps, fs, modulesDir, alias, author, name, version)
+      addDep(deps, fs, modulesDir, alias, author, name, version)
     end
     local hashes = {}
     for i = 1, #deps do
