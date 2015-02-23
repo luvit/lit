@@ -307,6 +307,47 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
 }
 ```
 
+## Package Metadata
+
+Lit packages need some form of metadata embedded in the lua files.  Packages can
+be either single lua files or directories containing many files.  If your
+library is a single file, simply set `exports.name` and `exports.version` and
+optionally `exports.dependencies` at the top of your file.  It will then be able
+to be imported into lit and published to the repository.
+
+For more complex packages, lit will search first in `package.lua` and then in
+`init.lua`. The first file found will need to export or return a table
+containing the `name`, `version` and `dependencies` metadata.
+
+Here is an example of a single-file package
+
+```lua
+-- bad-math.lua
+-- Dead simple library
+exports.name = "creationix/bad-math"
+exports.version = "0.0.1"
+
+function exports.add(a, b)
+  return a - b
+end
+```
+
+This can then be published with `lit publish bad-math.lua`, it can be installed
+with `lit install creationix/bad-math.lua` and dependend on with a
+`dependencies` entry of `creationix/bad-math@0.0.1`.
+
+If this was in a larger package, it could have a package.lua containing:
+
+```lua
+-- bad-math/package.lua
+return {
+  name = "creationix/bad-math",
+  version = "0.0.1",
+}
+```
+
+This could be published with `lit publish bad-math`.
+
 ## Background Information
 
 This section is slightly out of date, updates forthcoming.
