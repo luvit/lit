@@ -100,7 +100,6 @@ local function zipFs(zip, autoChroot)
 end
 
 return function (path)
-p{path=path}
   local zip = miniz.new_reader(path)
   if zip then
     return zipFs(zip, true), ""
