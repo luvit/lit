@@ -22,11 +22,16 @@ return function (path)
     assert(fs.mkdirp("objects"))
     assert(fs.mkdirp("refs/tags"))
     assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))
-    assert(fs.writeFile("config", "[core]\n"
-      .. "\trepositoryformatversion = 0\n"
-      .. "\tfilemode = true\n"
-      .. "\tbare = true\n"))
-  end
+    assert(fs.writeFile("config", [[
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = true
+[gc]
+        auto = 0
+]]))
+
+end
 
   local storage = {}
 
