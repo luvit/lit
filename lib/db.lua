@@ -34,7 +34,7 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
-db.import(path) -> kind, hash          - Import a file or tree into database
+db.import(fs, path) -> kind, hash      - Import a file or tree into database
 db.export(hash, path) -> kind          - Export a hash to a path
 ]]
 
@@ -274,7 +274,7 @@ return function (path)
     }
   end
 
-  function db.import(path, rules)
+  function db.import(fs, path, rules)
 
     local filters = {}
     if rules then
@@ -290,7 +290,9 @@ return function (path)
         return modes.tree, hash
       end
       if stat.type == "file" then
-        stat = stat.mode and stat or fs.stat(path)
+        if not stat.mode then
+          stat = fs.stat(path)
+        end
         local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
         return mode, db.saveAs("blob", assert(fs.readFile(path)))
       end
@@ -301,6 +303,8 @@ return function (path)
     end
 
     function importTree(path)
+      assert(type(fs) == "table")
+
       local items = {}
       local meta = fs.readFile(pathJoin(path, "package.lua"))
       if meta then meta = loadstring(meta)() end

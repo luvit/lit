@@ -21,6 +21,7 @@ local semver = require('semver')
 local normalize = semver.normalize
 local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
+local vfs = require('./vfs')
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -49,10 +50,12 @@ return function (db, config, getKey)
   end
 
   function core.add(path)
-    local meta = pkg.query(path)
+    local fs
+    fs, path = vfs(path)
+    local meta = pkg.query(fs, path)
     assert(meta.private ~= true, "Can't tag private package: " .. path)
     local author, name, version = pkg.normalize(meta)
-    local kind, hash = db.import(path)
+    local kind, hash = db.import(fs, path)
     local oldTagHash = db.read(author, name, version)
     local fullTag = author .. "/" .. name .. '/v' .. version
     if oldTagHash then
@@ -178,11 +181,10 @@ return function (db, config, getKey)
     end
   end
 
-  function core.addDep(deps, modulesDir, alias, author, name, version)
-
+  function core.addDep(deps, fs, modulesDir, alias, author, name, version)
     -- Check for existing packages in the "modules" dir on disk
     if modulesDir then
-      local meta, path = pkg.query(pathJoin(modulesDir, alias))
+      local meta, path = pkg.query(fs, pathJoin(modulesDir, alias))
       if meta then
         if meta.name ~= author .. '/' .. name then
           local message = string.format("%s %s ~= %s/%s",
@@ -202,7 +204,7 @@ return function (db, config, getKey)
         }
 
         if not meta.dependencies then return end
-        return core.processDeps(deps, modulesDir, meta.dependencies)
+        return core.processDeps(deps, fs, modulesDir, meta.dependencies)
       end
     end
 
@@ -253,7 +255,8 @@ return function (db, config, getKey)
     deps[#deps + 1] = hash
   end
 
-  function core.processDeps(deps, modulesDir, list)
+  function core.processDeps(deps, fs, modulesDir, list)
+
     for alias, dep in pairs(list) do
       if type(alias) == "number" then
         alias = string.match(dep, "/([^@]+)")
@@ -264,7 +267,7 @@ return function (db, config, getKey)
         error("Package names must include owner/name at a minimum")
       end
       if version then version = normalize(version) end
-      core.addDep(deps, modulesDir, alias, author, name, version)
+      core.addDep(deps, fs, modulesDir, alias, author, name, version)
     end
     local hashes = {}
     for i = 1, #deps do
@@ -277,7 +280,7 @@ return function (db, config, getKey)
     for i = 1, #hashes do
       local meta = pkg.queryDb(db, hashes[i])
       if meta.dependencies then
-        core.processDeps(deps, modulesDir, meta.dependencies)
+        core.processDeps(deps, fs, modulesDir, meta.dependencies)
       end
     end
 
@@ -315,14 +318,16 @@ return function (db, config, getKey)
 
 
   function core.installDeps(path)
-    local meta = pkg.query(path)
+    local fs
+    fs, path = vfs(path)
+    local meta = pkg.query(fs, path)
     if not meta.dependencies then
       log("no dependencies", path)
       return
     end
     local deps = {}
     local modulesDir = pathJoin(path, "modules")
-    core.processDeps(deps, modulesDir, meta.dependencies)
+    core.processDeps(deps, fs, modulesDir, meta.dependencies)
     return install(modulesDir, deps)
   end
 
@@ -347,8 +352,8 @@ return function (db, config, getKey)
     end
   end
 
-  local function importPath(writer, root, path, rules)
-    local kind, hash = db.import(pathJoin(root, path), rules)
+  local function importPath(writer, fs, root, path, rules)
+    local kind, hash = db.import(fs, pathJoin(root, path), rules)
     if kind == "tree" then
       importTree(writer, path, hash)
     else
@@ -357,7 +362,9 @@ return function (db, config, getKey)
   end
 
   function core.make(path, target)
-    local meta = pkg.query(path)
+    local fs
+    fs, path = vfs(path)
+    local meta = pkg.query(fs, path)
     if not target then
       target = meta.target or meta.name:match("[^/]+$")
       if require('ffi').os == "Windows" then
@@ -366,7 +373,8 @@ return function (db, config, getKey)
     end
     log("creating binary", target, "highlight")
 
-    local fd = assert(uv.fs_open('.' .. target, "wx", 511)) -- 0777
+    local tempFile = target:gsub("[^/]+$", ".%1.temp")
+    local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
     -- Copy base binary
     local binSize
@@ -391,19 +399,19 @@ return function (db, config, getKey)
 
     log("importing", path, "highlight")
     -- TODO: Find target relative to path and use that instead of just target
-    importPath(writer, path, nil, { "!" .. target })
+    importPath(writer, fs, path, nil, { "!" .. target })
 
     if meta.dependencies then
       local deps = {}
       local modulesDir = pathJoin(path, "modules")
       writer:add("modules/", "")
-      core.processDeps(deps, modulesDir, meta.dependencies)
+      core.processDeps(deps, fs, modulesDir, meta.dependencies)
       for alias, dep in pairs(deps) do
         local tag = dep.author .. '/' .. dep.name .. '@' .. dep.version
         if dep.disk then
           local name = "modules/" .. (dep.disk:match("([^/\\]+)$") or alias)
           log("adding", tag .. ' (' .. dep.disk .. ')', "highlight")
-          importPath(writer, path, name)
+          importPath(writer, fs, path, name)
         elseif dep.hash then
           log("adding", tag, "highlight")
           local tag = db.loadAs("tag", dep.hash)
@@ -418,7 +426,7 @@ return function (db, config, getKey)
 
     assert(uv.fs_write(fd, writer:finalize(), binSize))
     uv.fs_close(fd)
-    assert(uv.fs_rename('.' .. target, target))
+    assert(uv.fs_rename(tempFile, target))
     log("done building", target)
 
   end

@@ -4,14 +4,13 @@ Package Metadata Commands
 
 These commands work with packages metadata.
 
-pkg.query(path) -> meta, path               - Query an on-disk path for package info.
+pkg.query(fs, path) -> meta, path           - Query an on-disk path for package info.
 pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
 pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
 ]]
 
 local isFile = require('git').modes.isFile
 local semver = require('semver')
-local fs = require('coro-fs')
 local pathJoin = require('luvi').path.join
 local listToMap = require('git').listToMap
 
@@ -44,7 +43,7 @@ local function evalModule(data, name)
 end
 
 
-function exports.query(path)
+function exports.query(fs, path)
   local packagePath = path
   local stat, data, err
   stat, err = fs.stat(path)
