@@ -141,7 +141,3 @@ handlers.send
 handlers.claim
 handlers.share
 handlers.unclaim
-
-git.toDate (seconds) -> { seconds, offset}  - Convert from unix timestamp to git timestamp
-git.fromDate ({seconds, offset}) -> seconds - Reverse the conversion
-
