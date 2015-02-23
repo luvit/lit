@@ -16,6 +16,19 @@ Lit is also a luvi app and library itself and bootstraps fairly easily.
 In most cases, you just want to install lit as quickly as possible, possibly
 in a `Makefile` or `make.bat` in your own library or app.
 
+We maintain several [binary releases of
+luvi](https://github.com/luvit/luvi/releases) to ease bootstrapping of lit and
+luvit apps.
+
+The following platforms are supported:
+
+ - Windows (amd64)
+ - FreeBSD 10.1 (amd64)
+ - Raspberry PI Raspbian (armv6)
+ - BeagleBone Black Debian (armv7)
+ - Ubuntu 14.04 (x86_64)
+ - OSX Yosemite (x86_64)
+
 On unix, download the [install script](./get-lit.sh) and pipe to `sh`:
 
 ```sh
@@ -46,6 +59,27 @@ lit, it will build itself using the zip file as both code and input data.
 
 When done, you will have a `lit` or `lit.exe` executable in your directory
 that you can put somewhere in your path to install globally.
+
+#### Building From Source
+
+If the pre-built luvi binaries don't work on your machine, you can always build
+[luvi from source](https://github.com/luvit/luvi#building-from-source).
+
+Once you have luvi, building lit is simple:
+
+```
+> curl -L https://github.com/luvit/lit/archive/master.zip > lit.zip
+> LUVI_APP=lit.zip luvi make lit.zip
+```
+
+Or you can clone lit from git and use the Makefile which will do the same thing
+but use the files in the git clone.
+
+```
+> git clone git@github.com:luvit/lit.git
+> cd lit
+> make
+```
 
 ## Command-Line Interface
 
