@@ -15,7 +15,7 @@ echo "Downloading $LIT_URL to lit.zip"
 curl -L $LIT_URL > lit.zip
 
 # Create lit using lit
-LUVI_APP=lit.zip luvi make lit.zip
+LUVI_APP=lit.zip ./luvi make lit.zip
 
 # Cleanup
 rm lit.zip luvi
