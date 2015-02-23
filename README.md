@@ -1,6 +1,11 @@
 # Lit - Luvit Invention Toolkit
 
-Lit is a toolkit designed to make working in the new [luvit][] 2.0 ecosystem easy and even fun.  It serves multiple pusposes.  Lit is what run the central package repository at wss://lit.luvit.io/.  It can be used to compile [luvi][] apps from folders or zip files into self-executing binaries.  Lit is used to publish new packages to the central repository and install dependencies into your local tree.
+Lit is a toolkit designed to make working in the new [luvit][] 2.0 ecosystem
+easy and even fun.  It serves multiple pusposes.  Lit is what run the central
+package repository at wss://lit.luvit.io/.  It can be used to compile [luvi][]
+apps from folders or zip files into self-executing binaries.  Lit is used to
+publish new packages to the central repository and install dependencies into
+your local tree.
 
 Lit is also a luvi app and luvi library itself and bootstraps fairly easily.
 
@@ -9,15 +14,19 @@ Lit is also a luvi app and luvi library itself and bootstraps fairly easily.
 In most cases, you just want to install lit as quickly as possible, possibly
 in a `Makefile` or `make.bat` in your own library or app.
 
-On unix, do the following to get the latest version:
+On unix, download the [install script](./get-lit.sh) and pipe to `sh`:
 
 ```sh
 curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
 ```
 
-Since lit is still young, I recommend not using `master` and instead using a specified tag for your bootstrap scripts till we get past 1.0.0.
+Since lit is still young, I recommend not using `master` and instead using a
+specified tag for your bootstrap scripts till we get past 1.0.0.
 
-If you're on Windows, I've thought of you as well, in `cmd.exe` run:
+If you're on Windows, I've thought of you as well.  Simply download and run
+the [powershell script](./get-lit.ps1).
+
+In `cmd.exe` run:
 
 ```batch
 PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
@@ -29,14 +38,18 @@ Or directly in powershell, run:
 iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))
 ```
 
-Both these scripts will attempt to download a pre-compiled [luvi][] binary and the source to lit as a zip file.  Then using the zip capabilities in luvi and zip, it will build itself using the zip file as both code and input data.
+Both these scripts will attempt to download a pre-compiled [luvi][] binary and
+the source to lit as a zip file.  Then using the zip capabilities in luvi and
+zip, it will build itself using the zip file as both code and input data.
 
-When done, you will have a `lit` or `lit.exe` executable in your directory that you can put somewhere in your path to install.
+When done, you will have a `lit` or `lit.exe` executable in your directory
+that you can put somewhere in your path to install globally.
 
 ## Using Lit
 
 The command-line interface is is documented in [The Commands
-README](./commands/README).  A snapshot (possibly out of date) it duplicated here for convenience.
+README](./commands/README).  A snapshot (possibly out of date) it duplicated
+here for convenience.
 
 ```
 Lit CLI Commands
@@ -85,8 +98,8 @@ Upstream Organization Management
 
 Also you can use lit as a library via it's core interface.
 
-This interface is is documented in [The lib
-README](./lib/README).  A snapshot (possibly out of date) it duplicated here for convenience.
+This interface is is documented in [The lib README](./lib/README).  A snapshot
+(possibly out of date) it duplicated here for convenience.
 
 ```
 List of all internal functions to be organized
