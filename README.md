@@ -2,6 +2,34 @@
 
 This project is a command-line client and server for sharing luvit modules.
 
+## Installing Lit
+
+In most cases, you just want to install lit as quickly as possible, possibly in a Makefile in your project.
+
+On unix, do the following:
+
+```sh
+curl -L https://github.com/luvit/lit/raw/master/web-install.sh | sh
+```
+
+To get the latest version.  Or replace `master` with a tag to get that version of lit.
+
+gIf you're on Windows, I've thought of you as well, in `cmd.exe` run:
+
+```batch
+PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/web-install.ps1'))"
+```
+
+Or in Powershell
+
+```powershell
+iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/web-install.ps1'))
+```
+
+## Background Information
+
+This section is slightly out of date, updates forthcoming.
+
 The server listens on a TCP port and speaks a custom sync protocol.
 
 Message integrity is implemented via the nature of content addressable storage
