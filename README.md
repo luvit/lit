@@ -47,15 +47,18 @@ that you can put somewhere in your path to install globally.
 
 ## Command-Line Interface
 
-Lit is a multi-functionality toolkit, it has many groups of commands via it's CLI.
+Lit is a multi-functionality toolkit, it has many groups of commands via it's
+CLI.
 
 #### `lit help`
 
-This will print a [high-level cheatsheet](./commands/README) of all the commands in the interface to your terminal.
+This will print a [high-level cheatsheet](./commands/README) of all the commands
+in the interface to your terminal.
 
 #### `lit version`
 
-This simple command will print the lit version and exit.  It's useful to verify which version of lit you have installed from a script.
+This simple command will print the lit version and exit.  It's useful to verify
+which version of lit you have installed from a script.
 
 ### Local Configuration
 
@@ -63,17 +66,28 @@ These commands are for working with your local lit config file.
 
 #### `lit auth username`
 
-This command is used to authenticate as a github user.  It assumes you have a RSA private key located at `$HOME/.ssh/id_rsa` and downloads your public keys from github looking for one that matches the private key on the disk.  Once verified you are the person you claim to be, this private key will be used to sign packages you create to be published.
+This command is used to authenticate as a github user.  It assumes you have a
+RSA private key located at `$HOME/.ssh/id_rsa` and downloads your public keys
+from github looking for one that matches the private key on the disk.  Once
+verified you are the person you claim to be, this private key will be used to
+sign packages you create to be published.
 
 #### `lit up [url]`
 
-By default lit is configured to use `wss://lit.luvit.io` as it's upstream repository.  You can set a new custom upstream here.  If you're down (because of `lit down`) this will bring you back online.  If the url is ommitted, the `defaultUpstream` in your config will be used.
+By default lit is configured to use `wss://lit.luvit.io` as it's upstream
+repository.  You can set a new custom upstream here.  If you're down (because of
+`lit down`) this will bring you back online.  If the url is ommitted, the
+`defaultUpstream` in your config will be used.
 
-When online, lit will check the upstream when looking for package matches and download and cache any new data on demand.
+When online, lit will check the upstream when looking for package matches and
+download and cache any new data on demand.
 
 #### `lit down`
 
-If your internet connection is slow or unreliable, you can use lit in offline mode.  This will skip all calls to the upstream and work as a standalone database using your cache.  This works suprizingly well once the packages you commonly use are cached locally.
+If your internet connection is slow or unreliable, you can use lit in offline
+mode.  This will skip all calls to the upstream and work as a standalone
+database using your cache.  This works suprizingly well once the packages you
+commonly use are cached locally.
 
 #### `lit config`
 
@@ -81,37 +95,51 @@ This simple helper will dump the contents of your config file for easy viewing
 
 ### Package Management
 
-Lit's primary usage is probably as a package manager and client to the package repository.
+Lit's primary usage is probably as a package manager and client to the package
+repository.
 
 #### `lit add path*`
 
-Given one or more paths to modules (folders or files containing lit metadata), lit will read the metadata, import the file or folders into the database and create a tagged release (signing if you're authenticated).
+Given one or more paths to modules (folders or files containing lit metadata),
+lit will read the metadata, import the file or folders into the database and
+create a tagged release (signing if you're authenticated).
 
-These packages can then be later published to an upstream or installed locally in some other folder.
+These packages can then be later published to an upstream or installed locally
+in some other folder.
 
 #### `lit publish path*`
 
-Publish will first run `lit add path*` to ensure the latest version is imported into the database.  It will then iterate over the local versions and upload any that aren't yet on the upstream.
+Publish will first run `lit add path*` to ensure the latest version is imported
+into the database.  It will then iterate over the local versions and upload any
+that aren't yet on the upstream.
 
 #### `lit install`
 
-Running `lit install` in a folder containing lit metadata will install all it's dependencies recursivly to the local `modules` folder.  If any of the dependencies already exist there, they will be skipped, even if there is a new version in the database.
+Running `lit install` in a folder containing lit metadata will install all it's
+dependencies recursivly to the local `modules` folder.  If any of the
+dependencies already exist there, they will be skipped, even if there is a new
+version in the database.
 
 #### `lit install names*`
 
-You can also install one or more lit packages directly by name without setting up a metadata file.
+You can also install one or more lit packages directly by name without setting
+up a metadata file.
 
-For example, this will install the latest version of `creationix/git` to modules (even if there is something already there)
+For example, this will install the latest version of `creationix/git` to modules
+(even if there is something already there)
 
 ```sh
-> lit install creationix/git`
+> lit install creationix/git
 ```
 
 #### `lit sync`
 
-If you like to work offline a lot, it's useful to run `lit sync` when online to make sure the cached packages in your local database have the latest versions cached.
+If you like to work offline a lot, it's useful to run `lit sync` when online to
+make sure the cached packages in your local database have the latest versions
+cached.
 
-Here is an example of going inline, checking for updates and then going back offline.
+Here is an example of going inline, checking for updates and then going back
+offline.
 
 ```sh
 > lit up
@@ -121,15 +149,19 @@ Here is an example of going inline, checking for updates and then going back off
 
 ### Upstream Organization Management
 
-By default, you can only publish to upstream prefixes that match your github username, but you can also publish to github organization names if you've set as an other of that org in the lit upstream.
+By default, you can only publish to upstream prefixes that match your github
+username, but you can also publish to github organization names if you've set as
+an other of that org in the lit upstream.
 
 #### `lit claim org`
 
-If you're a public member of an org on github, you can add yourself as an owner to the corresponding org in the lit upstream.
+If you're a public member of an org on github, you can add yourself as an owner
+to the corresponding org in the lit upstream.
 
 #### `lit share org username`
 
-Once you're an owner, you can add anyone as collaborators and co-owners with the share command.
+Once you're an owner, you can add anyone as collaborators and co-owners with the
+share command.
 
 #### `lit unclaim org`
 
@@ -137,31 +169,42 @@ You can remove yourself from the list of owners with this command.
 
 ### Execution and Packaging
 
-Luvi apps can be run and created using the `LUVI_APP` and `LUVI_TARGET` environment variables, but lit provides easier interfaces to this and adds new functionality.
+Luvi apps can be run and created using the `LUVI_APP` and `LUVI_TARGET`
+environment variables, but lit provides easier interfaces to this and adds new
+functionality.
 
 #### `lit make path/to/app [target]`
 
-When you're ready to package your luvi app into a single binary, you can use lit's make command.  This is more than simply setting `LUVI_TARGET`.  It will read the `package.lua` metadata to get the name of the target.  Also it will inject any missing dependencies into the bundle embedded in the executable.
+When you're ready to package your luvi app into a single binary, you can use
+lit's make command.  This is more than simply setting `LUVI_TARGET`.  It will
+read the `package.lua` metadata to get the name of the target.  Also it will
+inject any missing dependencies into the bundle embedded in the executable.
 
-Also the `package.lua` can contain a white-list of black-list of files to include in the final bundle.  See examples in [luvit](https://github.com/luvit/luvit/blob/luvi-up/package.lua) and [lit](https://github.com/luvit/lit/blob/master/package.lua).
+Also the `package.lua` can contain a white-list of black-list of files to
+include in the final bundle.  See examples in
+[luvit](https://github.com/luvit/luvit/blob/luvi-up/package.lua) and
+[lit](https://github.com/luvit/lit/blob/master/package.lua).
 
-For example, lit's own bootstrap uses a combination of `LUVI_APP` and `lit make` to build itself with nothing more than the luvi executable and a zip file containing lit's source.
+For example, lit's own bootstrap uses a combination of `LUVI_APP` and `lit make`
+to build itself with nothing more than the luvi executable and a zip file
+containing lit's source.
 
 ```sh
 > LUVI_APP=lit.zip luvi make lit.zip
 ```
 
-This will run the app contained in lit.zip passing in the arguments `make` and `lit.zip`.  The `make` will trigger lit's make command and it will build a lit executable from the contents of the zip file, installing any dependencies not found in the zip.
+This will run the app contained in lit.zip passing in the arguments `make` and
+`lit.zip`.  The `make` will trigger lit's make command and it will build a lit
+executable from the contents of the zip file, installing any dependencies not
+found in the zip.
 
 #### `lit run args*`
 
-If you're in the root of a luvi app, you can run it here.  The following two commands are basically the same:
-
-
-Directly in luvi:
+If you're in the root of a luvi app, you can run it here.  The following two
+commands are basically the same:
 
 ```sh
-> LUVI_APP=. luvi arg1 arg2`
+> LUVI_APP=. luvi arg1 arg2
 ```
 
 Using lit wrapper:
@@ -170,11 +213,13 @@ Using lit wrapper:
 > lit run arg1 arg2
 ```
 
-This is mostly for environments where setting temporary environment variables is less than ideal.
+This is mostly for environments where setting temporary environment variables is
+less than ideal.
 
-#### lit test
+#### `lit test`
 
-This is another convenience wrapper.  It is the same as `lit run` except is also sets a custom main to run.
+This is another convenience wrapper.  It is the same as `lit run` except is
+also sets a custom main to run.
 
 ```sh
 > LUVI_APP=. LUVI_MAIN=tests/run.lua luvi
@@ -188,10 +233,24 @@ Is the same as:
 
 ### Lit Server
 
-It's trivial to setup your own caching proxy or private repository of lit packages.  Simply install lit on the server and run `lit serve`.  If you have an upstream configured this server will act as a caching proxy.  Any requests not found locally will be fetched from the upstream and cached locally.  Any packages published locally will be kept local (private).
+It's trivial to setup your own caching proxy or private repository of lit
+packages.  Simply install lit on the server and run `lit serve`.  If you have
+an upstream configured this server will act as a caching proxy.  Any requests
+not found locally will be fetched from the upstream and cached locally.  Any
+packages published locally will be kept local (private).
 
-It's highly encouraged to setup such proxies if you have deployments that depend on lit packages.  Never use the public repository directly for repetitive and/or mission critical scripts.
+It's highly encouraged to setup such proxies if you have deployments that
+depend on lit packages.  Never use the public repository directly for
+repetitive and/or mission critical scripts.
 
+The server listens on port `4822` by default.
+
+```
+> lit serve
+lit version: 0.9.8
+command: serve
+load config: /home/tim/.litconfig
+```
 
 ## Lit as a Library
 
