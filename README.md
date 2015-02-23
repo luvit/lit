@@ -14,7 +14,7 @@ curl -L https://github.com/luvit/lit/raw/master/web-install.sh | sh
 
 To get the latest version.  Or replace `master` with a tag to get that version of lit.
 
-gIf you're on Windows, I've thought of you as well, in `cmd.exe` run:
+If you're on Windows, I've thought of you as well, in `cmd.exe` run:
 
 ```batch
 PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/web-install.ps1'))"
