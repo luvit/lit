@@ -1,5 +1,5 @@
 #!/bin/sh
-
+set -eu
 LIT=`pwd`/lit
 BASE=`pwd`/test-pull
 export LIT_CONFIG=$BASE/config
@@ -10,13 +10,13 @@ echo "database: $BASE/db.git" > $LIT_CONFIG
 echo "storage: git" >> $LIT_CONFIG
 
 export LUVI_APP=`pwd`
-$LIT auth creationix || exit -1
-$LIT up ws://localhost:4822 || exit -1
+$LIT auth creationix
+$LIT up ws://localhost:4822
 
 mkdir $APP_DIR
 cp package.lua $APP_DIR
 cd $APP_DIR
-$LIT install || exit -1
+$LIT install
 cd -
 
 APP_DIR=$BASE/app2
@@ -24,15 +24,15 @@ APP_DIR=$BASE/app2
 mkdir $APP_DIR
 cp package.lua $APP_DIR
 cd $APP_DIR
-$LIT install || exit -1
+$LIT install
 cd -
 
-$LIT down || exit -1
+$LIT down
 
 APP_DIR=$BASE/app3
 
 mkdir $APP_DIR
 cp package.lua $APP_DIR
 cd $APP_DIR
-$LIT install || exit -1
+$LIT install
 cd -
