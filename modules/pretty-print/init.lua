@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 --]]
-exports.name = "creationix/pretty-print"
+exports.name = "luvit/pretty-print"
 exports.version = "0.1.0"
 
 local uv = require('uv')
@@ -236,7 +236,7 @@ end
 
 -- Print replacement that goes through libuv.  This is useful on windows
 -- to use libuv's code to translate ansi escape codes to windows API calls.
-function print(...)
+function _G.print(...)
   local n = select('#', ...)
   local arguments = {...}
   for i = 1, n do

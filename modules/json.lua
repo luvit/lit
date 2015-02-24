@@ -1,3 +1,5 @@
+exports.name = "luvit/json"
+exports.version = "0.1.0"
 
 -- Module options:
 local always_try_using_lpeg = false
@@ -53,17 +55,14 @@ local strrep, gsub, strsub, strbyte, strchar, strfind, strlen, strformat =
 local strmatch = string.match
 local concat = table.concat
 
-local json = { original_version = "dkjson 2.5" }
-
-json.name = "creationix/json"
-json.version = "2.5.1"
+local json = exports
+json.original_version = "dkjson 2.5"
 
 if register_global_module_table then
   _G[global_module_name] = json
 end
 
-local _ENV = nil -- blocking globals in Lua 5.2
-assert(not _ENV)
+_ENV = nil -- blocking globals in Lua 5.2
 
 pcall (function()
   -- Enable access to blocked metatables.
@@ -324,9 +323,10 @@ encode2 = function (value, indent, level, buffer, buflen, tables, globalorder, s
         for i = 1, n do
           local k = order[i]
           local v = value[k]
+          local _
           if v then
             used[k] = true
-            buflen = addpair (k, v, prev, indent, level, buffer, buflen, tables, globalorder, state)
+            buflen, _ = addpair (k, v, prev, indent, level, buffer, buflen, tables, globalorder, state)
             prev = true -- add a seperator before the next element
           end
         end
@@ -717,4 +717,3 @@ end
 json.parse = json.decode
 json.stringify = json.encode
 
-return json

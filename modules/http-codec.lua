@@ -1,6 +1,6 @@
 --[[
 
-Copyright 2014 The Luvit Authors. All Rights Reserved.
+Copyright 2014-2015 The Luvit Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ limitations under the License.
 
 --]]
 
-exports.name = "creationix/http-codec"
-exports.version = "0.1.4"
+exports.name = "luvit/http-codec"
+exports.version = "0.1.0"
 
 local sub = string.sub
 local gsub = string.gsub
@@ -88,7 +88,11 @@ exports.encoder = function ()
   local encodeHead, encodeRaw, encodeChunked
 
   function encodeHead(item)
-    if not item then return end
+    if not item or item == "" then
+      return item
+    elseif not (type(item) == "table") then
+      error("expected a table but got a " .. type(item) .. " when encoding data")
+    end
     local head, chunkedEncoding
     local version = item.version or 1.1
     if item.method then
