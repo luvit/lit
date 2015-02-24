@@ -1,6 +1,7 @@
+
 if exports then
   exports.name = "luvit/require"
-  exports.version = "0.2.0"
+  exports.version = "0.2.1"
 end
 
 local luvi = require('luvi')
@@ -24,6 +25,7 @@ local binExt = os == "Windows" and ".dll" or ".so"
 
 local fileCache = {}
 local function readFile(path)
+  assert(path)
   local data = fileCache[path]
   if data ~= nil then return data end
   local prefix = path:match("^bundle:/*")
@@ -45,6 +47,7 @@ end
 
 local dirCache = {}
 local function isDir(path)
+  assert(path)
   local is = dirCache[path]
   if is ~= nil then return is end
   local prefix = path:match("^bundle:/*")
@@ -63,6 +66,7 @@ end
 local types = { ".lua", binExt }
 
 local function fixedRequire(path)
+  assert(path)
   local fullPath = path
   local data = readFile(fullPath)
   if not data then
@@ -76,12 +80,18 @@ local function fixedRequire(path)
     end
     if not data then return end
   end
+   local prefix = fullPath:match("^bundle:")
+   if prefix == "bundle:" and bundle.base then
+     fullPath = fullPath:gsub(prefix, bundle.base)
+   end
+
   return data, fullPath
 end
 
 
 local skips = {}
 local function moduleRequire(base, name)
+  assert(base and name)
   while true do
     if not skips[base] then
       local mod, path
@@ -108,7 +118,7 @@ end
 local moduleCache = {}
 
 local function generator(modulePath)
-  assert(modulePath, "Missing path to require")
+  assert(modulePath, "Missing path to require generator")
 
   -- Convert windows paths to unix paths (mostly)
   local path = modulePath:gsub("\\", "/")
@@ -118,6 +128,7 @@ local function generator(modulePath)
   local base = pathJoin(path, "..")
 
   local function resolve(name)
+    assert(name, "Missing name to resolve")
     if name:byte(1) == 46 then -- Starts with "."
       return fixedRequire(pathJoin(base, name))
     elseif name:byte(1) == 47 then -- Starts with "/"
@@ -127,8 +138,18 @@ local function generator(modulePath)
   end
 
   local function require(name)
+    assert(name, "Missing name to require")
+
+    if package.preload[name] or package.loaded[name] then
+      return realRequire(name)
+    end
+
     -- Resolve the path
-    local data, path = resolve(name)
+    local success, data, path = xpcall(function ()
+      return resolve(name)
+    end, debug.traceback)
+    assert(success, data)
+    -- local data, path = resolve(name)
     if not path then
       local success, value = pcall(realRequire, name)
       if success then return value end
@@ -141,7 +162,7 @@ local function generator(modulePath)
     local module = moduleCache[path]
     if module then return module.exports end
     -- Put a new module in the cache if not
-    module = { path = path, exports = {} }
+    module = { path = path, dir = pathJoin(path, ".."), exports = {} }
     moduleCache[path] = module
 
     local ext = path:match("%.[^/]+$")
@@ -183,11 +204,5 @@ local function generator(modulePath)
 
   return require, resolve, moduleCache
 end
-
--- Cache manually just in case we're required via ourself
-moduleCache["bundle:deps/require.lua"] = {
-  path = "bundle:deps/require.lua",
-  exports = generator
-}
 
 return generator
