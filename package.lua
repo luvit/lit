@@ -4,7 +4,7 @@ return {
   dependencies = {
     "luvit/require@0.1.0",
     "luvit/pretty-print@0.1.0",
-    "luvit/http-codec@0.1.0",
+    "luvit/http-codec@0.1.2",
     "luvit/json@0.1.0",
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.3",
