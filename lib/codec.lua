@@ -98,12 +98,12 @@ function exports.makeRemote(webRead, webWrite, isClient)
   local function read()
     local name, data = innerRead()
     -- p("network read", name, data and (#data <= 60 and data or # data))
+    assert(name ~= "error", data)
     return name, data
   end
 
   local function readAs(expectedName)
     local name, data = read()
-    if name == "error" then return nil, data end
     assert(expectedName == name, name
       and ("Expected " .. expectedName .. ", but found " .. name)
       or ("Disconnected while waiting for " .. expectedName))

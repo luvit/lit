@@ -53,6 +53,9 @@ return function (db, config, getKey)
     local fs
     fs, path = vfs(path)
     local meta = pkg.query(fs, path)
+    if not meta then
+      error("Not a package: " .. path)
+    end
     assert(meta.private ~= true, "Can't tag private package: " .. path)
     local author, name, version = pkg.normalize(meta)
     local kind, hash = db.import(fs, path)

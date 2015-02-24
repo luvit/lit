@@ -182,7 +182,9 @@ return function(db, url)
       elseif name == "done" then
         return data
       else
-        error("Expected more wants or done in reply to send to server")
+        error(name
+          and ("Expected 'wants' or 'done', but found " .. name)
+          or "Disconnected while waiting for 'wants' or 'done'")
       end
     end
     disconnect()
@@ -191,9 +193,9 @@ return function(db, url)
   function db.upquery(name, request)
     connect()
     remote.writeAs(name, request)
-    local reply, err = remote.readAs("reply")
+    local reply = remote.readAs("reply")
     disconnect()
-    return reply, err
+    return reply
   end
 
   return db
