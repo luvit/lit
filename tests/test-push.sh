@@ -12,6 +12,7 @@ echo "storage: git" >> $LIT_CONFIG
 export LUVI_APP=`pwd`
 $LIT auth creationix
 $LIT up ws://localhost:4822
+$LIT claim luvit
 
 for file in modules/*
 do

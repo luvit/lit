@@ -211,7 +211,9 @@ return function (path)
   end
 
   function db.isOwner(org, author)
-    for owner in db.owners(org) do
+    local iter = db.owners(org)
+    if not iter then return false end
+    for owner in iter do
       if author == owner then return true end
     end
     return false
