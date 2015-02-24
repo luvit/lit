@@ -152,7 +152,7 @@ that aren't yet on the upstream.
 #### `lit install`
 
 Running `lit install` in a folder containing lit metadata will install all it's
-dependencies recursivly to the local `modules` folder.  If any of the
+dependencies recursivly to the local `deps` folder.  If any of the
 dependencies already exist there, they will be skipped, even if there is a new
 version in the database.
 

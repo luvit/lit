@@ -337,8 +337,8 @@ return function (path)
             -- Skip hidden files.
             allow = false
           elseif entry.type == "directory" then
-            -- Walk all trees except modules
-            allow = entry.name ~= "modules"
+            -- Walk all trees except deps
+            allow = entry.name ~= "deps"
           else
             allow = default
           end

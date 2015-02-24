@@ -185,7 +185,7 @@ return function (db, config, getKey)
   end
 
   local function addDep(deps, fs, modulesDir, alias, author, name, version)
-    -- Check for existing packages in the "modules" dir on disk
+    -- Check for existing packages in the "deps" dir on disk
     if modulesDir then
       local meta, path = pkg.query(fs, pathJoin(modulesDir, alias))
       if meta then
@@ -304,7 +304,7 @@ return function (db, config, getKey)
         local tag = db.loadAs("tag", dep.hash)
         local target = pathJoin(modulesDir, alias) ..
           (tag.type == "blob" and ".lua" or "")
-        local filename = "modules/" .. alias .. (tag.type == "blob" and ".lua" or "/")
+        local filename = "deps/" .. alias .. (tag.type == "blob" and ".lua" or "/")
         log("installing", string.format("%s/%s@%s -> %s",
           dep.author, dep.name, dep.version, filename), "highlight")
         db.export(tag.object, target)
@@ -316,7 +316,7 @@ return function (db, config, getKey)
   function core.installList(path, list)
     local deps = {}
     core.processDeps(deps, nil, list)
-    return install(pathJoin(path, "modules"), deps)
+    return install(pathJoin(path, "deps"), deps)
   end
 
 
@@ -329,7 +329,7 @@ return function (db, config, getKey)
       return
     end
     local deps = {}
-    local modulesDir = pathJoin(path, "modules")
+    local modulesDir = pathJoin(path, "deps")
     core.processDeps(deps, fs, modulesDir, meta.dependencies)
     return install(modulesDir, deps)
   end
@@ -406,22 +406,22 @@ return function (db, config, getKey)
 
     if meta.dependencies then
       local deps = {}
-      local modulesDir = pathJoin(path, "modules")
-      writer:add("modules/", "")
+      local modulesDir = pathJoin(path, "deps")
+      writer:add("deps/", "")
       core.processDeps(deps, fs, modulesDir, meta.dependencies)
       for alias, dep in pairs(deps) do
         local tag = dep.author .. '/' .. dep.name .. '@' .. dep.version
         if dep.disk then
-          local name = "modules/" .. (dep.disk:match("([^/\\]+)$") or alias)
+          local name = "deps/" .. (dep.disk:match("([^/\\]+)$") or alias)
           log("adding", tag .. ' (' .. dep.disk .. ')', "highlight")
           importPath(writer, fs, path, name)
         elseif dep.hash then
           log("adding", tag, "highlight")
           local tag = db.loadAs("tag", dep.hash)
           if tag.type == "tree" then
-            importTree(writer, "modules/" .. alias, tag.object)
+            importTree(writer, "deps/" .. alias, tag.object)
           elseif tag.type == "blob" then
-            importBlob(writer, "modules/" .. alias .. ".lua", tag.object)
+            importBlob(writer, "deps/" .. alias .. ".lua", tag.object)
           end
         end
       end
