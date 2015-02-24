@@ -22,6 +22,7 @@ local normalize = semver.normalize
 local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
+local prompt = require('prompt')(require('pretty-print'))
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -38,6 +39,10 @@ local function now()
   }
 end
 
+local function confirm(message)
+  local res = prompt(message .. " (y/n)")
+  return res and res:find("y")
+end
 
 return function (db, config, getKey)
 
@@ -101,9 +106,16 @@ return function (db, config, getKey)
     -- Loop through all local versions that aren't upstream
     local queue = {}
     for version in db.versions(author, name) do
-      if not db.readRemote(author, name, version) then
-        local hash = db.read(author, name, version)
-        queue[#queue + 1] = {tag, version, hash}
+      local hash = db.read(author, name, version)
+      local match = db.match(author, name, version)
+      local tag = db.loadAs("tag", hash)
+      local meta = pkg.queryDb(db, tag.object)
+      -- Skip private modules, obsolete modules, and non-signed modules
+      if match == version and not meta.private and tag.message:find("-----BEGIN RSA SIGNATURE-----") then
+        if not db.readRemote(author, name, version) then
+          local tag = string.format("%s/%s/v%s", author, name, version)
+          queue[#queue + 1] = {tag, version, hash}
+        end
       end
     end
 
@@ -114,8 +126,10 @@ return function (db, config, getKey)
 
     for i = 1, #queue do
       local tag, version, hash = unpack(queue[i])
-      log("publishing", tag .. '@' .. version)
-      db.push(hash)
+      if #queue == 1 or confirm(tag .. " -> " .. config.upstream .. "\nDo you wish to publish?") then
+        log("publishing", tag .. '@' .. version)
+        db.push(hash)
+      end
     end
 
   end

@@ -80,7 +80,7 @@ return function(db, url)
     end
   end
   local function disconnect()
-    timeout:start(10, 0, close)
+    timeout:start(1000, 0, close)
   end
 
   function db.readRemote(author, name, version)

@@ -169,7 +169,11 @@ return function (path)
 
   function db.versions(author, name)
     local path = string.format("refs/tags/%s/%s", author, name)
-    return storage.leaves(path)
+    local iter = storage.leaves(path)
+    return function ()
+      local item = iter()
+      return item and item:sub(2)
+    end
   end
 
   local function keyPath(author, fingerprint)
