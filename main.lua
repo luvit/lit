@@ -1,10 +1,11 @@
-require('luvi').bundle.register("luvit-require", "modules/require.lua");
 local uv = require('uv')
-local require = require('luvit-require')()("bundle:main.lua")
+require('luvi').bundle.register("luvit-require", "deps/require.lua")
+local require = require('luvit-require')("bundle:main.lua")
+
 _G.p = require('pretty-print').prettyPrint
 local version = require('./package').version
 coroutine.wrap(function ()
-  local log = require('./lib/log')
+  local log = require('log')
   local success, err = xpcall(function ()
     log("lit version", version)
     args[1] = args[1] or "help"

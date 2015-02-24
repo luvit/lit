@@ -1,1 +1,1 @@
-return require('./lib/autocore')
+return require('autocore')

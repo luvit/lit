@@ -1,9 +1,9 @@
-local core = require('../lib/autocore')
+local core = require('autocore')
 local prompt = require('prompt')(require('pretty-print'))
 local fs = require('coro-fs')
 local env = require('env')
-local log = require('../lib/log')
-local exec = require('../lib/exec')
+local log = require('log')
+local exec = require('exec')
 
 local config = core.config
 local dirty = false

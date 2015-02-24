@@ -13,7 +13,7 @@ export LUVI_APP=`pwd`
 $LIT auth creationix
 $LIT down
 
-for file in modules/*
+for file in deps/*
 do
   $LIT add $file
 done

@@ -1,4 +1,4 @@
-local core = require('../lib/autocore')
+local core = require('autocore')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
 

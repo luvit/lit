@@ -2,12 +2,12 @@ local tcp = require('coro-tcp')
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 
-local log = require('../lib/log')
+local log = require('log')
 local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
-local makeRemote = require('../lib/codec').makeRemote
-local handlers = require('../lib/handlers')
-local handleRequest = require('../lib/api')(args[2])
+local makeRemote = require('codec').makeRemote
+local handlers = require('handlers')
+local handleRequest = require('api')(args[2])
 
 tcp.createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
 

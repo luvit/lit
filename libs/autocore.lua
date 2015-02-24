@@ -1,8 +1,8 @@
 local log = require('./log')
 local fs = require('coro-fs')
 local env = require('env')
-local makeDb = require('../lib/db')
-local makeCore = require('../lib/core')
+local makeDb = require('db')
+local makeCore = require('core')
 
 local prefix
 if require('ffi').os == "Windows" then

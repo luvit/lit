@@ -1,5 +1,5 @@
-local log = require('../lib/log')
-local core = require('../lib/autocore')
+local log = require('log')
+local core = require('autocore')
 local db = core.db
 
 assert(core.config.upstream, "Must have upstream to sync to")

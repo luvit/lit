@@ -1,4 +1,4 @@
-local core = require('../lib/autocore')
+local core = require('autocore')
 if #args ~= 3 then
   error("Usage: lit share orgname friendname")
 end

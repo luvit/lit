@@ -14,7 +14,7 @@ $LIT auth creationix
 $LIT up ws://localhost:4822
 $LIT claim luvit
 
-for file in modules/*
+for file in deps/*
 do
   $LIT publish $file
 done

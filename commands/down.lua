@@ -1,5 +1,5 @@
-local config = require('../lib/autocore').config
-local log = require('../lib/log')
+local config = require('autocore').config
+local log = require('log')
 
 log("upstream", "disabled", "nil")
 config.upstream = nil

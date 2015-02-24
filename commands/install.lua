@@ -1,5 +1,5 @@
 local uv = require('uv')
-local core = require('../lib/autocore')
+local core = require('autocore')
 
 if #args < 2 then
   core.installDeps(uv.cwd())
