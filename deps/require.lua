@@ -81,11 +81,12 @@ local function fixedRequire(path)
     if not data then return end
   end
    local prefix = fullPath:match("^bundle:")
+   local normalizedPath = fullPath
    if prefix == "bundle:" and bundle.base then
-     fullPath = fullPath:gsub(prefix, bundle.base)
+     normalizedPath = fullPath:gsub(prefix, bundle.base)
    end
 
-  return data, fullPath
+  return data, fullPath, normalizedPath
 end
 
 
@@ -94,14 +95,14 @@ local function moduleRequire(base, name)
   assert(base and name)
   while true do
     if not skips[base] then
-      local mod, path
+      local mod, path, key
       if isDir(pathJoin(base, "libs")) then
-        mod, path = fixedRequire(pathJoin(base, "libs", name))
-        if mod then return mod, path end
+        mod, path, key = fixedRequire(pathJoin(base, "libs", name))
+        if mod then return mod, path, key end
       end
       if isDir(pathJoin(base, "deps")) then
-        mod, path = fixedRequire(pathJoin(base, "deps", name))
-        if mod then return mod, path end
+        mod, path, key = fixedRequire(pathJoin(base, "deps", name))
+        if mod then return mod, path, key end
       end
     end
 
@@ -145,11 +146,7 @@ local function generator(modulePath)
     end
 
     -- Resolve the path
-    local success, data, path = xpcall(function ()
-      return resolve(name)
-    end, debug.traceback)
-    assert(success, data)
-    -- local data, path = resolve(name)
+    local data, path, key = resolve(name)
     if not path then
       local success, value = pcall(realRequire, name)
       if success then return value end
@@ -159,11 +156,11 @@ local function generator(modulePath)
     end
 
     -- Check in the cache for this module
-    local module = moduleCache[path]
+    local module = moduleCache[key]
     if module then return module.exports end
     -- Put a new module in the cache if not
     module = { path = path, dir = pathJoin(path, ".."), exports = {} }
-    moduleCache[path] = module
+    moduleCache[key] = module
 
     local ext = path:match("%.[^/]+$")
     if ext == ".lua" then
