@@ -22,6 +22,7 @@ local normalize = semver.normalize
 local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
+local fs = require('coro-fs')
 local prompt = require('prompt')(require('pretty-print'))
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -326,10 +327,9 @@ return function (db, config, getKey)
     end
   end
 
-
   function core.installList(path, list)
     local deps = {}
-    core.processDeps(deps, nil, list)
+    core.processDeps(deps, fs, nil, list)
     return install(pathJoin(path, "deps"), deps)
   end
 
