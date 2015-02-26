@@ -415,8 +415,8 @@ locally inside the git database under `keys/$username/$fingerprint`.  Also
 organization membership is stored under keys at `keys/$orgname.owners` in a
 newline delimited file of usernames.
 
-For full details read the source.  The lib folder has a nice [internal
-README](./lib/README) to get you started.
+For full details read the source.  The libs folder has a nice [internal
+README](./libs/README) to get you started.
 
 [luvit]: https://github.com/luvit/luvit/
 [luvi]:https://github.com/luvit/luvi/
