@@ -1,10 +1,10 @@
 return {
   name = "creationix/lit",
-  version = "0.10.1",
+  version = "0.10.2",
   dependencies = {
-    "luvit/require@0.2.0",
+    "luvit/require@0.2.1",
     "luvit/pretty-print@0.1.0",
-    "luvit/http-codec@0.1.2",
+    "luvit/http-codec@0.1.4",
     "luvit/json@0.1.0",
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.3",

@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.0.2"
+exports.version = "1.0.3"
 
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
@@ -35,7 +35,7 @@ function exports.wrapStream(socket)
         flushed = true
         coroutine.resume(thread, not err, err)
       end)
-      assert(coroutine.yield())
+      coroutine.yield()
     end
     if flushed and not reading then
       socket:close()
