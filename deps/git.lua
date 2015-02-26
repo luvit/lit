@@ -1,5 +1,5 @@
 exports.name = "creationix/git"
-exports.version = "0.1.0"
+exports.version = "0.1.1"
 
 local modes = {
   tree   = 16384, --  040000
@@ -211,7 +211,7 @@ function decoders.commit(raw)
     if name == "author" or name == "committer" then
       value = parsePerson(value)
     end
-    if name == "parents" then
+    if name == "parent" then
       parents[#parents + 1] = value
     else
       data[name] = value

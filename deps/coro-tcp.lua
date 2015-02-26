@@ -1,8 +1,8 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.3"
+exports.version = "1.0.4"
 exports.dependencies = {
-  "creationix/coro-channel@1.0.2"
+  "creationix/coro-channel@1.0.4"
 }
 
 local uv = require('uv')
