@@ -478,7 +478,7 @@ return function (db, config, getKey)
         end
       end
       local match, hash = db.match(author, name)
-      if not db.offlineMatch(author, name, match) then
+      if match and not db.offlineMatch(author, name, match) then
         hashes[#hashes + 1] = hash
         tags[#tags + 1] = author .. "/" .. name .. "/v" .. match
       end

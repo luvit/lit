@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 LUVI_VERSION=0.7.1
-LIT_VERSION=0.10.3
+LIT_VERSION=0.10.4
 
 LUVI_ARCH=static-`uname -s`_`uname -m`
 if uname -m | grep arm; then
