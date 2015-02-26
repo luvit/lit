@@ -1,8 +1,8 @@
+exports.name = "creationix/coro-tls"
+exports.version = "1.1.1"
+
 local openssl = require('openssl')
 local bit = require('bit')
-
-exports.name = "creationix/coro-tls"
-exports.version = "1.1.0"
 
 -- Given a read/write pair, return a new read/write pair for plaintext
 exports.wrap = function (read, write, options)

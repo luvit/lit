@@ -14,31 +14,19 @@ local semver = require('semver')
 local pathJoin = require('luvi').path.join
 local listToMap = require('git').listToMap
 
-local function makeAny()
-  return setmetatable({},{
-    __index = makeAny,
-    __call = makeAny,
-    __newindex = function () end,
-  })
-end
-
-local sandbox = { __index = _G }
-
 local function evalModule(data, name)
   local fn = assert(loadstring(data, name))
   local exports = {}
   local module = { exports = exports }
-  setfenv(fn, setmetatable({
-    module = module,
+  setfenv(fn, {
     exports = exports,
-    require = makeAny,
-  }, sandbox))
+  })
   local success, ret = pcall(fn)
-  assert(success, ret)
-  local meta = type(ret) == "table" and ret or module.exports
-  assert(meta, "Missing exports in " .. name)
-  assert(meta.name, "Missing name in package description in " .. name)
-  assert(meta.version, "Missing version in package description in " .. name)
+
+  local meta = success and type(ret) == "table" and ret or module.exports
+  if not meta then return nil, "Missing exports in " .. name end
+  if not meta.name then return nil, "Missing name in package description in " .. name end
+  if not meta.version then return nil, "Missing version in package description in " .. name end
   return meta
 end
 

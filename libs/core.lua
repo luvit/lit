@@ -62,7 +62,6 @@ return function (db, config, getKey)
     if not meta then
       error("Not a package: " .. path)
     end
-    assert(meta.private ~= true, "Can't tag private package: " .. path)
     local author, name, version = pkg.normalize(meta)
     if config.upstream then core.sync(author, name) end
 
@@ -76,7 +75,7 @@ return function (db, config, getKey)
         log("no change", fullTag)
         return author, name, version, oldTagHash
       end
-      error("EEXISTS: Tag already exists, but there are local changes.\nBump " .. fullTag .. " and try again.")
+      error("Tag already exists, but there are local changes.\nBump " .. fullTag .. " and try again.")
     end
     local encoded = encoders.tag({
       object = hash,
@@ -114,11 +113,23 @@ return function (db, config, getKey)
       local tag = db.loadAs("tag", hash)
       local meta = pkg.queryDb(db, tag.object)
       -- Skip private modules, obsolete modules, and non-signed modules
-      if match == version and not meta.private and tag.message:find("-----BEGIN RSA SIGNATURE-----") then
-        if not db.readRemote(author, name, version) then
-          local tag = string.format("%s/%s/v%s", author, name, version)
-          queue[#queue + 1] = {tag, version, hash}
-        end
+      local skip = false
+      if match ~= version then
+        skip = "Obsoleted version"
+      elseif not meta then
+        skip = "Old style metadata"
+      elseif meta.private then
+        skip = "Marked private"
+      elseif not tag.message:find("-----BEGIN RSA SIGNATURE-----") then
+        skip = "Package not signed"
+      elseif db.readRemote(author, name, version) then
+        skip = "Exists at upstream"
+      end
+      if skip then
+        log("skipping", author .. "/" .. name .. "@" .. version .. ": " .. skip)
+      else
+        local tag = string.format("%s/%s/v%s", author, name, version)
+        queue[#queue + 1] = {tag, version, hash}
       end
     end
 
@@ -466,6 +477,11 @@ return function (db, config, getKey)
           tags[#tags + 1] = author .. "/" .. name .. "/v" .. match
         end
       end
+      local match, hash = db.match(author, name)
+      if not db.offlineMatch(author, name, match) then
+        hashes[#hashes + 1] = hash
+        tags[#tags + 1] = author .. "/" .. name .. "/v" .. match
+      end
     end
 
     if author then
@@ -486,7 +502,7 @@ return function (db, config, getKey)
         end
       end
     end
-    if #hashes == 0 then return end
+    if #tags == 0 then return end
     log("syncing", table.concat(tags, ", "), "highlight")
     db.fetch(hashes)
   end
