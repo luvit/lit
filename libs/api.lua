@@ -100,7 +100,7 @@ return function (prefix)
     "^/packages/([^/]+)/(.+)$", function (author, name)
       local versions = {}
       for version in db.versions(author, name) do
-        versions[version] = prefix .. "/packages/" .. author .. "/" .. name .. "/" .. version
+        versions[version] = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
       end
       return next(versions) and versions
     end,
