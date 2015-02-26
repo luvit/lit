@@ -99,7 +99,6 @@ return function(db, url)
     local tag = author .. "/" .. name
     connect()
     local query = version and (tag .. " " .. version) or tag
-    log("matching", query)
     remote.writeAs("match", query)
     local data = remote.readAs("reply")
     disconnect()

@@ -64,6 +64,8 @@ return function (db, config, getKey)
     end
     assert(meta.private ~= true, "Can't tag private package: " .. path)
     local author, name, version = pkg.normalize(meta)
+    if config.upstream then core.sync(author, name) end
+
     local kind, hash = db.import(fs, path)
     local oldTagHash = db.read(author, name, version)
     local fullTag = author .. "/" .. name .. '/v' .. version
@@ -74,7 +76,7 @@ return function (db, config, getKey)
         log("no change", fullTag)
         return author, name, version, oldTagHash
       end
-      log("replacing tag with new contents", fullTag, "failure")
+      error("EEXISTS: Tag already exists, but there are local changes.\nBump " .. fullTag .. " and try again.")
     end
     local encoded = encoders.tag({
       object = hash,
@@ -101,7 +103,7 @@ return function (db, config, getKey)
     if not config.upstream then
       error("Must be configured with upstream to publish")
     end
-    local author, name= core.add(path)
+    local author, name = core.add(path)
     local tag = author .. '/' .. name
 
     -- Loop through all local versions that aren't upstream
@@ -128,7 +130,7 @@ return function (db, config, getKey)
     for i = 1, #queue do
       local tag, version, hash = unpack(queue[i])
       if #queue == 1 or confirm(tag .. " -> " .. config.upstream .. "\nDo you wish to publish?") then
-        log("publishing", tag .. '@' .. version)
+        log("publishing", tag .. '@' .. version, "highlight")
         db.push(hash)
       end
     end
@@ -446,6 +448,47 @@ return function (db, config, getKey)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)
 
+  end
+
+  function core.sync(author, name)
+    local hashes = {}
+    local tags = {}
+    local function check(author, name)
+      local versions = {}
+      for version in db.versions(author, name) do
+        local match, hash = db.offlineMatch(author, name, version)
+        versions[match] = hash
+      end
+      for version, hash in pairs(versions) do
+        local match, newHash = db.match(author, name, version)
+        if hash ~= newHash then
+          hashes[#hashes + 1] = newHash
+          tags[#tags + 1] = author .. "/" .. name .. "/v" .. match
+        end
+      end
+    end
+
+    if author then
+      if name then
+        log("checking for updates", author .. '/' .. name)
+        check(author, name)
+      else
+        log("checking for updates", author .. "/*")
+        for name in db.names(author) do
+          check(author, name)
+        end
+      end
+    else
+      log("checking for updates", "*/*")
+      for author in db.authors() do
+        for name in db.names(author) do
+          check(author, name)
+        end
+      end
+    end
+    if #hashes == 0 then return end
+    log("syncing", table.concat(tags, ", "), "highlight")
+    db.fetch(hashes)
   end
 
   local function makeRequest(name, req)

@@ -18,8 +18,8 @@ Package Management
  lit publish path*           Add and publish packages to upstream.
  lit install                 Install deps of package in cwd.
  lit install names*          Install dependencies.
- lit sync                    Sync down upstream updates for any locally cached
-                             packages.
+ lit sync [author] [name]    Sync down upstream updates for any locally cached
+                             packages.  Optionally filter by author and/or name.
 
 Execution and Packaging
 -----------------------
