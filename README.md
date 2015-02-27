@@ -122,7 +122,7 @@ download and cache any new data on demand.
 
 If your internet connection is slow or unreliable, you can use lit in offline
 mode.  This will skip all calls to the upstream and work as a standalone
-database using your cache.  This works suprizingly well once the packages you
+database using your cache.  This works surprisingly well once the packages you
 commonly use are cached locally.
 
 #### `lit config`
