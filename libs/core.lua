@@ -212,6 +212,8 @@ return function (db, config, getKey)
     end
   end
 
+  local hashToDep = {}
+
   local function addDep(deps, fs, modulesDir, alias, author, name, version)
     -- Check for existing packages in the "deps" dir on disk
     if modulesDir then
@@ -282,6 +284,7 @@ return function (db, config, getKey)
       version = version,
       hash = hash
     }
+    hashToDep[hash] = alias
 
     deps[#deps + 1] = hash
   end
@@ -310,8 +313,14 @@ return function (db, config, getKey)
     end
     for i = 1, #hashes do
       local meta = pkg.queryDb(db, hashes[i])
-      if meta.dependencies then
-        core.processDeps(deps, fs, modulesDir, meta.dependencies)
+      if meta then
+        if meta.dependencies then
+          core.processDeps(deps, fs, modulesDir, meta.dependencies)
+        end
+      else
+        local hash = hashes[i]
+        local alias = hashToDep[hash] or "unknown"
+        log("warning", "Can't find metadata in package: " .. alias .. "-" .. hash)
       end
     end
 
