@@ -23,6 +23,9 @@ local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
 local fs = require('coro-fs')
+local http = require('coro-http')
+local dbFs = require('db-fs')
+local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -141,7 +144,7 @@ return function (db, config, getKey)
     for i = 1, #queue do
       local tag, version, hash = unpack(queue[i])
       if #queue == 1 or confirm(tag .. " -> " .. config.upstream .. "\nDo you wish to publish?") then
-        log("publishing", tag .. '@' .. version, "highlight")
+        log("publishing", tag, "highlight")
         db.push(hash)
       end
     end
@@ -271,11 +274,12 @@ return function (db, config, getKey)
     end
 
     if not match then
-      if version then
-        error("No such version: " .. author .. "/" .. name .. '@' .. version)
-      else
-        error("No such package: " .. author .. '/' .. name)
-      end
+      error("No such "
+        .. (config.upstream and "" or "local ")
+        .. (version and "version" or "package") .. ": "
+        .. author .. "/" .. name
+        .. (version and '@' .. version or '')
+        .. (config.upstream and "" or " (perhaps add an upstream)"))
     end
 
     deps[alias] = {
@@ -400,10 +404,7 @@ return function (db, config, getKey)
     end
   end
 
-  function core.make(path, target)
-    local fs
-    fs, path = vfs(path)
-    local meta = pkg.query(fs, path)
+  local function realMake(fs, path, meta, target)
     if not target then
       target = meta.target or meta.name:match("[^/]+$")
       if require('ffi').os == "Windows" then
@@ -436,7 +437,7 @@ return function (db, config, getKey)
 
     local writer = miniz.new_writer()
 
-    log("importing", path, "highlight")
+    log("importing", #path > 0 and path or fs.base, "highlight")
     -- TODO: Find target relative to path and use that instead of just target
     importPath(writer, fs, path, nil, { "!" .. target })
 
@@ -467,7 +468,94 @@ return function (db, config, getKey)
     uv.fs_close(fd)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)
+  end
 
+
+  function core.make(path, target)
+    local fs, newPath = vfs(path)
+    local meta = pkg.query(fs, newPath)
+    if not meta then
+      error("Not a package at: " .. path)
+    end
+    return realMake(fs, newPath, meta, target)
+  end
+
+  local aliases = {
+    "^github://([^/]+)/([^/@]+)/?@(.+)$", "https://github.com/%1/%2/archive/%3.zip",
+    "^github://([^/]+)/([^/]+)/?$", "https://github.com/%1/%2/archive/master.zip",
+    "^gist://([^/]+)/(.+)/?$", "https://gist.github.com/%1/%2/download",
+  }
+  core.urlAilases = aliases
+
+  local function makeHttp(target, url)
+    local res, body = http.request("GET", url)
+    assert(res.code == 200, body)
+    local filename
+    for i = 1, #res do
+      local key, value = unpack(res[i])
+      if key:lower() == "content-disposition" then
+        filename = value:match("filename=([^;]+)")
+      end
+    end
+
+    local path = filename or (target or "app") .. ".zip"
+    fs.writeFile(path, body)
+    core.make(path, target)
+    fs.unlink(path)
+  end
+
+  local function makeGit(target, url)
+    local path = (url:match("([^/]+).git$") or target or "app") .. ".git-clone"
+    local stdout, stderr, code, signal = exec("git", "clone", "--depth=1", url, path)
+    if code == 0 and signal == 0 then
+      core.make(path, target)
+    else
+      error("Problem cloning: " .. stdout .. stderr)
+    end
+    exec("rm", "-rf", path)
+  end
+
+  local function makeLit(target, author, name, version)
+    local tag = author .. '/' .. name
+    local match, hash = db.match(author, name, version)
+    if not match then
+      if version then tag = tag .. "@" .. version end
+      error("No such lit package: " ..  tag)
+    end
+    tag = tag .. "@" .. match
+
+    db.fetch({hash})
+    local meta = pkg.queryDb(db, hash)
+    if not meta then
+      error("Not a valid package: " .. tag)
+    end
+    local fs = dbFs(db, hash)
+    fs.base = "lit://" .. tag
+    return realMake(fs, "", meta, target)
+  end
+
+  local handlers = {
+    "^(https?://[^#]+%.git)$", makeGit,
+    "^(https?://[^#]+)$", makeHttp,
+    "^(git://.*)$", makeGit,
+    "^([^ @]+%@.*)$", makeGit,
+    "^lit://([^/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^lit://([^/]+)/([^@]+)$", makeLit,
+    "^([^@/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^([^@/]+)/([^@]+)$", makeLit,
+  }
+  core.urlHandlers = handlers
+
+  function core.makeUrl(url, target)
+    local fullUrl = url
+    for i = 1, #aliases, 2 do
+      fullUrl = fullUrl:gsub(aliases[i], aliases[i + 1])
+    end
+    for i = 1, #handlers, 2 do
+      local match = {fullUrl:match(handlers[i])}
+      if #match > 0 then return handlers[i + 1](target, unpack(match)) end
+    end
+    error("Not a file or valid url: " .. fullUrl)
   end
 
   function core.sync(author, name)

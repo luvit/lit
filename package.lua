@@ -1,13 +1,14 @@
 return {
   name = "creationix/lit",
-  version = "0.10.5",
+  version = "0.10.6",
   dependencies = {
-    "luvit/require@0.2.1",
+    "luvit/require@0.2.3",
     "luvit/pretty-print@0.1.0",
-    "luvit/http-codec@0.1.4",
+    "luvit/http-codec@0.1.5",
     "luvit/json@0.1.0",
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.4",
+    "creationix/coro-http@0.1.0",
     "creationix/coro-tls@1.1.1",
     "creationix/coro-wrapper@0.1.0",
     "creationix/hex-bin@1.0.0",

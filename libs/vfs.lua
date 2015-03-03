@@ -102,7 +102,9 @@ end
 return function (path)
   local zip = miniz.new_reader(path)
   if zip then
-    return zipFs(zip, true), ""
+    local fs, newPath = zipFs(zip, true), ""
+    fs.base = path
+    return fs, newPath
   else
     return fs, path
   end
