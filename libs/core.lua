@@ -437,7 +437,7 @@ return function (db, config, getKey)
 
     local writer = miniz.new_writer()
 
-    log("importing", path, "highlight")
+    log("importing", #path > 0 and path or fs.base, "highlight")
     -- TODO: Find target relative to path and use that instead of just target
     importPath(writer, fs, path, nil, { "!" .. target })
 
@@ -480,7 +480,19 @@ return function (db, config, getKey)
 
   local function makeHttp(target, url)
     local res, body = http.request("GET", url)
-    p(res, #body)
+    assert(res.code == 200, body)
+    local filename
+    for i = 1, #res do
+      local key, value = unpack(res[i])
+      if key:lower() == "content-disposition" then
+        filename = value:match("filename=([^;]+)")
+      end
+    end
+
+    local path = filename or (target or "app") .. ".zip"
+    fs.writeFile(path, body)
+    core.make(path, target)
+    fs.unlink(path)
   end
 
   local function makeGit(target, hostname, port, path)
