@@ -24,6 +24,8 @@ local miniz = require('miniz')
 local vfs = require('./vfs')
 local fs = require('coro-fs')
 local http = require('coro-http')
+local dbFs = require('db-fs')
+local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -402,10 +404,7 @@ return function (db, config, getKey)
     end
   end
 
-  function core.make(path, target)
-    local fs
-    fs, path = vfs(path)
-    local meta = pkg.query(fs, path)
+  local function realMake(fs, path, meta, target)
     if not target then
       target = meta.target or meta.name:match("[^/]+$")
       if require('ffi').os == "Windows" then
@@ -469,7 +468,17 @@ return function (db, config, getKey)
     uv.fs_close(fd)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)
+  end
 
+
+  function core.make(path, target)
+    local fs, newPath = vfs(path)
+    local meta = pkg.query(fs, newPath)
+    p{fs=fs,newPath=newPath}
+    if not meta then
+      error("Not a package at: " .. path)
+    end
+    return realMake(fs, newPath, meta, target)
   end
 
   local aliases = {
@@ -496,32 +505,45 @@ return function (db, config, getKey)
     fs.unlink(path)
   end
 
-  local function makeGit(target, hostname, port, path)
-    if path == "" then path = "/" end
-    port = port and tonumber(port) or 9418
-    p("TODO: git", {
-      hostname = hostname,
-      port = port,
-      path = path
-    })
+  local function makeGit(target, url)
+    local path = (url:match("([^/]+).git$") or target or "app") .. ".git-clone"
+    local stdout, stderr, code, signal = exec("git", "clone", "--depth=1", url, path)
+    if code == 0 and signal == 0 then
+      core.make(path, target)
+    else
+      error("Problem cloning: " .. stdout .. stderr)
+    end
+    exec("rm", "-rf", path)
   end
 
   local function makeLit(target, author, name, version)
-    version = semver.normalize(version)
-    p("LIT", {
-      author = author,
-      name = name,
-      version = version
-    })
+    local tag = author .. '/' .. name
+    local match, hash = db.match(author, name, version)
+    if not match then
+      if version then tag = tag .. "@" .. version end
+      error("No such lit package: " ..  tag)
+    end
+    tag = tag .. "@" .. match
+
+    db.fetch({hash})
+    local meta = pkg.queryDb(db, hash)
+    if not meta then
+      error("Not a valid package: " .. tag)
+    end
+    local fs = dbFs(db, hash)
+    fs.base = "lit://" .. tag
+    return realMake(fs, "", meta, target)
   end
 
   local handlers = {
+    "^(https?://[^#]+%.git)$", makeGit,
     "^(https?://[^#]+)$", makeHttp,
-    "^git://([^/:]+):?([0-9]*)(/?.*)$", makeGit,
+    "^(git://.*)$", makeGit,
+    "^([^ @]+%@.*)$", makeGit,
     "^lit://([^/]+)/([^@]+)@v?(.+)$", makeLit,
     "^lit://([^/]+)/([^@]+)$", makeLit,
-    "^([^/]+)/([^@]+)@v?(.+)$", makeLit,
-    "^([^/]+)/([^@]+)$", makeLit,
+    "^([^@/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^([^@/]+)/([^@]+)$", makeLit,
   }
   core.urlHandlers = handlers
 
