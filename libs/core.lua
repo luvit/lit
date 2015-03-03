@@ -272,11 +272,12 @@ return function (db, config, getKey)
     end
 
     if not match then
-      if version then
-        error("No such version: " .. author .. "/" .. name .. '@' .. version)
-      else
-        error("No such package: " .. author .. '/' .. name)
-      end
+      error("No such "
+        .. (config.upstream and "" or "local ")
+        .. (version and "version" or "package") .. ": "
+        .. author .. "/" .. name
+        .. (version and '@' .. version or '')
+        .. (config.upstream and "" or " (perhaps add an upstream)"))
     end
 
     deps[alias] = {
