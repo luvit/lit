@@ -250,7 +250,7 @@ return function (path)
       local parts = {"^"}
       for glob, text in pattern:gmatch("(%**)([^%*]*)") do
         if #glob == 1 then
-          parts[#parts + 1] = "[^/]*"
+          parts[#parts + 1] = "[^\\/]*"
         elseif #glob > 1 then
           parts[#parts + 1] = ".*"
         end
@@ -266,7 +266,7 @@ return function (path)
     end
     return {
       default = not rules[1].allowed,
-      prefix = "^" .. path:gsub(quotepattern, "%%%1") .. '/(.*)',
+      prefix = "^" .. pathJoin(path:gsub(quotepattern, "%%%1"), '(.*)'),
       match = function (path)
         local allowed
         for i = 1, #rules do
