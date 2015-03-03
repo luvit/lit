@@ -1,7 +1,7 @@
 
 if exports then
   exports.name = "luvit/require"
-  exports.version = "0.2.1"
+  exports.version = "0.2.3"
 end
 
 local luvi = require('luvi')
@@ -178,17 +178,26 @@ local function generator(modulePath)
 
     elseif ext == binExt then
       local fnName = "luaopen_" .. name:match("[^/]+$"):match("^[^%.]+")
-      local fn
-      if uv.fs_access(path, "r") then
+      local fn, err
+      local realPath = uv.fs_access(path, "r") and path or uv.fs_access(key, "r") and key
+      if realPath then
         -- If it's a real file, load it directly
-        fn = assert(package.loadlib(path, fnName))
+        fn, err = package.loadlib(realPath, fnName)
+        if not fn then
+          error(realPath .. "#" .. fnName .. ": " .. err)
+        end
       else
         -- Otherwise, copy to a temporary folder and read from there
         local dir = assert(uv.fs_mkdtemp(pathJoin(tmpBase, "lib-XXXXXX")))
+        path = pathJoin(dir, path:match("[^/\\]+$"))
         local fd = uv.fs_open(path, "w", 384) -- 0600
         uv.fs_write(fd, data, 0)
         uv.fs_close(fd)
-        fn = assert(package.loadlib(path, fnName))
+        local err
+        fn, err = package.loadlib(path, fnName)
+        if not fn then
+          error(path .. "#" .. fnName .. ": " .. err)
+        end
         uv.fs_unlink(path)
         uv.fs_rmdir(dir)
       end

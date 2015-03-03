@@ -144,7 +144,7 @@ return function (db, config, getKey)
     for i = 1, #queue do
       local tag, version, hash = unpack(queue[i])
       if #queue == 1 or confirm(tag .. " -> " .. config.upstream .. "\nDo you wish to publish?") then
-        log("publishing", tag .. '@' .. version, "highlight")
+        log("publishing", tag, "highlight")
         db.push(hash)
       end
     end
@@ -474,7 +474,6 @@ return function (db, config, getKey)
   function core.make(path, target)
     local fs, newPath = vfs(path)
     local meta = pkg.query(fs, newPath)
-    p{fs=fs,newPath=newPath}
     if not meta then
       error("Not a package at: " .. path)
     end
