@@ -494,7 +494,7 @@ return function (db, config, getKey)
     for i = 1, #res do
       local key, value = unpack(res[i])
       if key:lower() == "content-disposition" then
-        filename = value:match("filename=([^;]+)")
+        filename = value:match("filename=\"?([^;\"]+)")
       end
     end
 
