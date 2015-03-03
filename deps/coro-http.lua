@@ -1,8 +1,16 @@
+exports.name = "creationix/coro-http"
+exports.version = "0.1.0"
+exports.dependencies = {
+  "creationix/coro-tcp@1.0.4",
+  "creationix/coro-tls@1.1.1",
+  "creationix/coro-wrapper@0.1.0",
+  "luvit/http-codec@0.1.5"
+}
+
 local httpCodec = require('http-codec')
 local connect = require('coro-tcp').connect
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
-local log = require('./log')
 
 local function parseUrl(url)
   local protocol, host, hostname, port, path = url:match("^(https?:)//(([^/:]+):?([0-9]*))(/?.*)$")
@@ -52,7 +60,6 @@ end
 exports.saveConnection = saveConnection
 
 function exports.request(method, url, headers, body)
-  log("Making request", method .. ' ' .. url)
   local uri = parseUrl(url)
   local connection = getConnection(uri.hostname, uri.port, uri.tls)
   local read = connection.read
