@@ -23,6 +23,7 @@ local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
 local fs = require('coro-fs')
+local http = require('coro-http')
 local prompt = require('prompt')(require('pretty-print'))
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -468,6 +469,59 @@ return function (db, config, getKey)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)
 
+  end
+
+  local aliases = {
+    "^github://([^/]+)/([^/@]+)/?@(.+)$", "https://github.com/%1/%2/archive/%3.zip",
+    "^github://([^/]+)/([^/]+)/?$", "https://github.com/%1/%2/archive/master.zip",
+    "^gist://([^/]+)/(.+)/?$", "https://gist.github.com/%1/%2/download",
+  }
+  core.urlAilases = aliases
+
+  local function makeHttp(target, url)
+    local res, body = http.request("GET", url)
+    p(res, #body)
+  end
+
+  local function makeGit(target, hostname, port, path)
+    if path == "" then path = "/" end
+    port = port and tonumber(port) or 9418
+    p("TODO: git", {
+      hostname = hostname,
+      port = port,
+      path = path
+    })
+  end
+
+  local function makeLit(target, author, name, version)
+    version = semver.normalize(version)
+    p("LIT", {
+      author = author,
+      name = name,
+      version = version
+    })
+  end
+
+  local handlers = {
+    "^(https?://[^#]+)$", makeHttp,
+    "^git://([^/:]+):?([0-9]*)(/?.*)$", makeGit,
+    "^lit://([^/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^lit://([^/]+)/([^@]+)$", makeLit,
+    "^([^/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^([^/]+)/([^@]+)$", makeLit,
+  }
+  core.urlHandlers = handlers
+
+  function core.makeUrl(url, target)
+    local fullUrl = url
+    for i = 1, #aliases, 2 do
+      fullUrl = fullUrl:gsub(aliases[i], aliases[i + 1])
+    end
+    for i = 1, #handlers, 2 do
+      local match = {fullUrl:match(handlers[i])}
+      if #match > 0 then return handlers[i + 1](target, unpack(match)) end
+    end
+    error("Not a file or valid url: " .. fullUrl)
   end
 
   function core.sync(author, name)
