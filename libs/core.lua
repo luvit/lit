@@ -483,7 +483,7 @@ return function (db, config, getKey)
   local aliases = {
     "^github://([^/]+)/([^/@]+)/?@(.+)$", "https://github.com/%1/%2/archive/%3.zip",
     "^github://([^/]+)/([^/]+)/?$", "https://github.com/%1/%2/archive/master.zip",
-    "^gist://([^/]+)/(.+)/?$", "https://gist.github.com/%1/%2/download",
+    "^gist://([^/]+)/(.+)/?$", "https://gist.github.com/%1/%2.git",
   }
   core.urlAilases = aliases
 
