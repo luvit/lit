@@ -54,6 +54,7 @@ return function (path)
   local frame = git.frame
   local modes = git.modes
   local log = require('./log')
+  local ffi = require('ffi')
 
   local db = {}
 
@@ -247,6 +248,7 @@ return function (path)
     assert(#rules > 0, "Empty files rule list not allowed")
     for i = 1, #rules do
       local skip, pattern = rules[i]:match("(!*)(.*)")
+      pattern = pattern:gsub("%$OS", ffi.os):gsub("%$ARCH", ffi.arch)
       local parts = {"^"}
       for glob, text in pattern:gmatch("(%**)([^%*]*)") do
         if #glob == 1 then
