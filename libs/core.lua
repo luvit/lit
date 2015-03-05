@@ -413,7 +413,7 @@ return function (db, config, getKey)
     end
     log("creating binary", target, "highlight")
 
-    local tempFile = target:gsub("[^/]+$", ".%1.temp")
+    local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
     -- Copy base binary
