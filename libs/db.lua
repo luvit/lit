@@ -249,7 +249,7 @@ return function (path)
     for i = 1, #rules do
       local skip, pattern = rules[i]:match("(!*)(.*)")
       pattern = pattern:gsub("%$OS", ffi.os):gsub("%$ARCH", ffi.arch)
-      local parts = {"^"}
+      local parts = {}
       for glob, text in pattern:gmatch("(%**)([^%*]*)") do
         if #glob == 1 then
           parts[#parts + 1] = "[^\\/]*"
@@ -257,13 +257,12 @@ return function (path)
           parts[#parts + 1] = ".*"
         end
         if #text > 0 then
-          parts[#parts + 1] = text:gsub(quotepattern, "%%%1")
+          parts[#parts + 1] = text:gsub(quotepattern, "%%%1"):gsub("/", "[/\\]")
         end
       end
-      parts[#parts + 1] = "$"
       rules[i] = {
         allowed = #skip == 0,
-        pattern = table.concat(parts)
+        pattern = "^" .. table.concat(parts) .. "$"
       }
     end
     return {
