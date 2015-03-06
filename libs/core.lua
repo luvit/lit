@@ -27,6 +27,7 @@ local http = require('coro-http')
 local dbFs = require('db-fs')
 local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
+local filterTree = require('rules').filterTree
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -396,12 +397,17 @@ return function (db, config, getKey)
   end
 
   local function importPath(writer, fs, root, path, rules)
-    local kind, hash = db.import(fs, pathJoin(root, path), rules)
+    local kind, hash = db.import(fs, pathJoin(root, path), rules, true)
     if kind == "tree" then
       importTree(writer, path, hash)
     else
       importBlob(writer, path, hash)
     end
+  end
+
+  local function importDb(writer, path, hash, rules)
+    hash = filterTree(db, path, hash, rules, true)
+    return importTree(writer, path, hash)
   end
 
   local function realMake(fs, path, meta, target)
@@ -456,7 +462,7 @@ return function (db, config, getKey)
           log("adding", tag, "highlight")
           local tag = db.loadAs("tag", dep.hash)
           if tag.type == "tree" then
-            importTree(writer, "deps/" .. alias, tag.object)
+            importDb(writer, "deps/" .. alias, tag.object)
           elseif tag.type == "blob" then
             importBlob(writer, "deps/" .. alias .. ".lua", tag.object)
           end
