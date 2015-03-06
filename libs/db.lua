@@ -244,11 +244,19 @@ return function (path)
 
   local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
 
-  local function compileFilter(path, rules)
+  -- When importing into the db to publish, we want to include binaries for all
+  -- platforms, but when installing to disk or zip app bundle, we want native only.
+  local patterns = {
+    -- Rough translation of (Linux|Windows|OSX|BSD) and (x86|x64|arm)
+    -- This is more liberal than it needs to be, but works mostly in practice.
+    all = {"[LWOB][iS][nXD][uxdows]*", "[xa][86r][64m]"},
+    native = {ffi.os, ffi.arch},
+  }
+  local function compileFilter(path, rules, nativeOnly)
     assert(#rules > 0, "Empty files rule list not allowed")
+    local os, arch = unpack(patterns[nativeOnly and "native" or "all"])
     for i = 1, #rules do
       local skip, pattern = rules[i]:match("(!*)(.*)")
-      pattern = pattern:gsub("%$OS", ffi.os):gsub("%$ARCH", ffi.arch)
       local parts = {}
       for glob, text in pattern:gmatch("(%**)([^%*]*)") do
         if #glob == 1 then
@@ -260,11 +268,13 @@ return function (path)
           parts[#parts + 1] = text:gsub(quotepattern, "%%%1"):gsub("/", "[/\\]")
         end
       end
+      pattern = table.concat(parts):gsub("%%%$OS", os):gsub("%%%$ARCH", arch)
       rules[i] = {
         allowed = #skip == 0,
-        pattern = "^" .. table.concat(parts) .. "$"
+        pattern = "^" .. pattern .. "$"
       }
     end
+
     return {
       default = not rules[1].allowed,
       prefix = "^" .. pathJoin(path:gsub(quotepattern, "%%%1"), '(.*)'),
@@ -281,11 +291,53 @@ return function (path)
     }
   end
 
-  function db.import(fs, path, rules)
+  local function isAllowed(path, entry, filters)
 
+    -- Ignore all hidden files and folders always.
+    local allow, subPath, default
+    default = true
+    for i = 1, #filters do
+      local filter = filters[i]
+      local newPath = path:match(filter.prefix)
+      if newPath then
+        default = filter.default
+        local newAllow = filter.match(newPath)
+        if newAllow ~= nil then
+          subPath = newPath
+          allow = newAllow
+        end
+      end
+    end
+    local isTree = entry.type == "directory" or entry.mode == modes.tree
+    if allow == nil then
+      -- If nothing matched, fall back to defaults
+      if entry.name:match("^%.") then
+        -- Skip hidden files.
+        allow = false
+      elseif isTree then
+        -- Walk all trees except deps
+        allow = entry.name ~= "deps"
+      else
+        allow = default
+      end
+    end
+
+    if subPath then
+      if allow and not isTree and not default then
+        log("including", subPath)
+      elseif not allow and default then
+        log("skipping", subPath)
+      end
+    end
+
+    return allow, default, subPath
+  end
+
+  function db.import(fs, path, rules, nativeOnly)
+    if nativeOnly == nil then nativeOnly = false end
     local filters = {}
     if rules then
-      filters[#filters + 1] = compileFilter(path, rules)
+      filters[#filters + 1] = compileFilter(path, rules, nativeOnly)
     end
 
     local importEntry, importTree
@@ -316,49 +368,17 @@ return function (path)
       local meta = fs.readFile(pathJoin(path, "package.lua"))
       if meta then meta = loadstring(meta)() end
       if meta and meta.files then
-        filters[#filters + 1] = compileFilter(path, meta.files)
+        filters[#filters + 1] = compileFilter(path, meta.files, nativeOnly)
       end
 
       for entry in assert(fs.scandir(path)) do
         local fullPath = pathJoin(path, entry.name)
-        -- Ignore all hidden files and folders always.
-        local allow, subPath, default
-        default = true
-        for i = 1, #filters do
-          local filter = filters[i]
-          local newPath = fullPath:match(filter.prefix)
-          if newPath then
-            default = filter.default
-            local newAllow = filter.match(newPath)
-            if newAllow ~= nil then
-              subPath = newPath
-              allow = newAllow
-            end
-          end
-        end
-        if allow == nil then
-          -- If nothing matched, fall back to defaults
-          if entry.name:match("^%.") then
-            -- Skip hidden files.
-            allow = false
-          elseif entry.type == "directory" then
-            -- Walk all trees except deps
-            allow = entry.name ~= "deps"
-          else
-            allow = default
-          end
-        end
-
+        local allow, default, subPath = isAllowed(fullPath, entry, filters)
         if allow then
           entry.mode, entry.hash = importEntry(fullPath, entry)
           if entry.hash then
             items[#items + 1] = entry
-            if entry.type ~= "directory" and not default then
-              log("including", subPath)
-            end
           end
-        elseif default and subPath then
-          log("skipping", subPath)
         end
       end
       return #items > 0 and db.saveAs("tree", items)
@@ -369,43 +389,77 @@ return function (path)
     return modes.toType(mode), hash
   end
 
-  local exportEntry, exportTree
-
-  function exportEntry(path, mode, value)
-    if mode == modes.tree then
-      exportTree(path, value)
-    elseif mode == modes.sym then
-      local success, err = fs.symlink(value, path)
-      if not success and err:match("^ENOENT:") then
-        assert(fs.mkdirp(pathJoin(path, "..")))
-        assert(fs.symlink(value, path))
-      end
-    elseif modes.isFile(mode) then
-      local success, err = fs.writeFile(path, value)
-      if not success and err:match("^ENOENT:") then
-        assert(fs.mkdirp(pathJoin(path, "..")))
-        assert(fs.writeFile(path, value))
-      end
-      assert(fs.chmod(path, mode))
-    else
-      error("Unsupported mode at " .. path .. ": " .. mode)
-    end
-  end
-
-  function exportTree(path, tree)
-    assert(fs.mkdirp(path))
-    for i = 1, #tree do
-      local entry = tree[i]
-      local newPath = pathJoin(path, entry.name)
-      local kind, value = db.loadAny(entry.hash)
-      assert(modes.toType(entry.mode) == kind, "Git kind mismatch")
-      exportEntry(newPath, entry.mode, value)
-    end
-  end
-
-  function db.export(hash, path)
+  function db.export(hash, path, rules, nativeOnly)
+    if nativeOnly == nil then nativeOnly = true end
     local kind, value = db.loadAny(hash)
     if not kind then error(value or "No such hash") end
+
+    local filters = {}
+    if rules then
+      filters[#filters + 1] = compileFilter(path, rules, nativeOnly)
+    end
+
+    local exportEntry, exportTree
+
+    function exportEntry(path, mode, value)
+      if mode == modes.tree then
+        exportTree(path, value)
+      elseif mode == modes.sym then
+        local success, err = fs.symlink(value, path)
+        if not success and err:match("^ENOENT:") then
+          assert(fs.mkdirp(pathJoin(path, "..")))
+          assert(fs.symlink(value, path))
+        end
+      elseif modes.isFile(mode) then
+        local success, err = fs.writeFile(path, value)
+        if not success and err:match("^ENOENT:") then
+          assert(fs.mkdirp(pathJoin(path, "..")))
+          assert(fs.writeFile(path, value))
+        end
+        assert(fs.chmod(path, mode))
+      else
+        error("Unsupported mode at " .. path .. ": " .. mode)
+      end
+    end
+
+    function exportTree(path, tree)
+
+      local meta
+      for i = 1, #tree do
+        local entry = tree[i]
+        if entry.name == "package.lua" then
+          if modes.isFile(entry.mode) then
+            meta = db.loadAs("blob", entry.hash)
+          end
+          break
+        end
+      end
+      if meta then meta = loadstring(meta)() end
+      if meta and meta.files then
+        filters[#filters + 1] = compileFilter(path, meta.files, nativeOnly)
+      end
+
+      for i = #tree, 1, -1 do
+        local entry = tree[i]
+        local fullPath = pathJoin(path, entry.name)
+        if not isAllowed(fullPath, entry, filters) then
+          table.remove(tree, i)
+        end
+      end
+
+      if #tree == 0 then return end
+
+      assert(fs.mkdirp(path))
+      for i = 1, #tree do
+        local entry = tree[i]
+        local fullPath = pathJoin(path, entry.name)
+        local kind, value = db.loadAny(entry.hash)
+        assert(modes.toType(entry.mode) == kind, "Git kind mismatch")
+        exportEntry(fullPath, entry.mode, value)
+      end
+    end
+
+
     exportEntry(path, kind == "tree" and modes.tree or modes.blob, value)
     return kind
   end

@@ -1,6 +1,6 @@
 local git = require('git')
 local listToMap = git.listToMap
-local modeToType = git.modeToType
+local modeToType = git.modes.toType
 local modes = git.modes
 
 return function (db, root)
