@@ -1,10 +1,10 @@
 exports.name = "creationix/coro-http"
-exports.version = "0.1.0"
+exports.version = "1.0.0"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.4",
   "creationix/coro-tls@1.1.1",
-  "creationix/coro-wrapper@0.1.0",
-  "luvit/http-codec@0.1.5"
+  "creationix/coro-wrapper@1.0.0",
+  "luvit/http-codec@1.0.0"
 }
 
 local httpCodec = require('http-codec')

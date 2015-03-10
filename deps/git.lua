@@ -1,5 +1,5 @@
 exports.name = "creationix/git"
-exports.version = "0.1.1"
+exports.version = "1.0.0"
 
 local modes = {
   tree   = 16384, --  040000

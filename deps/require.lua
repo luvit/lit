@@ -1,7 +1,7 @@
 
 if exports then
   exports.name = "luvit/require"
-  exports.version = "0.2.3"
+  exports.version = "1.0.0"
 end
 
 local luvi = require('luvi')
@@ -193,7 +193,6 @@ local function generator(modulePath)
         local fd = uv.fs_open(path, "w", 384) -- 0600
         uv.fs_write(fd, data, 0)
         uv.fs_close(fd)
-        local err
         fn, err = package.loadlib(path, fnName)
         if not fn then
           error(path .. "#" .. fnName .. ": " .. err)

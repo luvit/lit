@@ -1,5 +1,5 @@
 exports.name = "creationix/ssh-rsa"
-exports.version = "0.1.2"
+exports.version = "1.0.0"
 
 local openssl = require('openssl')
 local pkey = openssl.pkey

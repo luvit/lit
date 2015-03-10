@@ -15,8 +15,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 --]]
-exports.name = "creationix/readline"
-exports.version = "1.0.1"
+exports.name = "luvit/readline"
+exports.version = "1.0.0"
 
 -- Heavily inspired by ljlinenoise : <http://fperrad.github.io/ljlinenoise/>
 
@@ -367,7 +367,7 @@ function Editor:readLine(prompt, callback)
   self.position = 1
   self.stdout:write(self.prompt)
   self.history:add(self.line)
-  self.historyIndex = #self.history,
+  self.historyIndex = #self.history
 
   self.stdin:set_mode(1)
   self.stdin:read_start(onKey)
