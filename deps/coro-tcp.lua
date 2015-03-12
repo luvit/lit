@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.4"
+exports.version = "1.0.5"
 exports.dependencies = {
   "creationix/coro-channel@1.0.4"
 }
@@ -47,7 +47,9 @@ function exports.createServer(addr, port, onConnect)
       if not success then
         print(failure)
       end
-      socket:close()
+      if not socket:is_closing() then
+        socket:close()
+      end
     end)()
   end)
 end
