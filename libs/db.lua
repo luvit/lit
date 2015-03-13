@@ -183,20 +183,39 @@ return function (path)
     return string.format("keys/%s/%s", author, fingerprint)
   end
 
+   local function windowsSafeKeyPath(author, fingerprint)
+    return string.format("keys/%s/%s", author, fingerprint:gsub(":", "_"))
+  end
+
   function db.readKey(author, fingerprint)
-    return storage.read(keyPath(author, fingerprint))
+    return storage.read(windowsSafeKeyPath(author, fingerprint))
   end
 
   function db.putKey(author, fingerprint, key)
-    return storage.put(keyPath(author, fingerprint), key)
+    return storage.put(windowsSafeKeyPath(author, fingerprint), key)
   end
 
   function db.revokeKey(author, fingerprint)
-    return storage.delete(keyPath(author, fingerprint))
+    return storage.delete(windowsSafeKeyPath(author, fingerprint))
   end
 
+  -- Wrapper around storage.leaves to replace every "_" with a ":" (Windows safe)
   function db.fingerprints(author)
-    return storage.leaves("keys/" .. author)
+    local n0 = 0
+
+    return function()
+      n0 = n0 + 1
+      local n1 = 0
+
+      for fingerprint in storage.leaves("keys/" .. author) do
+        n1 = n1 + 1
+        if n1 == n0 then
+          return fingerprint:gsub("_", ":")
+        end
+      end
+
+      return nil
+    end
   end
 
   function db.getEtag(author)
