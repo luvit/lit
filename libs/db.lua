@@ -180,7 +180,7 @@ return function (path)
   end
 
   local function keyPath(author, fingerprint)
-    return string.format("keys/%s/%s", author, fingerprint)
+    return string.format("keys/%s/%s", author, fingerprint:gsub(":", "_"))
   end
 
   function db.readKey(author, fingerprint)
@@ -196,7 +196,11 @@ return function (path)
   end
 
   function db.fingerprints(author)
-    return storage.leaves("keys/" .. author)
+    local iter = storage.leaves("keys/" .. author)
+    return function ()
+      local item = iter()
+      return item and item:gsub("_", ":")
+    end
   end
 
   function db.getEtag(author)
