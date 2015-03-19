@@ -1,7 +1,7 @@
 exports.name = "creationix/prompt"
-exports.version = "1.0.1"
+exports.version = "1.0.2"
 exports.dependencies = {
-  "luvit/readline@1.0.0"
+  "luvit/readline@1.0.1"
 }
 
 local readLine = require('readline').readLine

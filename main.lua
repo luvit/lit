@@ -8,6 +8,7 @@ coroutine.wrap(function ()
   local log = require('log')
   local success, err = xpcall(function ()
     log("lit version", version)
+    log("luvi version", require('luvi').version)
     args[1] = args[1] or "help"
     if args[1] == "version" then os.exit(0) end
     log("command", table.concat(args, " "), "highlight")
