@@ -1,9 +1,9 @@
 
-$LUVI_VERSION = "1.0.1"
+$LUVI_VERSION = "1.1.0"
 $LIT_VERSION = "1.0.2"
 
 $LUVI_ARCH = "Windows-amd64"
-$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-static-$LUVI_ARCH.exe"
+$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"
 $LIT_URL = "https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
 
 function Download-File {

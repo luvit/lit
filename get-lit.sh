@@ -1,14 +1,10 @@
 #!/bin/sh
 set -eu
-LUVI_VERSION=1.0.1
+LUVI_VERSION=1.1.0
 LIT_VERSION=1.0.2
 
-LUVI_ARCH=static-`uname -s`_`uname -m`
-if uname -m | grep arm; then
-  LUVI_ARCH=large-`uname -s`_`uname -m`
-fi
-echo $LUVI_ARCH
-LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-$LUVI_ARCH"
+LUVI_ARCH=`uname -s`_`uname -m`
+LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH"
 LIT_URL="https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
 
 # Download Files
