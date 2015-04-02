@@ -60,6 +60,10 @@ return function (db, config, getKey)
   end
 
   function core.add(path)
+    local key = getKey()
+    if not (key and config.name and config.email) then
+      error("Please run `lit auth` to configure your username")
+    end
     local fs
     fs, path = vfs(path)
     local meta = pkg.query(fs, path)
