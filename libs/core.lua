@@ -544,11 +544,11 @@ return function (db, config, getKey)
     "^(https?://[^#]+%.git)$", makeGit,
     "^(https?://[^#]+)$", makeHttp,
     "^(git://.*)$", makeGit,
-    "^([^ @]+%@.*)$", makeGit,
     "^lit://([^/]+)/([^@]+)@v?(.+)$", makeLit,
     "^lit://([^/]+)/([^@]+)$", makeLit,
     "^([^@/]+)/([^@]+)@v?(.+)$", makeLit,
     "^([^@/]+)/([^@]+)$", makeLit,
+    "^([^ :/@]+%@.*)$", makeGit,
   }
   core.urlHandlers = handlers
 

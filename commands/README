@@ -3,6 +3,7 @@ Lit CLI Commands
 ================
  lit help                    Show usage information.
  lit version                 Show just the lit version.
+ lit update                  Update lit to the latest version.
 
 Local configuration
 -------------------
