@@ -2,6 +2,10 @@ local meta = require('../package')
 local updater = require('auto-updater')
 local toupdate = updater.check(meta)
 local log = require('log')
+if not toupdate then
+  log("newer than remote", meta.version, "err")
+  return
+end
 if toupdate == meta.version then
   log("up to date", meta.version, "highlight")
   return
@@ -18,6 +22,7 @@ if not res:match("[yY]") then
   return
 end
 
+
 local new = target .. ".new"
 local old = target .. ".old"
 core.makeUrl("lit://" .. meta.name .. "@" .. toupdate, new)
@@ -25,4 +30,4 @@ log("replacing binary", target, "highlight")
 uv.fs_rename(target, old)
 uv.fs_rename(new, target)
 uv.fs_unlink(old)
-log("upgrade complete", toupdate, "success")
+log("update complete", toupdate, "success")

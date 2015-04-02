@@ -1,6 +1,10 @@
 return {
   name = "creationix/lit",
   version = "1.0.3",
+  luvi = {
+    version = "1.1.0",
+    flavor = "regular",
+  },
   dependencies = {
     "luvit/require@1.0.1",
     "luvit/pretty-print@1.0.0",

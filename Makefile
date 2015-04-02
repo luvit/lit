@@ -1,7 +1,7 @@
 APP_FILES=$(shell find . -name '*.lua')
 LUVI_ARCH=$(shell uname -s)_$(shell uname -m)
-LUVI_VERSION=v1.1.0
-LUVI_URL=https://github.com/luvit/luvi/releases/download/$(LUVI_VERSION)/luvi-regular-$(LUVI_ARCH)
+LUVI_VERSION=1.1.0
+LUVI_URL=https://github.com/luvit/luvi/releases/download/v$(LUVI_VERSION)/luvi-regular-$(LUVI_ARCH)
 
 lit: luvi $(APP_FILES)
 	LUVI_APP=. ./luvi make

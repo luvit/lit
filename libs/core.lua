@@ -28,6 +28,31 @@ local dbFs = require('db-fs')
 local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
 local filterTree = require('rules').filterTree
+local luvi = require('luvi')
+
+local function run(...)
+  local stdout, stderr, code, signal = exec(...)
+  if code == 0 and signal == 0 then
+    return string.gsub(stdout, "%s*$", "")
+  else
+    return nil, string.gsub(stderr, "%s*$", "")
+  end
+end
+
+local function luviUrl(meta)
+
+  local arch
+  if require('jit').os == "Windows" then
+    arch = "Windows_x86_64"
+  else
+    arch = run("uname", "-s") .. "_" .. run("uname", "-m")
+  end
+  meta = meta or {}
+
+  return string.format(
+    "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s",
+    meta.version or luvi.version, meta.flavor or "regular", arch)
+end
 
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
@@ -96,7 +121,6 @@ return function (db, config, getKey)
       },
       message = ""
     })
-    local key = getKey()
     if key then
       encoded = sshRsa.sign(encoded, key)
     end
@@ -147,7 +171,7 @@ return function (db, config, getKey)
     end
 
     for i = 1, #queue do
-      local tag, version, hash = unpack(queue[i])
+      local tag, _, hash = unpack(queue[i])
       if #queue == 1 or confirm(tag .. " -> " .. config.upstream .. "\nDo you wish to publish?") then
         log("publishing", tag, "highlight")
         db.push(hash)
@@ -426,23 +450,33 @@ return function (db, config, getKey)
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
-    -- Copy base binary
     local binSize
-    do
-      local source = uv.exepath()
 
-      local reader = miniz.new_reader(source)
-      if reader then
-        -- If contains a zip, find where the zip starts
-        binSize = reader:get_offset()
-      else
-        -- Otherwise just read the file size
-        binSize = uv.fs_stat(source).size
+    if meta.luvi and (normalize(meta.luvi.version) ~= normalize(luvi.version) or meta.luvi.flavor ~= "regular") then
+      local url = luviUrl(meta.luvi)
+      log("downloading custom luvi", url)
+      -- TODO: stream the binary and show progress
+      local res, bin = http.request("GET", url, {})
+      assert(res.code == 200, bin)
+      binSize = #bin
+      uv.fs_write(fd, bin, -1)
+    else      -- Copy base binary
+      do
+        local source = uv.exepath()
+
+        local reader = miniz.new_reader(source)
+        if reader then
+          -- If contains a zip, find where the zip starts
+          binSize = reader:get_offset()
+        else
+          -- Otherwise just read the file size
+          binSize = uv.fs_stat(source).size
+        end
+        local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
+        log("copying binary prefix", binSize .. " bytes from " .. source)
+        assert(uv.fs_sendfile(fd, fd2, 0, binSize))
+        uv.fs_close(fd2)
       end
-      local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
-      log("copying binary prefix", binSize .. " bytes from " .. source)
-      assert(uv.fs_sendfile(fd, fd2, 0, binSize))
-      uv.fs_close(fd2)
     end
 
     local writer = miniz.new_writer()
