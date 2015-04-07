@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.2"
+exports.version = "1.0.3"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.1",
@@ -28,11 +28,10 @@ function exports.createServer(addr, port, onConnect)
         end
       end
       local body = table.concat(parts)
-      onConnect(head, body, function (head, body)
-        write(head)
-        if body then write(body) end
-        write("")
-      end, socket)
+      head, body = onConnect(head, body, socket)
+      write(head)
+      if body then write(body) end
+      write("")
       if not head.keepAlive then break end
     end
   end)
