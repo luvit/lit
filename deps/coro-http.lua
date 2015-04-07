@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.1"
+exports.version = "1.0.2"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.1",
@@ -9,8 +9,34 @@ exports.dependencies = {
 
 local httpCodec = require('http-codec')
 local connect = require('coro-tcp').connect
+local createServer = require('coro-tcp').createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
+
+
+function exports.createServer(addr, port, onConnect)
+  createServer(addr, port, function (rawRead, rawWrite, socket)
+    local read = wrapper.reader(rawRead, httpCodec.decoder())
+    local write = wrapper.writer(rawWrite, httpCodec.encoder())
+    for head in read do
+      local parts = {}
+      for part in read do
+        if #part > 0 then
+          parts[#parts + 1] = part
+        else
+          break
+        end
+      end
+      local body = table.concat(parts)
+      onConnect(head, body, function (head, body)
+        write(head)
+        if body then write(body) end
+        write("")
+      end, socket)
+      if not head.keepAlive then break end
+    end
+  end)
+end
 
 local function parseUrl(url)
   local protocol, host, hostname, port, path = url:match("^(https?:)//(([^/:]+):?([0-9]*))(/?.*)$")
@@ -79,6 +105,7 @@ function exports.request(method, url, headers, body)
   write(req)
   if body then write(body) end
   local res = read()
+
   body = {}
   for item in read do
     if #item == 0 then break end
