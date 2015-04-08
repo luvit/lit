@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.4"
+exports.version = "1.0.5"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.1",
@@ -97,9 +97,24 @@ function exports.request(method, url, headers, body)
     path = uri.path,
     {"Host", uri.host}
   }
+  local contentLength
+  local chunked
   if headers then
     for i = 1, #headers do
+      local key, value = unpack(headers[i])
+      key = key:lower()
+      if key == "content-length" then
+        contentLength = value
+      elseif key == "content-encoding" and value:lower() == "chunked" then
+        chunked = true
+      end
       req[#req + 1] = headers[i]
+    end
+  end
+
+  if type(body) == "string" then
+    if not (contentLength and chunked) then
+      req[#req + 1] = {"Content-Length", #body}
     end
   end
 
