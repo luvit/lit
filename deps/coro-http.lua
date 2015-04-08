@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.3"
+exports.version = "1.0.4"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.1",
@@ -12,7 +12,6 @@ local connect = require('coro-tcp').connect
 local createServer = require('coro-tcp').createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
-
 
 function exports.createServer(addr, port, onConnect)
   createServer(addr, port, function (rawRead, rawWrite, socket)
@@ -59,16 +58,19 @@ local function getConnection(host, port, tls)
   for i = #connections, 1, -1 do
     local connection = connections[i]
     if connection.host == host and connection.port == port and connection.tls == tls then
-      table.remove(connection, i)
-      return connection
+      table.remove(connections, i)
+      -- Make sure the connection is still alive before reusing it.
+      if not connection.socket:is_closing() and connection.socket:is_active() then
+        return connection
+      end
     end
   end
-  local read, write = assert(connect(host, port))
+  local read, write, socket = assert(connect(host, port))
   if tls then
     read, write = tlsWrap(read, write)
   end
-  -- TODO: wrap read and write to clean up when socket terminates?
   return {
+    socket = socket,
     host = host,
     port = port,
     tls = tls,
@@ -79,7 +81,7 @@ end
 exports.getConnection = getConnection
 
 local function saveConnection(connection)
-  -- TODO: add some idle timeout or timestamp?
+  if connection.socket:is_closing() then return end
   connections[#connections + 1] = connection
 end
 exports.saveConnection = saveConnection
@@ -104,6 +106,7 @@ function exports.request(method, url, headers, body)
   write(req)
   if body then write(body) end
   local res = read()
+  if not res then error("Connection closed") end
 
   body = {}
   for item in read do
