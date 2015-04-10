@@ -1,17 +1,38 @@
 exports.name = "creationix/coro-tls"
-exports.version = "1.1.1"
+exports.version = "1.1.2"
 
 local openssl = require('openssl')
 local bit = require('bit')
 
 -- Given a read/write pair, return a new read/write pair for plaintext
 exports.wrap = function (read, write, options)
-  if options then
-    -- TODO: process options
+  if not options then
+    options = {}
   end
 
   local ctx = openssl.ssl.ctx_new("TLSv1_2")
-  ctx:verify_mode({"none"})
+
+  local key, cert, ca
+  if options.key then
+    key = assert(openssl.pkey.read(options.key, true, 'pem'))
+  end
+  if options.cert then
+    cert = assert(openssl.x509.read(options.cert))
+  end
+  if options.ca then
+    ca = assert(openssl.x509.read(options.ca))
+  end
+  if key and cert then
+    assert(ctx:use(key, cert))
+  end
+  if ca then
+    local store = openssl.x509.store:new()
+    assert(store:add(ca))
+    ctx:cert_store(store)
+  else
+    ctx:verify_mode({"none"})
+  end
+
   ctx:options(bit.bor(
     openssl.ssl.no_sslv2,
     openssl.ssl.no_sslv3,
