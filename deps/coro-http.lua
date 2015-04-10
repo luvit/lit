@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.1"
+exports.version = "1.0.5"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.1",
@@ -9,8 +9,32 @@ exports.dependencies = {
 
 local httpCodec = require('http-codec')
 local connect = require('coro-tcp').connect
+local createServer = require('coro-tcp').createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
+
+function exports.createServer(addr, port, onConnect)
+  createServer(addr, port, function (rawRead, rawWrite, socket)
+    local read = wrapper.reader(rawRead, httpCodec.decoder())
+    local write = wrapper.writer(rawWrite, httpCodec.encoder())
+    for head in read do
+      local parts = {}
+      for part in read do
+        if #part > 0 then
+          parts[#parts + 1] = part
+        else
+          break
+        end
+      end
+      local body = table.concat(parts)
+      head, body = onConnect(head, body, socket)
+      write(head)
+      if body then write(body) end
+      write("")
+      if not head.keepAlive then break end
+    end
+  end)
+end
 
 local function parseUrl(url)
   local protocol, host, hostname, port, path = url:match("^(https?:)//(([^/:]+):?([0-9]*))(/?.*)$")
@@ -34,16 +58,19 @@ local function getConnection(host, port, tls)
   for i = #connections, 1, -1 do
     local connection = connections[i]
     if connection.host == host and connection.port == port and connection.tls == tls then
-      table.remove(connection, i)
-      return connection
+      table.remove(connections, i)
+      -- Make sure the connection is still alive before reusing it.
+      if not connection.socket:is_closing() and connection.socket:is_active() then
+        return connection
+      end
     end
   end
-  local read, write = assert(connect(host, port))
+  local read, write, socket = assert(connect(host, port))
   if tls then
     read, write = tlsWrap(read, write)
   end
-  -- TODO: wrap read and write to clean up when socket terminates?
   return {
+    socket = socket,
     host = host,
     port = port,
     tls = tls,
@@ -54,7 +81,7 @@ end
 exports.getConnection = getConnection
 
 local function saveConnection(connection)
-  -- TODO: add some idle timeout or timestamp?
+  if connection.socket:is_closing() then return end
   connections[#connections + 1] = connection
 end
 exports.saveConnection = saveConnection
@@ -70,15 +97,32 @@ function exports.request(method, url, headers, body)
     path = uri.path,
     {"Host", uri.host}
   }
+  local contentLength
+  local chunked
   if headers then
     for i = 1, #headers do
+      local key, value = unpack(headers[i])
+      key = key:lower()
+      if key == "content-length" then
+        contentLength = value
+      elseif key == "content-encoding" and value:lower() == "chunked" then
+        chunked = true
+      end
       req[#req + 1] = headers[i]
+    end
+  end
+
+  if type(body) == "string" then
+    if not (contentLength and chunked) then
+      req[#req + 1] = {"Content-Length", #body}
     end
   end
 
   write(req)
   if body then write(body) end
   local res = read()
+  if not res then error("Connection closed") end
+
   body = {}
   for item in read do
     if #item == 0 then break end
