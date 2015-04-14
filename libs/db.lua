@@ -289,6 +289,7 @@ return function (path)
 
       for entry in assert(fs.scandir(path)) do
         local fullPath = pathJoin(path, entry.name)
+        entry.type = entry.type or fs.stat(fullPath).type
         if isAllowed(fullPath, entry, filters) then
           entry.mode, entry.hash = importEntry(fullPath, entry)
           if entry.hash then
