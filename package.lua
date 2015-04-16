@@ -1,8 +1,8 @@
 return {
   name = "creationix/lit",
-  version = "1.0.3",
+  version = "1.1.0",
   luvi = {
-    version = "1.1.0",
+    version = "2.0.0",
     flavor = "regular",
   },
   dependencies = {
@@ -12,8 +12,8 @@ return {
     "luvit/json@1.0.0",
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.5",
-    "creationix/coro-http@1.0.1",
-    "creationix/coro-tls@1.1.1",
+    "creationix/coro-http@1.0.6",
+    "creationix/coro-tls@1.1.2",
     "creationix/coro-wrapper@1.0.0",
     "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.1",
