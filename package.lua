@@ -1,5 +1,5 @@
 return {
-  name = "creationix/lit",
+  name = "luvit/lit",
   version = "1.1.1",
   luvi = {
     version = "2.0.1",
