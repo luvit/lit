@@ -1,8 +1,8 @@
 return {
   name = "creationix/lit",
-  version = "1.1.0",
+  version = "1.1.1",
   luvi = {
-    version = "2.0.0",
+    version = "2.0.1",
     flavor = "regular",
   },
   dependencies = {
