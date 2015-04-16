@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.0"
+exports.version = "1.0.1"
 exports.dependencies = {
   "creationix/hex-bin@1.0.0"
 }
@@ -158,6 +158,9 @@ function exports.handshake(options, request)
     {"Sec-Websocket-Version", "13"},
     {"Sec-Websocket-Key", key},
   }
+  for i = 1, #options do
+    req[#req + 1] = options[i]
+  end
   if host then
     req[#req + 1] = {"Host", host}
   end
