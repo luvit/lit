@@ -25,5 +25,4 @@ Download-File $LIT_URL "lit.zip"
 Start-Process "luvi.exe" -ArgumentList "lit.zip -- make lit.zip" -Wait -NoNewWindow
 
 # Cleanup
-Remove-Item "luvi.exe"
 Remove-Item "lit.zip"

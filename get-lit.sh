@@ -18,4 +18,4 @@ curl -L $LIT_URL > lit.zip
 ./luvi lit.zip -- make lit.zip
 
 # Cleanup
-rm lit.zip luvi
+rm -f lit.zip
