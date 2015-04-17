@@ -119,7 +119,7 @@ return function (db, config, getKey)
         email = config.email,
         date = now()
       },
-      message = ""
+      message = jsonStringify(meta)
     })
     if key then
       encoded = sshRsa.sign(encoded, key)

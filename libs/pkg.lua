@@ -30,6 +30,18 @@ local function evalModule(data, name)
   return meta
 end
 
+local validKeys = {
+  name = "string",
+  version = "string",
+  description = "string",
+  keywords = "table", -- list of strings
+  homepage = "string",
+  license = "string",
+  author = "table", -- person {name=name, email=email, url=url}
+  contributors = "table", -- list of people
+  dependencies = "table", -- list of strings
+  luvi = "table", -- {flavor=flavor,version=version}
+}
 
 function exports.query(fs, path)
   local packagePath = path
@@ -55,8 +67,13 @@ function exports.query(fs, path)
     return data, err or "Can't find package at " .. path
   end
   local meta = evalModule(data, packagePath)
-
-  return meta, packagePath
+  local clean = {}
+  for key, value in pairs(meta) do
+    if type(value) == validKeys[key] then
+      clean[key] = value
+    end
+  end
+  return clean, packagePath
 end
 
 function exports.queryDb(db, hash)
