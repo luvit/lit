@@ -4,7 +4,10 @@ Lit CLI Commands
  lit help                    Show usage information.
  lit version                 Show just the lit version.
  lit update                  Update lit to the latest version.
-
+ lit make appdir             Build appdir into a single executable.
+ lit serve prefix            Start a lit package server (upstream or proxy).
+                             `prefix` is the protocol and host.
+                             EG: lit serve https://lit.luvit.io
 Local configuration
 -------------------
  lit auth username           Verify local private key and set username.
@@ -14,29 +17,14 @@ Local configuration
 
 Package Management
 ------------------
- lit add path*               Import, tag, and sign packages from disk.
-                             to the local db.
- lit publish path*           Add and publish packages to upstream.
  lit install                 Install deps of package in cwd.
  lit install names*          Install dependencies.
  lit sync [author] [name]    Sync down upstream updates for any locally cached
-                             packages.  Optionally filter by author and/or name.
-
-Execution and Packaging
+ lit publish path*           Add and publish packages to upstream.
+ lit add path*               Import, tag, and sign packages from disk.
+                             to the local db.
+Organization Management
 -----------------------
- lit run appdir              Run app directly without building.
- lit test appdir             Run app directly, but with custom test main.
- lit make appdir             Build appdir into a single executable.
-
-Server
-------
- lit serve prefix            Start a lit package server (upstream or proxy).
-                             `prefix` is the protocol and host.
-                             EG: lit serve https://lit.luvit.io
-
-Upstream Organization Management
---------------------------------
- lit claim org               Claim a github organization that you are a public
-                             member of.
+ lit claim org               Claim github org of which you are a public member.
  lit share org user          Add collaborator who can push to this lit org.
  lit unclaim org             Remove yourself from a lit organization.
