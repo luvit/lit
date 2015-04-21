@@ -7,7 +7,7 @@ return {
   },
   dependencies = {
     "luvit/require@1.0.1",
-    "luvit/pretty-print@1.0.0",
+    "luvit/pretty-print@1.0.1",
     "luvit/http-codec@1.0.0",
     "luvit/json@1.0.0",
     "creationix/coro-fs@1.2.3",
@@ -20,7 +20,7 @@ return {
     "creationix/git@1.0.0",
     "creationix/prompt@1.0.2",
     "creationix/ssh-rsa@1.0.0",
-    "creationix/websocket-codec@1.0.0",
+    "creationix/websocket-codec@1.0.1",
   },
   files = {
     "commands/README",
