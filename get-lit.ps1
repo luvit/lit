@@ -1,5 +1,5 @@
 
-$LUVI_VERSION = "2.0.2"
+$LUVI_VERSION = "2.0.3"
 $LIT_VERSION = "1.1.3"
 
 $LUVI_ARCH = "Windows-amd64"
