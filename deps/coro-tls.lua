@@ -38,7 +38,7 @@ exports.wrap = function (read, write, options)
     openssl.ssl.no_sslv3,
     openssl.ssl.no_compression))
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
-  local ssl = ctx:ssl(bin, bout, options.server and true or false)
+  local ssl = ctx:ssl(bin, bout, options.server)
 
   local function flush()
     while bout:pending() > 0 do
