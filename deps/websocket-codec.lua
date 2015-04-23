@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.1"
+exports.version = "1.0.2"
 exports.dependencies = {
   "creationix/hex-bin@1.0.0"
 }
@@ -140,9 +140,10 @@ end
 
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-local function acceptKey(key)
+function exports.acceptKey(key)
   return gsub(base64(hexToBin(digest("sha1", key .. websocketGuid))), "\n", "")
 end
+local acceptKey = exports.acceptKey
 
 -- Make a client handshake connection
 function exports.handshake(options, request)
