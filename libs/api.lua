@@ -44,6 +44,9 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
+
+GET /search/$query -> list of matches
+
 ]]
 
 local pathJoin = require('luvi').path.join
@@ -84,6 +87,7 @@ return function (prefix)
         names = prefix .. "/packages{/author}",
         versions = prefix .. "/packages{/author}{/name}",
         package = prefix .. "/packages{/author}{/name}{/version}",
+        search = prefix .. "/search{/query}",
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
@@ -118,6 +122,31 @@ return function (prefix)
       end
       return next(authors) and authors
     end,
+    "^/search/(.*)$", function (query)
+      local matches = {}
+      for author in db.authors() do
+        if author:match(query) then
+          matches[#matches + 1] = {
+            type = "author",
+            name = author,
+            url = prefix .. "/packages/" .. author
+          }
+        end
+        for name in db.names(author) do
+          if name:match(query) then
+            matches[#matches + 1] = {
+              type = "package",
+              name = author .. "/" .. name,
+              url = prefix .. "/packages/" .. author .. "/" .. name
+            }
+          end
+        end
+      end
+      return {
+        query = query,
+        matches = matches,
+      }
+    end
   }
 
   return function (req)
