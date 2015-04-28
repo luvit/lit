@@ -1,5 +1,5 @@
 exports.name = "creationix/git"
-exports.version = "1.0.0"
+exports.version = "1.0.1"
 
 local modes = {
   tree   = 16384, --  040000
@@ -85,8 +85,8 @@ local function parsePerson(raw)
   return {
     name = name,
     email = email,
-    {
-      seconds = seconds,
+    date = {
+      seconds = tonumber(seconds),
       offset = offset
     }
   }
