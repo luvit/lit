@@ -9,6 +9,7 @@ GET / -> api json {
   blobs = "/blobs/{hash}"
   trees = "/trees/{hash}"
   packages = "/packages{/author}{/tag}{/version}"
+  ...
 }
 GET /blobs/$HASH -> raw data
 GET /trees/$HASH -> tree json {
@@ -58,6 +59,14 @@ local core = require('./autocore')
 local db = core.db
 local modes = require('git').modes
 
+local function hex_to_char(x)
+  return string.char(tonumber(x, 16))
+end
+
+local function unescape(url)
+  return url:gsub("%%(%x%x)", hex_to_char)
+end
+
 return function (prefix)
 
   local function makeUrl(kind, hash, filename)
@@ -85,10 +94,10 @@ return function (prefix)
         blobs = prefix .. "/blobs/{hash}",
         trees = prefix .. "/trees/{hash}",
         authors = prefix .. "/packages",
-        names = prefix .. "/packages{/author}",
-        versions = prefix .. "/packages{/author}{/name}",
-        package = prefix .. "/packages{/author}{/name}{/version}",
-        search = prefix .. "/search{/query}",
+        names = prefix .. "/packages/{author}",
+        versions = prefix .. "/packages/{author}/{name}",
+        package = prefix .. "/packages/{author}/{name}/{version}",
+        search = prefix .. "/search/{query}",
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
@@ -174,7 +183,13 @@ return function (prefix)
     for i = 1, #routes, 2 do
       local match = {path:match(routes[i])}
       if #match > 0 then
-        body, extra = routes[i + 1](unpack(match))
+        for j = 1, #match do
+          match[j] = unescape(match[j])
+        end
+        local success, err = pcall(function ()
+          body, extra = routes[i + 1](unpack(match))
+        end)
+        if not success then body = {"error", err} end
         break
       end
     end
