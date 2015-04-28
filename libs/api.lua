@@ -59,6 +59,9 @@ local core = require('./autocore')
 local db = core.db
 local modes = require('git').modes
 
+
+local litVersion = "Lit " .. require('../package').version
+
 local function hex_to_char(x)
   return string.char(tonumber(x, 16))
 end
@@ -167,9 +170,28 @@ return function (prefix)
   }
 
   return function (req)
+
+    if req.method == "OPTIONS" then
+      -- Wide open CORS headers
+      return {
+        code = 204,
+        {"Access-Control-Allow-Origin", "*"},
+        {'Access-Control-Allow-Credentials', 'true'},
+        {'Access-Control-Allow-Methods', 'GET, OPTIONS'},
+        -- Custom headers and headers various browsers *should* be OK with but aren't
+        {'Access-Control-Allow-Headers', 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'},
+        -- Tell client that this pre-flight info is valid for 20 days
+        {'Access-Control-Max-Age', 1728000},
+        {'Content-Type', 'text/plain charset=UTF-8'},
+        {'Content-Length', 0},
+      }
+    end
+
     if not (req.method == "GET" or req.method == "HEAD") then
       return nil, "Must be GET or HEAD"
     end
+
+
     local path = pathJoin(req.path)
     local headers = {}
     for i = 1, #req do
@@ -200,7 +222,7 @@ return function (prefix)
     local res = {
       code = 200,
       {"Date", date("!%a, %d %b %Y %H:%M:%S GMT")},
-      {"Server", "lit"},
+      {"Server", litVersion},
     }
     if extra then
       for i = 1, #extra do
@@ -216,6 +238,11 @@ return function (prefix)
     local etag = string.format('"%s"', digest("sha1", body))
     res[#res + 1] = {"ETag", etag}
     res[#res + 1] = {"Content-Length", #body}
+
+    -- Add CORS headers
+    res[#res + 1] = {'Access-Control-Allow-Origin', '*'}
+    res[#res + 1] = {'Access-Control-Allow-Methods', 'GET, OPTIONS'}
+    res[#res + 1] = {'Access-Control-Allow-Headers', 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'}
 
     if headers["if-none-match"] == etag then
       res.code = 304
