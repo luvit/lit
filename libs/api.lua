@@ -127,9 +127,8 @@ return function (prefix)
       local matches = {}
       for author in db.authors() do
         if author:match(query) then
-          matches[#matches + 1] = {
+          matches[author] = {
             type = "author",
-            name = author,
             url = prefix .. "/packages/" .. author
           }
         end
