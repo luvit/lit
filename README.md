@@ -24,9 +24,10 @@ The following platforms are supported:
 
  - Windows (amd64)
  - FreeBSD 10.1 (amd64)
- - Raspberry PI Raspbian (armv6)
- - BeagleBone Black Debian (armv7)
+ - Raspberry PI (armv6)
+ - Raspberry PI 2 (armv7)
  - Ubuntu 14.04 (x86_64)
+ - Ubuntu 14.04 (i686)
  - OSX Yosemite (x86_64)
 
 On unix, download the [install script](./get-lit.sh) and pipe to `sh`:
@@ -35,10 +36,7 @@ On unix, download the [install script](./get-lit.sh) and pipe to `sh`:
 curl -L https://github.com/luvit/lit/raw/master/get-lit.sh | sh
 ```
 
-Since lit is still young, I recommend not using `master` and instead using a
-specified tag for your bootstrap scripts till we get past 1.0.0.
-
-If you're on Windows, I've thought of you as well.  Simply download and run
+If you're on Windows, We've thought of you as well.  Simply download and run
 the [powershell script](./get-lit.ps1).
 
 In `cmd.exe` run:
@@ -69,7 +67,7 @@ Once you have luvi, building lit is simple:
 
 ```
 > curl -L https://github.com/luvit/lit/archive/master.zip > lit.zip
-> LUVI_APP=lit.zip luvi make lit.zip
+> luvi lit.zip -- make lit.zip
 ```
 
 Or you can clone lit from git and use the Makefile which will do the same thing
@@ -205,9 +203,8 @@ You can remove yourself from the list of owners with this command.
 
 ### Execution and Packaging
 
-Luvi apps can be run and created using the `LUVI_APP` and `LUVI_TARGET`
-environment variables, but lit provides easier interfaces to this and adds new
-functionality.
+Luvi apps can be run and created using the `luvi` tool directly, but lit
+provides easier interfaces to this and adds new functionality.
 
 #### `lit make path/to/app [target]`
 
@@ -226,46 +223,13 @@ to build itself with nothing more than the luvi executable and a zip file
 containing lit's source.
 
 ```sh
-> LUVI_APP=lit.zip luvi make lit.zip
+> luvi lit.zip -- make lit.zip
 ```
 
 This will run the app contained in lit.zip passing in the arguments `make` and
 `lit.zip`.  The `make` will trigger lit's make command and it will build a lit
 executable from the contents of the zip file, installing any dependencies not
 found in the zip.
-
-#### `lit run args*`
-
-If you're in the root of a luvi app, you can run it here.  The following two
-commands are basically the same:
-
-```sh
-> LUVI_APP=. luvi arg1 arg2
-```
-
-Using lit wrapper:
-
-```sh
-> lit run arg1 arg2
-```
-
-This is mostly for environments where setting temporary environment variables is
-less than ideal.
-
-#### `lit test`
-
-This is another convenience wrapper.  It is the same as `lit run` except is
-also sets a custom main to run.
-
-```sh
-> LUVI_APP=. LUVI_MAIN=tests/run.lua luvi
-```
-
-Is the same as:
-
-```sh
-> lit test
-```
 
 ### Lit Server
 
