@@ -53,6 +53,7 @@ local pathJoin = require('luvi').path.join
 local digest = require('openssl').digest.digest
 local date = require('os').date
 local jsonStringify = require('json').stringify
+local jsonParse = require('json').parse
 local core = require('./autocore')
 local db = core.db
 local modes = require('git').modes
@@ -134,11 +135,19 @@ return function (prefix)
         end
         for name in db.names(author) do
           if name:match(query) then
-            matches[#matches + 1] = {
-              type = "package",
-              name = author .. "/" .. name,
-              url = prefix .. "/packages/" .. author .. "/" .. name
-            }
+            local version, hash = db.match(author, name)
+            local tag = db.loadAs("tag", hash)
+            local meta = tag.message:match("%b{}")
+            if meta then
+              meta = jsonParse(meta)
+            else
+              meta = {}
+            end
+            meta.type = "package"
+            meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
+            meta.version = version
+            meta.tagger = tag.tagger
+            matches[author .. "/" .. name] = meta
           end
         end
       end
