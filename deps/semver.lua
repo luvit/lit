@@ -1,5 +1,5 @@
 exports.name = "creationix/semver"
-exports.version = "1.0.1"
+exports.version = "1.0.2"
 local parse, normalize, match
 -- Make the module itself callable
 setmetatable(exports, {
@@ -13,14 +13,15 @@ function parse(version)
   return
     assert(tonumber(string.match(version, "^v?(%d+)")), "Not a semver"),
     tonumber(string.match(version, "^v?%d+%.(%d+)") or 0),
-    tonumber(string.match(version, "^v?%d+%.%d+%.(%d+)") or 0)
+    tonumber(string.match(version, "^v?%d+%.%d+%.(%d+)") or 0),
+    tonumber(string.match(version, "^v?%d+%.%d+%.%d+-(%d+)") or 0)
 end
 exports.parse = parse
 
 function normalize(version)
   if not version then return "*" end
-  local a, b, c = parse(version)
-  return a .. '.' .. b .. '.' .. c
+  local a, b, c, d = parse(version)
+  return a .. '.' .. b .. '.' .. c .. (d and ('-' .. d) or (''))
 end
 exports.normalize = normalize
 
@@ -29,9 +30,9 @@ exports.normalize = normalize
 function exports.gte(first, second)
   if not second or first == second then return true end
   if not first then return false end
-  local a, b, c = parse(second)
-  local d, e, f = parse(first)
-  return (d > a) or (d == a and (e > b or (e == b and f > c)))
+  local a, b, c, x = parse(second)
+  local d, e, f, y = parse(first)
+  return (d > a) or (d == a and (e > b or (e == b and (f > c or (y > x)))))
 end
 
 -- Sanity check for gte code
@@ -41,10 +42,12 @@ assert(exports.gte("9.9.9", "9.9.9"))
 assert(exports.gte("9.9.10", "9.9.9"))
 assert(exports.gte("9.10.0", "9.9.99"))
 assert(exports.gte("10.0.0", "9.99.99"))
+assert(exports.gte("10.0.0-1", "10.0.0-0"))
 assert(not exports.gte(nil, "0.0.0"))
 assert(not exports.gte("9.9.9", "9.9.10"))
 assert(not exports.gte("9.9.99", "9.10.0"))
 assert(not exports.gte("9.99.99", "10.0.0"))
+assert(not exports.gte("10.0.0-0", "10.0.0-1"))
 
 -- Given a semver string in the format a.b.c, and a list of versions in the
 -- same format, return the newest version that is compatable. This means for
