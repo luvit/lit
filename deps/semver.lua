@@ -70,7 +70,7 @@ function match(version, iterator)
     -- With an empty match, simply grab the newest version
     for possible in iterator do
       local d, e, f, y = parse(possible)
-      if (not a) or (d > a) or (d == a and (e > b or (e == b and (f > c or (f == c and y >= x))))) then
+      if (not a) or (d > a) or (d == a and (e > b or (e == b and (f > c or (f == c and y > x))))) then
         a, b, c, x = d, e, f, y
       end
     end
