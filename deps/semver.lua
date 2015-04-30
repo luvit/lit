@@ -106,10 +106,13 @@ end
 
 -- Sanity check for match code
 assert(match("0.0.1", iterator()) == "0.0.2")
+assert(match("0.0.1-1", iterator()) == "0.0.2")
 assert(match("0.1.0", iterator()) == "0.1.1")
+assert(match("0.1.0-1", iterator()) == "0.1.1")
 assert(match("0.2.0", iterator()) == "0.2.1")
 assert(not match("0.3.0", iterator()))
 assert(match("1.0.0", iterator()) == "1.1.3")
+assert(match("1.0.0-1", iterator()) == "1.1.3")
 assert(not match("1.1.4", iterator()))
 assert(not match("1.2.0", iterator()))
 assert(match("2.0.0", iterator()) == "2.1.2")
