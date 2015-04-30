@@ -32,13 +32,15 @@ function exports.gte(first, second)
   if not first then return false end
   local a, b, c, x = parse(second)
   local d, e, f, y = parse(first)
-  return (d > a) or (d == a and (e > b or (e == b and (f > c or (f == c and y > x)))))
+  return (d > a) or (d == a and (e > b or (e == b and (f > c or (f == c and y >= x)))))
 end
 
 -- Sanity check for gte code
 assert(exports.gte(nil, nil))
 assert(exports.gte("0.0.0", nil))
 assert(exports.gte("9.9.9", "9.9.9"))
+assert(exports.gte("1.2.3", "1.2.3-0"))
+assert(exports.gte("1.2.3-4", "1.2.3-4"))
 assert(exports.gte("9.9.10", "9.9.9"))
 assert(exports.gte("9.10.0", "9.9.99"))
 assert(exports.gte("10.0.0", "9.99.99"))
