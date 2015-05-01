@@ -18,7 +18,7 @@ local function updateLuvit()
     luvitPath = luvitPath .. ".exe"
   end
   if uv.fs_stat(luvitPath) then
-    local bundle = require('luvi').makeBundle({"/usr/local/bin/luvit"})
+    local bundle = require('luvi').makeBundle({luvitPath})
     local fs = {
       readFile = bundle.readfile,
       stat = bundle.stat,
@@ -43,11 +43,14 @@ local function updateLuvi()
       log("luvi is up to date", version, "highlight")
       return
     end
-    log("found system luvi", version)
-    local res = prompt("Are you sure you wish to update " .. target .. " to luvi " .. toupdate .. "?", "Y/n")
-    if not res:match("[yY]") then
-      log("canceled update", version, "err")
-      return
+
+    if version then
+      log("found system luvi", version)
+      local res = prompt("Are you sure you wish to update " .. target .. " to luvi " .. toupdate .. "?", "Y/n")
+      if not res:match("[yY]") then
+        log("canceled update", version, "err")
+        return
+      end
     end
 
     log("updating luvi", toupdate)
