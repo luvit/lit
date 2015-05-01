@@ -1,6 +1,6 @@
 return {
   name = "luvit/lit",
-  version = "1.1.4",
+  version = "1.1.5",
   luvi = {
     version = "2.0.3",
     flavor = "regular",

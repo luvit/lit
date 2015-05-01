@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-tls"
-exports.version = "1.1.3"
+exports.version = "1.1.4"
 
 local openssl = require('openssl')
 local bit = require('bit')
