@@ -14,6 +14,9 @@ end
 
 local function updateLuvit()
   local luvitPath = pathJoin(binDir, "luvit")
+  if require('ffi').os == "Windows" then
+    luvitPath = luvitPath .. ".exe"
+  end
   if uv.fs_stat(luvitPath) then
     local bundle = require('luvi').makeBundle({"/usr/local/bin/luvit"})
     local fs = {
@@ -28,6 +31,9 @@ end
 
 local function updateLuvi()
   local target = pathJoin(binDir, "luvi")
+  if require('ffi').os == "Windows" then
+    target = target .. ".exe"
+  end
   local new, old
   local toupdate = require('luvi').version
   if uv.fs_stat(target) then
