@@ -43,7 +43,7 @@ local function luviUrl(meta)
 
   local arch
   if require('jit').os == "Windows" then
-    arch = "Windows_x86_64"
+    arch = "Windows-amd64.exe"
   else
     arch = run("uname", "-s") .. "_" .. run("uname", "-m")
   end
