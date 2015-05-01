@@ -1,8 +1,8 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.6"
+exports.version = "1.0.7"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
-  "creationix/coro-tls@1.1.2",
+  "creationix/coro-tls@1.1.4",
   "creationix/coro-wrapper@1.0.0",
   "luvit/http-codec@1.0.0"
 }
