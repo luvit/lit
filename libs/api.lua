@@ -84,9 +84,9 @@ GET /search/$QUERY -> packages/authors json {
 }
 
 Possible search queries:
-  ".*"        = All authors and packages
-  ".*/"       = All authors
-  "/.*"       = All packages
+  "*"        = All authors and packages
+  "*/"       = All authors
+  "/*"       = All packages
   "author/"   = All packages of the author (if the author name is an exact match)
   "author/"   = All authors that partially match the author query (if no exact matches were found)
   "/package"  = All packages that match the package query
@@ -200,8 +200,10 @@ return function (prefix)
       return next(authors) and authors
     end,
     "^/search/(.*)$", function (query)
-      -- escape all special pattern characters except . and *
-      query = query:gsub("[%(%)%%%+%-%?%[%]%^%$]", function(c) return "%" .. c end)
+      -- escape all special pattern characters except *
+      query = query:gsub("[%(%)%%%+%-%?%[%]%^%$%.]", function(c) return "%" .. c end)
+      -- expand * to .* for a glob-like wildcard
+      query = query:gsub("%*", ".*")
       local matches = {}
       local authorQuery, separator, packageQuery = query:match("^(.-)(/?)([^/]*)$")
       if authorQuery == "" then authorQuery = nil end
