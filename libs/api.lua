@@ -34,7 +34,13 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   object = "..."
   url = "/trees/..."
   type = "tree"
-  tag = "v0.2.3"
+  tag = "author/package/v0.2.3"
+  keywords = {"..."}
+  description = "..."
+  author = {name="...", url="...", email="..."}
+  dependencies = {"author/package@v1.0.0"}
+  version = "0.2.3"
+  homepage = "..."
   tagger = {
     name = "Tim Caswell",
     email = "tim@creationix.com",
@@ -43,14 +49,51 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
       offset = -0600
     }
   }
-  message = "..."
 }
 
-GET /search/$query -> list of matches
+GET /search/$QUERY -> packages/authors json {
+  query = "..."
+  matches = {
+    {
+      type = "package"
+      url = "/packages/author/package/v0.2.3"
+      hash = "..."
+      object = "..."
+      tag = "author/package/v0.2.3"
+      keywords = {"..."}
+      description = "..."
+      author = {name="...", url="...", email="..."}
+      dependencies = {"author/package@v1.0.0"}
+      version = "0.2.3"
+      homepage = "..."
+      tagger = {
+        name = "Tim Caswell",
+        email = "tim@creationix.com",
+        date = {
+          seconds = 1423760148
+          offset = -0600
+        }
+      }
+    },
+    {
+      type = "author"
+      url = "/packages/author"
+    },
+    ...
+  }
+}
+
+Possible search queries:
+  "*"        = All authors and packages
+  "*/"       = All authors
+  "/*"       = All packages
+  "author/"   = All packages of the author (if the author name is an exact match)
+  "author/"   = All authors that partially match the author query (if no exact matches were found)
+  "/package"  = All packages that match the package query
+  "query"     = All packages or authors that match the query
 
 ]]
 
-local pathJoin = require('luvi').path.join
 local digest = require('openssl').digest.digest
 local date = require('os').date
 local jsonStringify = require('json').stringify
@@ -70,21 +113,43 @@ local function unescape(url)
   return url:gsub("%%(%x%x)", hex_to_char)
 end
 
+local function combineTables(...)
+  local merged = {}
+  for _,t in ipairs({...}) do
+    for k,v in pairs(t) do merged[k] = v end
+  end
+  return merged
+end
+
 return function (prefix)
 
   local function makeUrl(kind, hash, filename)
     return prefix .. "/" .. kind .. "s/" .. hash .. '/' .. filename
   end
 
+  local function getMetadataOfHash(hash)
+    local tag = db.loadAs("tag", hash)
+    local meta = tag.message:match("%b{}")
+    if meta then
+      meta = jsonParse(meta)
+    else
+      meta = {}
+    end
+    meta = combineTables(tag, meta)
+    meta.message = nil
+    meta.hash = hash
+    return meta
+  end
+
   local routes = {
     "^/blobs/([0-9a-f]+)/(.*)", function (hash, path)
       local body = db.loadAs("blob", hash)
-      local filename = path:match("[^/]+$")
+      local filename = path:match("([^/]+)/*$")
       return body, {
         {"Content-Disposition", "attachment; filename=" .. filename}
       }
     end,
-    "^/trees/([0-9a-f]+)/(.*)", function (hash, filename)
+    "^/trees/([0-9a-f]+)/(.-)/?$", function (hash, filename)
       local tree = db.loadAs("tree", hash)
       for i = 1, #tree do
         local entry = tree[i]
@@ -103,32 +168,31 @@ return function (prefix)
         search = prefix .. "/search/{query}",
       }
     end,
-    "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
+    "^/packages/([^/]+)/(.+)/v([^/]+)/?$", function (author, name, version)
       local hash = db.read(author, name, version)
-      local tag = db.loadAs('tag', hash)
+      local meta = getMetadataOfHash(hash)
       local filename = author .. "/" .. name .. "-v" .. version
-      if tag.type == "blob" then
+      if meta.type == "blob" then
         filename = filename .. ".lua"
       end
-      tag.hash = hash
-      tag.url = makeUrl(tag.type, tag.object, filename)
-      return tag
+      meta.url = makeUrl(meta.type, meta.object, filename)
+      return meta
     end,
-    "^/packages/([^/]+)/(.+)$", function (author, name)
+    "^/packages/([^/]+)/([^/]+)/?$", function (author, name)
       local versions = {}
       for version in db.versions(author, name) do
         versions[version] = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
       end
       return next(versions) and versions
     end,
-    "^/packages/([^/]+)$", function (author)
+    "^/packages/([^/]+)/?$", function (author)
       local names = {}
       for name in db.names(author) do
         names[name] = prefix .. "/packages/" .. author .. "/" .. name
       end
       return next(names) and names
     end,
-    "^/packages$", function ()
+    "^/packages/?$", function ()
       local authors = {}
       for author in db.authors() do
         authors[author] =  prefix .. "/packages/" .. author
@@ -136,29 +200,34 @@ return function (prefix)
       return next(authors) and authors
     end,
     "^/search/(.*)$", function (query)
+      -- escape all special pattern characters except *
+      query = query:gsub("[%(%)%%%+%-%?%[%]%^%$%.]", function(c) return "%" .. c end)
+      -- expand * to .* for a glob-like wildcard
+      query = query:gsub("%*", ".*")
       local matches = {}
+      local authorQuery, separator, packageQuery = query:match("^(.-)(/?)([^/]*)$")
+      if authorQuery == "" then authorQuery = nil end
+      if packageQuery == "" then packageQuery = nil end
+      local hadSeparator = separator ~= ""
       for author in db.authors() do
-        if author:match(query) then
+        local authorMatchesExactly = authorQuery == author
+        local authorMatches = authorQuery and author:match(authorQuery)
+        if (not packageQuery and authorMatches and not authorMatchesExactly and hadSeparator) or (not hadSeparator and not authorQuery and author:match(packageQuery)) then
           matches[author] = {
             type = "author",
             url = prefix .. "/packages/" .. author
           }
         end
-        for name in db.names(author) do
-          if name:match(query) then
-            local version, hash = db.match(author, name)
-            local tag = db.loadAs("tag", hash)
-            local meta = tag.message:match("%b{}")
-            if meta then
-              meta = jsonParse(meta)
-            else
-              meta = {}
+        if (authorMatches and packageQuery) or not authorQuery or (not packageQuery and authorMatchesExactly and hadSeparator) then
+          for name in db.names(author) do
+            if not packageQuery or (packageQuery and name:match(packageQuery)) then
+              local version, hash = db.match(author, name)
+              local meta = getMetadataOfHash(hash)
+              meta.type = "package"
+              meta.version = version
+              meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
+              matches[author .. "/" .. name] = meta
             end
-            meta.type = "package"
-            meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
-            meta.version = version
-            meta.tagger = tag.tagger
-            matches[author .. "/" .. name] = meta
           end
         end
       end
@@ -191,8 +260,6 @@ return function (prefix)
       return nil, "Must be GET or HEAD"
     end
 
-
-    local path = pathJoin(req.path)
     local headers = {}
     for i = 1, #req do
       local key, value = unpack(req[i])
@@ -203,7 +270,7 @@ return function (prefix)
     end
     local body, extra
     for i = 1, #routes, 2 do
-      local match = {path:match(routes[i])}
+      local match = {req.path:match(routes[i])}
       if #match > 0 then
         for j = 1, #match do
           match[j] = unescape(match[j])
