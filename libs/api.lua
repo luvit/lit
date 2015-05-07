@@ -167,6 +167,7 @@ return function (prefix)
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
       local meta = loadMeta(author, name, version)
+      meta.score = nil
       local filename = author .. "/" .. name .. "-v" .. version
       if meta.type == "blob" then
         filename = filename .. ".lua"
