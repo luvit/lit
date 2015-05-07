@@ -110,27 +110,6 @@ end
 
 local metaCache = {}
 
--- TODO: expose hook so core can manually invalidate this when a new version is
--- published.  Then we can make the default expire time *much* larger.
-local uv = require('uv')
-local matchCache = {}
-local function fastMatch(author, name)
-  local key = author .. "/" .. name
-  local cached = matchCache[key]
-  local now = uv.now()
-  if cached and cached.expires > now then
-    return cached.version, cached.hash
-  end
-  local version, hash = db.match(author, name)
-  matchCache[key] = {
-    version = version,
-    hash = hash,
-    expires = now + math.random(30, 90) * 1000,
-  }
-  return version, hash
-end
-
-
 return function (prefix)
 
   local function makeUrl(kind, hash, filename)
@@ -140,7 +119,7 @@ return function (prefix)
   local function loadMeta(author, name, version)
     local hash
     if not version then
-      version, hash = fastMatch(author, name)
+      version, hash = db.match(author, name)
     else
       hash = db.read(author, name, version)
     end
