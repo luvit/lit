@@ -70,10 +70,67 @@ local function unescape(url)
   return url:gsub("%%(%x%x)", hex_to_char)
 end
 
+local function found(terms, data)
+  if not (terms and data) then return 0 end
+  local count = 0
+  if type(data) == "table" then
+    for i = 1, #data do
+      count = count + found(terms, data[i])
+    end
+  else
+    for i = 1, #terms do
+      local term = terms[i]
+      if data:match(term) then
+        count = count + 1
+      end
+    end
+  end
+  return count
+end
+
+local quotepattern = '(['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..'])'
+local function escape(str)
+    return str:gsub(quotepattern, "%%%1")
+end
+
+local function compileGlob(glob, full)
+  local parts = {}
+  if full then parts[#parts + 1] = "^" end
+  for a, b in glob:gmatch("([^*]*)(%**)") do
+    if #a > 0 then
+      parts[#parts + 1] = escape(a)
+    end
+    if #b > 0 then
+      parts[#parts + 1] = ".*"
+    end
+  end
+  if full then parts[#parts + 1] = "$" end
+  return table.concat(parts)
+end
+
 return function (prefix)
 
   local function makeUrl(kind, hash, filename)
     return prefix .. "/" .. kind .. "s/" .. hash .. '/' .. filename
+  end
+
+  local function loadMeta(author, name, version)
+    local hash
+    if not version then
+      version, hash = db.match(author, name)
+    else
+      hash = db.read(author, name, version)
+    end
+    local tag = db.loadAs("tag", hash)
+    local meta = tag.message:match("%b{}")
+    meta = meta and jsonParse(meta) or {}
+    meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
+    meta.version = version
+    meta.hash = hash
+    meta.tagger = tag.tagger
+    meta.type = tag.type
+    meta.object = tag.object
+    return meta
   end
 
   local routes = {
@@ -104,15 +161,13 @@ return function (prefix)
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
-      local hash = db.read(author, name, version)
-      local tag = db.loadAs('tag', hash)
+      local meta = loadMeta(author, name, version)
       local filename = author .. "/" .. name .. "-v" .. version
-      if tag.type == "blob" then
+      if meta.type == "blob" then
         filename = filename .. ".lua"
       end
-      tag.hash = hash
-      tag.url = makeUrl(tag.type, tag.object, filename)
-      return tag
+      meta.url = makeUrl(meta.type, meta.object, filename)
+      return meta
     end,
     "^/packages/([^/]+)/(.+)$", function (author, name)
       local versions = {}
@@ -135,37 +190,101 @@ return function (prefix)
       end
       return next(authors) and authors
     end,
-    "^/search/(.*)$", function (query)
+    "^/search/(.*)$", function (raw)
+      local query = { raw = raw }
+      local keys = {"author", "tag", "name"}
+      for i = 1, #keys do
+        local key = keys[i]
+        local terms = {}
+        raw = raw:gsub(key .. " *[:=] *([^ ]+) *", function (match)
+          terms[#terms + 1] = compileGlob(match, true)
+          return ''
+        end)
+        raw = raw:gsub(key .. ' *[:=] *"([^"]+)" *', function (match)
+          terms[#terms + 1] = compileGlob(match, true)
+          return ''
+        end)
+        if #terms > 0 then
+          query[key] = terms
+        end
+      end
+      do
+        local terms = {}
+        raw = raw:gsub('"([^"]+)" *', function (match)
+          terms[#terms + 1] = compileGlob(match, false)
+          return ''
+        end)
+        raw = raw:gsub("([^ ]+) *", function (match)
+          terms[#terms + 1] = compileGlob(match, false)
+          return ''
+        end)
+        assert(#raw == 0, "unable to parse query string")
+        if #terms > 0 then
+          query.search = terms
+        end
+      end
+
       local matches = {}
       for author in db.authors() do
-        if author:match(query) then
-          matches[author] = {
-            type = "author",
-            url = prefix .. "/packages/" .. author
-          }
+        -- If an authors filter is given, restrict to given authors
+        -- Otherwise, allow all authors.
+
+        local skip, s1
+        if query.author then
+          s1 = found(query.author, author)
+          skip = s1 == 0
+        else
+          s1 = 0
+          skip = false
         end
-        for name in db.names(author) do
-          if name:match(query) then
-            local version, hash = db.match(author, name)
-            local tag = db.loadAs("tag", hash)
-            local meta = tag.message:match("%b{}")
-            if meta then
-              meta = jsonParse(meta)
+
+        if not skip then
+          for name in db.names(author) do
+            skip = false
+            local s2
+            if query.name then
+              s2 = found(query.name, name)
+              skip = s2 == 0
             else
-              meta = {}
+              s2 = 0
             end
-            meta.type = "package"
-            meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
-            meta.version = version
-            meta.tagger = tag.tagger
-            matches[author .. "/" .. name] = meta
+            if not skip then
+              local meta = loadMeta(author, name)
+              local s3
+              if query.tag then
+                s3 = found(query.tag, meta.tags)
+                skip = s3 == 0
+              else
+                s3 = 0
+              end
+              if not skip then
+                local s4
+                if query.search then
+                  s4 =
+                    found(query.search, name) +
+                    found(query.search, meta.description) +
+                    found(query.search, meta.tags) +
+                    found(query.search, meta.keywords)
+                  skip = s4 == 0
+                else
+                  s4 = 0
+                end
+
+                if not skip then
+                  meta.score = s1 + s2 + s3 + s4
+                  matches[author .. "/" .. name] = meta
+                end
+              end
+            end
           end
         end
       end
-      return {
+      local res = {
         query = query,
         matches = matches,
       }
+      p(res)
+      return res
     end
   }
 

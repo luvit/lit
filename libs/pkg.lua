@@ -35,6 +35,7 @@ local validKeys = {
   version = "string",
   description = "string",
   keywords = "table", -- list of strings
+  tags = "table", -- list of strings
   homepage = "string",
   license = "string",
   licenses = "table", -- table of strings
