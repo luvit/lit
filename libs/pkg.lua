@@ -37,6 +37,7 @@ local validKeys = {
   keywords = "table", -- list of strings
   homepage = "string",
   license = "string",
+  licenses = "table", -- table of strings
   author = "table", -- person {name=name, email=email, url=url}
   contributors = "table", -- list of people
   dependencies = "table", -- list of strings
