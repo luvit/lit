@@ -86,9 +86,9 @@ function exports.isAllowed(path, entry, filters)
   end
 
   if subPath then
-    if allow and not isTree and not default then
+    if allow and not isTree then
       log("including", subPath)
-    elseif not allow and default then
+    elseif not allow then
       log("skipping", subPath)
     end
   end
