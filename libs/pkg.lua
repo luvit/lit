@@ -33,6 +33,8 @@ end
 local validKeys = {
   name = "string",
   version = "string",
+  private = "boolean", -- Don't allow publishing.
+  obsolete = "boolean", -- Hide from search results.
   description = "string",
   keywords = "table", -- list of strings
   tags = "table", -- list of strings
