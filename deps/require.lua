@@ -18,7 +18,7 @@ limitations under the License.
 
 if exports then
   exports.name = "luvit/require"
-  exports.version = "1.1.0-1"
+  exports.version = "1.1.1"
   exports.homepage = "https://github.com/luvit/luvit/blob/master/deps/require.lua"
   exports.description = "Luvit's custom require system with relative requires and sane search paths."
   exports.tags = {"luvit", "require"}
@@ -251,7 +251,7 @@ function Module:require(name)
   module = makeModule(path)
   moduleCache[key] = module
 
-  local ext = path:match("%.[^/]+$")
+  local ext = path:match("%.[^/\\]+$")
   if ext == ".lua" then
     local fn = assert(loadstring(data, path))
     local global = {
