@@ -93,9 +93,8 @@ local function escape(str)
     return str:gsub(quotepattern, "%%%1")
 end
 
-local function compileGlob(glob, full)
+local function compileGlob(glob)
   local parts = {}
-  if full then parts[#parts + 1] = "^" end
   for a, b in glob:gmatch("([^*]*)(%**)") do
     if #a > 0 then
       parts[#parts + 1] = escape(a)
@@ -104,7 +103,6 @@ local function compileGlob(glob, full)
       parts[#parts + 1] = ".*"
     end
   end
-  if full then parts[#parts + 1] = "$" end
   return table.concat(parts)
 end
 
@@ -198,32 +196,34 @@ return function (prefix)
     end,
     "^/search/(.*)$", function (raw)
       local query = { raw = raw }
-      local keys = {"author", "tag", "name"}
+      local keys = {"author", "tag", "name", "depends"}
       for i = 1, #keys do
         local key = keys[i]
         local terms = {}
-        raw = raw:gsub(key .. " *[:=] *([^ ]+) *", function (match)
-          terms[#terms + 1] = compileGlob(match, true)
+        local function replace(match)
+          match = compileGlob(match)
+          if key == "depends" then
+            match = "^" .. match .. "%f[@]"
+          else
+            match = "^" .. match .. "$"
+          end
+          terms[#terms + 1] = match
           return ''
-        end)
-        raw = raw:gsub(key .. ' *[:=] *"([^"]+)" *', function (match)
-          terms[#terms + 1] = compileGlob(match, true)
-          return ''
-        end)
+        end
+        raw = raw:gsub(key .. " *[:=] *([^ ]+) *", replace)
+        raw = raw:gsub(key .. ' *[:=] *"([^"]+)" *', replace)
         if #terms > 0 then
           query[key] = terms
         end
       end
       do
         local terms = {}
-        raw = raw:gsub('"([^"]+)" *', function (match)
+        local function replace(match)
           terms[#terms + 1] = compileGlob(match, false)
           return ''
-        end)
-        raw = raw:gsub("([^ ]+) *", function (match)
-          terms[#terms + 1] = compileGlob(match, false)
-          return ''
-        end)
+        end
+        raw = raw:gsub('"([^"]+)" *', replace)
+        raw = raw:gsub("([^ ]+) *", replace)
         assert(#raw == 0, "unable to parse query string")
         if #terms > 0 then
           query.search = terms
@@ -247,40 +247,44 @@ return function (prefix)
         if not skip then
           for name in db.names(author) do
             skip = false
-            local s2
+            local s2, s3, s4, s5
             if query.name then
               s2 = found(query.name, name)
               skip = s2 == 0
             else
               s2 = 0
             end
+            local meta
             if not skip then
-              local meta = loadMeta(author, name)
-              local s3
+              meta = loadMeta(author, name)
               if query.tag then
-                s3 = found(query.tag, meta.tags)
+                s3 = found(query.tag, meta.tags) +
+                     found(query.tag, meta.keywords)
                 skip = s3 == 0
               else
                 s3 = 0
               end
-              if not skip then
-                local s4
-                if query.search then
-                  s4 =
-                    found(query.search, name) +
-                    found(query.search, meta.description) +
-                    found(query.search, meta.tags) +
-                    found(query.search, meta.keywords)
-                  skip = s4 == 0
-                else
-                  s4 = 0
-                end
+            end
+            if not skip and query.depends then
+              s4 = found(query.depends, meta.dependencies)
+              skip = s4 == 0
+            else
+              s4 = 0
+            end
+            if not skip and query.search then
+              s5 =
+                found(query.search, name) +
+                found(query.search, meta.description) +
+                found(query.search, meta.tags) +
+                found(query.search, meta.keywords)
+              skip = s5 == 0
+            else
+              s5 = 0
+            end
 
-                if not skip then
-                  meta.score = s1 + s2 + s3 + s4
-                  matches[author .. "/" .. name] = meta
-                end
-              end
+            if not skip then
+              meta.score = s1 + s2 + s3 + s4 + s5
+              matches[author .. "/" .. name] = meta
             end
           end
         end
