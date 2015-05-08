@@ -1,9 +1,14 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.5"
+exports.version = "1.0.5-1"
 exports.dependencies = {
   "creationix/coro-channel@1.0.4"
 }
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tcp.lua"
+exports.description = "An coro style tcp client and server helper."
+exports.tags = {"coro", "tcp"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 local uv = require('uv')
 local wrapStream = require('coro-channel').wrapStream

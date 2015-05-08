@@ -1,5 +1,10 @@
 exports.name = "creationix/coro-wrapper"
-exports.version = "1.0.0"
+exports.version = "1.0.0-1"
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
+exports.description = "An adapter for applying decoders to coro-streams."
+exports.tags = {"coro", "decoder", "adapter"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 function exports.reader(read, decode)
   local buffer = ""

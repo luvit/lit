@@ -1,5 +1,11 @@
 exports.name = "creationix/semver"
-exports.version = "1.0.2"
+exports.version = "1.0.2-1"
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
+exports.description = "Parser, comparer and matcher for semantic versions strings."
+exports.tags = {"semver"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
+
 local parse, normalize, match
 -- Make the module itself callable
 setmetatable(exports, {

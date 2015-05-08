@@ -16,7 +16,12 @@ limitations under the License.
 
 --]]
 exports.name = "luvit/pretty-print"
-exports.version = "1.0.1"
+exports.version = "1.0.1-1"
+exports.homepage = "https://github.com/luvit/luvit/blob/master/deps/pretty-print.lua"
+exports.description = "A lua value pretty printer and colorizer for terminals."
+exports.tags = {"colors", "tty"}
+exports.license = "Apache 2"
+exports.author = { name = "Tim Caswell" }
 
 local uv = require('uv')
 local env = require('env')

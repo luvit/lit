@@ -1,8 +1,13 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.2"
+exports.version = "1.0.2-1"
 exports.dependencies = {
   "creationix/hex-bin@1.0.0"
 }
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
+exports.description = "A codec implementing websocket framing and helpers for handshakeing"
+exports.tags = {"http", "websocket", "codec"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64

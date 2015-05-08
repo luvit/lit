@@ -1,5 +1,10 @@
 exports.name = "creationix/coro-tls"
-exports.version = "1.1.4"
+exports.version = "1.1.4-1"
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
+exports.description = "A coro-stream wrapper implementing tls sessions."
+exports.tags = {"coro", "tls", "ssl"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 local openssl = require('openssl')
 local bit = require('bit')

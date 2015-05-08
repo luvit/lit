@@ -1,5 +1,10 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.0.4"
+exports.version = "1.0.4-1"
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
+exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
+exports.tags = {"coro", "adapter"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
 -- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.

@@ -1,11 +1,16 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.7"
+exports.version = "1.0.7-1"
 exports.dependencies = {
   "creationix/coro-tcp@1.0.5",
   "creationix/coro-tls@1.1.4",
   "creationix/coro-wrapper@1.0.0",
   "luvit/http-codec@1.0.0"
 }
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
+exports.description = "An coro style http(s) client and server helper."
+exports.tags = {"coro", "http"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
 
 local httpCodec = require('http-codec')
 local connect = require('coro-tcp').connect

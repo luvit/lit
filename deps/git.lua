@@ -1,5 +1,11 @@
 exports.name = "creationix/git"
-exports.version = "1.0.1"
+exports.version = "1.0.1-1"
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/git.lua"
+exports.description = "An implementation of git-core."
+exports.tags = {"git"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
+
 
 local modes = {
   tree   = 16384, --  040000
