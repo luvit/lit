@@ -257,6 +257,11 @@ return function (prefix)
             local meta
             if not skip then
               meta = loadMeta(author, name)
+              if meta.obsolete then
+                skip = true
+              end
+            end
+            if not skip then
               if query.tag then
                 s3 = found(query.tag, meta.tags) +
                      found(query.tag, meta.keywords)
