@@ -255,7 +255,7 @@ return function (db, config, getKey)
           local message = string.format("%s %s ~= %s/%s",
             alias, meta.name, author, name)
           log("alias conflict (disk)", message, "failure")
-        elseif meta.version ~= version then
+        elseif meta.version:match("%d+%.%d+%.%d+") ~= version:match("%d+%.%d+%.%d+") then
           local message = string.format("%s %s ~= %s",
             alias, meta.version, version)
           log("version mismatch (disk)", message, "highlight")
