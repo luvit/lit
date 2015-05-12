@@ -458,7 +458,7 @@ return function (db, config, getKey)
 
     local binSize
 
-    if meta.luvi and (normalize(meta.luvi.version) ~= normalize(luvi.version) or meta.luvi.flavor ~= "regular") then
+    if meta.luvi and not (meta.luvi.flavor == "regular" and semver.gte(meta.luvi.version, luvi.version)) then
       local url = luviUrl(meta.luvi)
       log("downloading custom luvi", url)
       -- TODO: stream the binary and show progress
