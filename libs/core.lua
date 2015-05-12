@@ -405,6 +405,12 @@ return function (db, config, getKey)
 
   local function importBlob(writer, path, hash)
     local data = db.loadAs("blob", hash)
+    local base = path:match("^(.*)%.lua$")
+    if base then
+      -- TODO: add an option to disable this in case you want uncompiled lua files.
+      log("compiling", path)
+      data = string.dump(loadstring(data, "bundle:" .. path))
+    end
     writer:add(path, data, 9)
   end
 
