@@ -1,19 +1,16 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.0.4-1"
+exports.version = "1.1.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
 exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
 exports.tags = {"coro", "adapter"}
 exports.license = "MIT"
 exports.author = { name = "Tim Caswell" }
 
--- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
--- Given a raw uv_stream_t userdara, return coro-friendly read/write functions.
+-- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
 function exports.wrapStream(socket)
   local paused = true
   local queue = {}
   local waiting
-  local reading = true
-  local writing = true
 
   local onRead
 
@@ -29,24 +26,6 @@ function exports.wrapStream(socket)
     return coroutine.yield()
   end
 
-  local flushing = false
-  local flushed = false
-  local function checkShutdown()
-    if socket:is_closing() then return end
-    if not flushing and not writing then
-      flushing = true
-      local thread = coroutine.running()
-      socket:shutdown(function (err)
-        flushed = true
-        coroutine.resume(thread, not err, err)
-      end)
-      assert(coroutine.yield())
-    end
-    if flushed and not reading then
-      socket:close()
-    end
-  end
-
   function onRead(err, chunk)
     local data = err and {nil, err} or {chunk}
     if waiting then
@@ -60,23 +39,30 @@ function exports.wrapStream(socket)
         assert(socket:read_stop())
       end
     end
-    if not chunk then
-      reading = false
-      -- Close the whole socket if the writing side is also closed already.
-      checkShutdown()
+  end
+
+  local function wait()
+    local thread = coroutine.running()
+    return function (err)
+      coroutine.resume(thread, err)
+    end
+  end
+
+  local function shutdown()
+    socket:shutdown(wait())
+    coroutine.yield()
+    if not socket:is_closing() then
+      socket:close()
     end
   end
 
   local function write(chunk)
     if chunk == nil then
-      -- Shutdown our side of the socket
-      writing = false
-      checkShutdown()
-    else
-      -- TODO: add backpressure by pausing and resuming coroutine
-      -- when write buffer is full.
-      assert(socket:write(chunk))
+      return shutdown()
     end
+    assert(socket:write(chunk, wait()))
+    local err = coroutine.yield()
+    return not err, err
   end
 
   return read, write
