@@ -1,8 +1,8 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.5-1"
+exports.version = "1.0.5-2"
 exports.dependencies = {
-  "creationix/coro-channel@1.0.4"
+  "creationix/coro-channel@1.1.0"
 }
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tcp.lua"
 exports.description = "An coro style tcp client and server helper."
