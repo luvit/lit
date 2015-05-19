@@ -25,14 +25,25 @@ exports.wrap = function (read, write, options)
     cert = assert(openssl.x509.read(options.cert))
   end
   if options.ca then
-    ca = assert(openssl.x509.read(options.ca))
+    if type(options.ca) == "string" then
+      ca = { assert(openssl.x509.read(options.ca)) }
+    elseif type(options.ca) == "table" then
+      ca = {}
+      for i = 1, #options.ca do
+        ca[i] = assert(openssl.x509.read(options.ca[i]))
+      end
+    else
+      error("options.ca must be string or table of strings")
+    end
   end
   if key and cert then
     assert(ctx:use(key, cert))
   end
   if ca then
     local store = openssl.x509.store:new()
-    assert(store:add(ca))
+    for i = 1, #ca do
+      assert(store:add(ca[i]))
+    end
     ctx:cert_store(store)
   else
     ctx:verify_mode({"none"})
