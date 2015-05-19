@@ -9,13 +9,16 @@ exports.author = { name = "Tim Caswell" }
 local openssl = require('openssl')
 local bit = require('bit')
 
+local DEFAULT_CIPHERS = 'ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:' .. -- TLS 1.2
+                        'RC4:HIGH:!MD5:!aNULL:!EDH'                     -- TLS 1.0
+
 -- Given a read/write pair, return a new read/write pair for plaintext
 exports.wrap = function (read, write, options)
   if not options then
     options = {}
   end
 
-  local ctx = openssl.ssl.ctx_new("TLSv1_2")
+  local ctx = openssl.ssl.ctx_new(options.protocol or 'TLSv1_2', options.ciphers or DEFAULT_CIPHERS)
 
   local key, cert, ca
   if options.key then
