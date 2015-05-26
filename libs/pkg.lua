@@ -72,6 +72,7 @@ function exports.query(fs, path)
   end
   local meta = evalModule(data, packagePath)
   local clean = {}
+  if not meta then return nil, "No meta found" end
   for key, value in pairs(meta) do
     if type(value) == validKeys[key] then
       clean[key] = value
