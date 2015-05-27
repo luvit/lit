@@ -153,7 +153,6 @@ return function(db, url)
             error("Expected hash " .. hash .. " but got " .. actual .. " in result")
           end
         end
-        log("done fetching", #wants .. " object" .. (#wants == 1 and "" or "s"))
         disconnect()
       end
 

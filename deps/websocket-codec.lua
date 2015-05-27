@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.2-1"
+exports.version = "1.0.3"
 exports.dependencies = {
   "creationix/hex-bin@1.0.0"
 }
@@ -73,10 +73,11 @@ function exports.decode(chunk)
   if mask then
     offset = offset + 4
   end
-  if #chunk < offset + len - 1 then return end
+  if #chunk < offset + len then return end
 
   local first = byte(chunk, 1)
   local payload = sub(chunk, offset + 1, offset + len)
+  assert(#payload == len, "Length mismatch")
   if mask then
     payload = applyMask(payload, sub(chunk, offset - 3, offset))
   end
