@@ -136,17 +136,24 @@ return function(db, url)
         end
       end
       if #wants > 0 then
-        log("fetching", #wants .. " object" .. (#wants == 1 and "" or "s"))
         connect()
+        log("fetching", #wants .. " object" .. (#wants == 1 and "" or "s"))
         remote.writeAs("wants", wants)
         for i = 1, #wants do
           local hash = wants[i]
-          local actual = db.save(remote.readAs("send"))
+          local data = remote.readAs("send")
+          local actual = db.save(data)
           if actual ~= hash then
-            p{wants=wants}
+            p {
+              data = data,
+              wants = wants,
+              expected = hash,
+              actual = actual
+            }
             error("Expected hash " .. hash .. " but got " .. actual .. " in result")
           end
         end
+        log("done fetching", #wants .. " object" .. (#wants == 1 and "" or "s"))
         disconnect()
       end
 
@@ -159,8 +166,8 @@ return function(db, url)
           refs[value.tag] = hash
           table.insert(list, value.object)
         elseif kind == "tree" then
-          for i = 1, #value do
-            local subHash = value[i].hash
+          for j = 1, #value do
+            local subHash = value[j].hash
             table.insert(list, subHash)
           end
         end
