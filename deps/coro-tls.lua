@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-tls"
-exports.version = "1.1.4-1"
+exports.version = "1.2.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
 exports.description = "A coro-stream wrapper implementing tls sessions."
 exports.tags = {"coro", "tls", "ssl"}

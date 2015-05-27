@@ -1,6 +1,6 @@
 return {
   name = "luvit/lit",
-  version = "1.2.9",
+  version = "1.2.10",
   homepage = "https://github.com/luvit/lit",
   description = "The Luvit Invention Toolkit is a luvi app that handles dependencies and luvi builds.",
   tags = {"lit", "meta"},
@@ -18,7 +18,7 @@ return {
     "creationix/coro-fs@1.2.3",
     "creationix/coro-tcp@1.0.5",
     "creationix/coro-http@1.0.7",
-    "creationix/coro-tls@1.1.4",
+    "creationix/coro-tls@1.2.0",
     "creationix/coro-wrapper@1.0.0",
     "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.2",
