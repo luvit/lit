@@ -1,6 +1,6 @@
 
 $LUVI_VERSION = "2.0.9"
-$LIT_VERSION = "1.2.11"
+$LIT_VERSION = "1.2.12"
 
 $LUVI_ARCH = "Windows-amd64"
 $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"

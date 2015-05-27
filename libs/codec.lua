@@ -29,6 +29,14 @@ local function decodeBinary(message)
     end
     return "wants", wants
   end
+  local inflated = inflate(message, 1)
+  if #inflated == 0 then
+    p {
+      message = message,
+      inflated = inflated,
+    }
+    error("Inflate error")
+  end
   return "send", inflate(message, 1)
 end
 exports.decodeBinary = decodeBinary
