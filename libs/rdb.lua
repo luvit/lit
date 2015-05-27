@@ -141,7 +141,11 @@ return function(db, url)
         remote.writeAs("wants", wants)
         for i = 1, #wants do
           local hash = wants[i]
-          assert(db.save(remote.readAs("send")) == hash, "hash mismatch in result object")
+          local actual = db.save(remote.readAs("send"))
+          if actual ~= hash then
+            p{wants=wants}
+            error("Expected hash " .. hash .. " but got " .. actual .. " in result")
+          end
         end
         disconnect()
       end
