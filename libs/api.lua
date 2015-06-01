@@ -121,6 +121,9 @@ return function (prefix)
     else
       hash = db.read(author, name, version)
     end
+    if not hash then
+      error("No such version " .. author .. "/" .. name .. "@" .. version)
+    end
     local cached = metaCache[hash]
     if cached then return cached end
     local tag = db.loadAs("tag", hash)

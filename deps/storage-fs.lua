@@ -1,8 +1,11 @@
+exports.name = "creationix/storage-fs"
+exports.version = "0.1.0"
+
 --[[
 Low Level Storage Commands
 ==========================
 
-These are the filesystem abstraction needed by lit's local database.
+These are the filesystem abstractions needed by a git database
 
 storage.write(path, raw)     - Write mutable data by path
 storage.put(path, raw)       - Write immutable data by path
@@ -14,26 +17,9 @@ storage.leaves(path) -> iter - Iterate over node children of path
                                (empty iter if not found)
 ]]
 
-return function (rootPath)
-  local fs = require('coro-fs').chroot(rootPath)
+return function (fs)
 
-  -- Initialize the git file storage tree if it does't exist yet
-  if not fs.access("HEAD") then
-    assert(fs.mkdirp("objects"))
-    assert(fs.mkdirp("refs/tags"))
-    assert(fs.writeFile("HEAD", "ref: refs/heads/master\n"))
-    assert(fs.writeFile("config", [[
-[core]
-	repositoryformatversion = 0
-	filemode = true
-	bare = true
-[gc]
-        auto = 0
-]]))
-
-end
-
-  local storage = {}
+  local storage = { fs = fs }
 
   local function dirname(path)
     return path:match("^(.*)/") or ""
@@ -122,7 +108,7 @@ end
     end
     return function ()
       while true do
-        local item = iter()
+        local item = it()
         if not item then return end
         if item.type == filter then
           return item.name
@@ -138,7 +124,6 @@ end
   function storage.leaves(path)
     return iter(path, "file")
   end
-
 
   return storage
 end

@@ -23,6 +23,8 @@ return {
     "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.2",
     "creationix/git@1.0.1",
+    "creationix/git-fs@0.2.0",
+    "creationix/storage-fs@0.1.0",
     "creationix/prompt@1.0.3",
     "creationix/ssh-rsa@1.0.0",
     "creationix/websocket-codec@1.0.3",
