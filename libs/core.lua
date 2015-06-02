@@ -333,7 +333,11 @@ return function (db, config, getKey)
       if not author then
         error("Package names must include owner/name at a minimum")
       end
-      if version then version = normalize(version) end
+      if version then 
+        local ok = false
+        ok, version = pcall(normalize, version)
+        if not ok then error("Package version is error - " .. dep) end
+      end
       addDep(deps, fs, modulesDir, alias, author, name, version)
     end
     local hashes = {}
