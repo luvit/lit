@@ -1,5 +1,5 @@
 exports.name = "creationix/semver"
-exports.version = "1.0.2-1"
+exports.version = "1.0.3"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
 exports.description = "Parser, comparer and matcher for semantic versions strings."
 exports.tags = {"semver"}
@@ -16,8 +16,11 @@ setmetatable(exports, {
 
 function parse(version)
   if not version then return end
+  if not tonumber(string.match(version, "^v?(%d+)")) then
+    error("Invalid version value: " .. version)
+  end
   return
-    assert(tonumber(string.match(version, "^v?(%d+)")), "Not a semver"),
+    tonumber(string.match(version, "^v?(%d+)")),
     tonumber(string.match(version, "^v?%d+%.(%d+)") or 0),
     tonumber(string.match(version, "^v?%d+%.%d+%.(%d+)") or 0),
     tonumber(string.match(version, "^v?%d+%.%d+%.%d+-(%d+)") or 0)
