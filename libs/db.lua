@@ -43,16 +43,15 @@ return function (rootPath)
   local normalize = semver.normalize
   local pathJoin = require('luvi').path.join
   local fs = require('coro-fs')
-  local modes = require('git').modes
-  local gitFs = require('git-fs')
-  local storageFs = require('storage-fs')
+  local git = require('git')
+  local modes = git.modes
   local rules = require('rules')
   local compileFilter = rules.compileFilter
   local isAllowed = rules.isAllowed
   local filterTree = rules.filterTree
 
-  local storage = storageFs(fs.chroot(rootPath))
-  local db = gitFs(storage)
+  local db = git.mount(fs.chroot(rootPath))
+  local storage = db.storage
 
   local function assertHash(hash)
     assert(hash and #hash == 40 and hash:match("^%x+$"), "Invalid hash")
@@ -78,7 +77,7 @@ return function (rootPath)
   end
 
   function db.authors()
-    return db.nodes("tags")
+    return db.nodes("refs/tags")
   end
 
   function db.names(author)
