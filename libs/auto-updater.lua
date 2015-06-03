@@ -3,7 +3,7 @@ local semver = require('semver')
 local jsonParse = require('json').parse
 local log = require('log')
 local prompt = require('prompt')(require('pretty-print'))
-local core = require('autocore')
+local core = require('core')()
 local uv = require('uv')
 
 function exports.matchVersions(name, version)

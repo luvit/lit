@@ -1,4 +1,4 @@
-local core = require('autocore')
+local core = require('core')()
 local prompt = require('prompt')(require('pretty-print'))
 local fs = require('coro-fs')
 local env = require('env')

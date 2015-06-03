@@ -1,4 +1,4 @@
-local config = require('autocore').config
+local config = require('core')().config
 local log = require('log')
 
 local upstream = args[2] or config.defaultUpstream

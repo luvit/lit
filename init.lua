@@ -1,1 +1,1 @@
-return require('autocore')
+return require('core')

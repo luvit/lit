@@ -1,8 +1,6 @@
 local log = require('./log')
 local fs = require('coro-fs')
 local env = require('env')
-local makeDb = require('db')
-local makeCore = require('core')
 
 local prefix
 if require('ffi').os == "Windows" then
@@ -86,14 +84,4 @@ setmetatable(config, {
   __index = {save = save}
 })
 
-local privateKey
-local function getKey()
-  if not config.privateKey then return end
-  if privateKey then return privateKey end
-  local keyData = assert(fs.readFile(config.privateKey))
-  privateKey = require('openssl').pkey.read(keyData, true)
-  return privateKey
-end
-
-return makeCore(makeDb(config.database), config, getKey)
-
+return config

@@ -29,6 +29,7 @@ local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
 local filterTree = require('rules').filterTree
 local luvi = require('luvi')
+local makeDb = require('db')
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -74,14 +75,28 @@ local function confirm(message)
   return res and res:find("y")
 end
 
-return function (db, config, getKey)
+return function (config)
 
-  local core = {}
+  if not config then
+    config = require('autoconfig')
+  end
 
-  core.config = config
-  core.db = db
+  local db = makeDb(config.database)
   if config.upstream then
     db = require('./rdb')(db, config.upstream)
+  end
+  local core = {
+    config = config,
+    db = db
+  }
+
+  local privateKey
+  local function getKey()
+    if not config.privateKey then return end
+    if privateKey then return privateKey end
+    local keyData = assert(fs.readFile(config.privateKey))
+    privateKey = require('openssl').pkey.read(keyData, true)
+    return privateKey
   end
 
   function core.add(path)

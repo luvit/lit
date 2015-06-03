@@ -7,7 +7,7 @@ local log = require('log')
 local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local makeRemote = require('codec').makeRemote
-local core = require('autocore')
+local core = require('core')()
 local handlers = require('handlers')(core)
 local handleRequest = require('api')(core.db, args[2])
 
