@@ -2,7 +2,12 @@
 $LUVI_VERSION = "2.0.9"
 $LIT_VERSION = "1.2.14"
 
-$LUVI_ARCH = "Windows-amd64"
+if (test-path env:LUVI_ARCH) {
+  $LUVI_ARCH = $env:LUVI_ARCH
+}
+else {
+  $LUVI_ARCH = "Windows-amd64"
+}
 $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"
 $LIT_URL = "https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
 
