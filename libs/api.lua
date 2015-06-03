@@ -335,7 +335,8 @@ return function (prefix)
       headers[key:lower()] = value
     end
     if not prefix then
-      prefix = "http://" .. headers.host
+      local host = headers.host
+      prefix = host and "http://" .. host or ""
     end
     local body, extra
     for i = 1, #routes, 2 do
