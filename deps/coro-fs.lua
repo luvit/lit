@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.2.3-1"
+exports.version = "1.2.4"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
 exports.description = "A coro style interface to the filesystem."
 exports.tags = {"coro", "fs"}
