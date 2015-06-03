@@ -138,6 +138,7 @@ end
 
 function fs.chroot(base)
   local chroot = {
+    base = base,
     fstat = fs.fstat,
     fchmod = fs.fchmod,
     read = fs.read,
