@@ -8,7 +8,8 @@ local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local makeRemote = require('codec').makeRemote
 local handlers = require('handlers')
-local handleRequest = require('api')(args[2])
+local db = require('autocore').db
+local handleRequest = require('api')(db, args[2])
 
 tcp.createServer("127.0.0.1", 4822, function (rawRead, rawWrite, socket)
 

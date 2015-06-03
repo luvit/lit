@@ -55,8 +55,6 @@ local digest = require('openssl').digest.digest
 local date = require('os').date
 local jsonStringify = require('json').stringify
 local jsonParse = require('json').parse
-local core = require('./autocore')
-local db = core.db
 local modes = require('git').modes
 
 
@@ -108,7 +106,7 @@ end
 
 local metaCache = {}
 
-return function (prefix)
+return function (db, prefix)
 
   local function makeUrl(kind, hash, filename)
     return prefix .. "/" .. kind .. "s/" .. hash .. '/' .. filename
