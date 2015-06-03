@@ -9,6 +9,10 @@ local binDir = pathJoin(uv.exepath(), "..")
 
 
 local function updateLit()
+  local config = require('autoconfig')
+  config.checked = nil
+  config.toupdate = nil
+  config.save()
   return updater.check(require('../package'), uv.exepath())
 end
 

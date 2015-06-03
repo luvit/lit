@@ -75,11 +75,15 @@ local function confirm(message)
   return res and res:find("y")
 end
 
-return function (config)
+local autocore
+local function makeCore(config)
 
   if not config then
-    config = require('autoconfig')
+    autocore = autocore or makeCore(require('autoconfig'))
+    return autocore
   end
+
+  assert(config.database, "config.database is required path to git database")
 
   local db = makeDb(config.database)
   if config.upstream then
@@ -694,3 +698,5 @@ return function (config)
 
   return core
 end
+
+return makeCore
