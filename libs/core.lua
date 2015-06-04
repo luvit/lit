@@ -30,6 +30,8 @@ local prompt = require('prompt')(require('pretty-print'))
 local filterTree = require('rules').filterTree
 local luvi = require('luvi')
 local makeDb = require('db')
+local import = require('import')
+local export = require('export')
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -117,7 +119,7 @@ local function makeCore(config)
     local author, name, version = pkg.normalize(meta)
     if config.upstream then core.sync(author, name) end
 
-    local kind, hash = db.import(fs, path)
+    local kind, hash = import(db, fs, path)
     local oldTagHash = db.read(author, name, version)
     local fullTag = author .. "/" .. name .. '/v' .. version
     if oldTagHash then
@@ -396,7 +398,7 @@ local function makeCore(config)
         local filename = "deps/" .. alias .. (tag.type == "blob" and ".lua" or "/")
         log("installing", string.format("%s/%s@%s -> %s",
           dep.author, dep.name, dep.version, filename), "highlight")
-        db.export(tag.object, target)
+        export(db, tag.object, fs, target)
       end
     end
   end
@@ -450,7 +452,7 @@ local function makeCore(config)
   end
 
   local function importPath(writer, fs, root, path, rules)
-    local kind, hash = db.import(fs, pathJoin(root, path), rules, true)
+    local kind, hash = import(db, fs, pathJoin(root, path), rules, true)
     if kind == "tree" then
       importTree(writer, path, hash)
     else

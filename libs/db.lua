@@ -34,23 +34,15 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
-db.import(fs, path) -> kind, hash      - Import a file or tree into database
-db.export(hash, path) -> kind          - Export a hash to a path
 ]]
 
 return function (rootPath)
   local semver = require('semver')
   local normalize = semver.normalize
-  local pathJoin = require('luvi').path.join
   local fs = require('coro-fs')
-  local git = require('git')
-  local modes = git.modes
-  local rules = require('rules')
-  local compileFilter = rules.compileFilter
-  local isAllowed = rules.isAllowed
-  local filterTree = rules.filterTree
+  local gitMount = require('git').mount
 
-  local db = git.mount(fs.chroot(rootPath))
+  local db = gitMount(fs.chroot(rootPath))
   local storage = db.storage
 
   local function assertHash(hash)
@@ -176,113 +168,6 @@ return function (rootPath)
       end
     end
     storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
-  end
-
-
-  function db.import(fs, path, rules, nativeOnly)
-    if nativeOnly == nil then nativeOnly = false end
-    local filters = {}
-    if rules then
-      filters[#filters + 1] = compileFilter(path, rules, nativeOnly)
-    end
-
-    local importEntry, importTree
-
-    function importEntry(path, stat)
-      if stat.type == "directory" then
-        local hash = importTree(path)
-        if not hash then return end
-        return modes.tree, hash
-      end
-      if stat.type == "file" then
-        if not stat.mode then
-          stat = fs.stat(path)
-        end
-        local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
-        return mode, db.saveAs("blob", assert(fs.readFile(path)))
-      end
-      if stat.type == "link" then
-        return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
-      end
-      error("Unsupported type at " .. path .. ": " .. tostring(stat.type))
-    end
-
-    function importTree(path)
-      assert(type(fs) == "table")
-
-      local items = {}
-      local meta = fs.readFile(pathJoin(path, "package.lua"))
-      if meta then meta = loadstring(meta)() end
-      if meta and meta.files then
-        filters[#filters + 1] = compileFilter(path, meta.files, nativeOnly)
-      end
-
-      for entry in assert(fs.scandir(path)) do
-        local fullPath = pathJoin(path, entry.name)
-        entry.type = entry.type or fs.stat(fullPath).type
-        if isAllowed(fullPath, entry, filters) then
-          entry.mode, entry.hash = importEntry(fullPath, entry)
-          if entry.hash then
-            items[#items + 1] = entry
-          end
-        end
-      end
-      return #items > 0 and db.saveAs("tree", items)
-    end
-
-    local mode, hash = importEntry(path, assert(fs.stat(path)))
-    if not hash then return end
-    return modes.toType(mode), hash
-  end
-
-  function db.export(hash, path, rules, nativeOnly)
-    if nativeOnly == nil then nativeOnly = true end
-    local kind, value = db.loadAny(hash)
-    if not kind then error(value or "No such hash") end
-
-    if kind == "tree" then
-      hash = filterTree(db, path, hash, rules, nativeOnly)
-      value = db.loadAs("tree", hash)
-    end
-
-    local exportEntry, exportTree
-
-    function exportEntry(path, mode, value)
-      if mode == modes.tree then
-        exportTree(path, value)
-      elseif mode == modes.sym then
-        local success, err = fs.symlink(value, path)
-        if not success and err:match("^ENOENT:") then
-          assert(fs.mkdirp(pathJoin(path, "..")))
-          assert(fs.symlink(value, path))
-        end
-      elseif modes.isFile(mode) then
-        local success, err = fs.writeFile(path, value)
-        if not success and err:match("^ENOENT:") then
-          assert(fs.mkdirp(pathJoin(path, "..")))
-          assert(fs.writeFile(path, value))
-        end
-        assert(fs.chmod(path, mode))
-      else
-        error("Unsupported mode at " .. path .. ": " .. mode)
-      end
-    end
-
-    function exportTree(path, tree)
-
-      assert(fs.mkdirp(path))
-      for i = 1, #tree do
-        local entry = tree[i]
-        local fullPath = pathJoin(path, entry.name)
-        local kind, value = db.loadAny(entry.hash)
-        assert(modes.toType(entry.mode) == kind, "Git kind mismatch")
-        exportEntry(fullPath, entry.mode, value)
-      end
-    end
-
-
-    exportEntry(path, kind == "tree" and modes.tree or modes.blob, value)
-    return kind
   end
 
   return db

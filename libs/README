@@ -48,9 +48,6 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
-db.import(fs, path) -> kind, hash      - Import a file or tree into database
-db.export(hash, path) -> kind          - Export a hash to a path
-
 
 Remote Enhanced DB
 ==================
