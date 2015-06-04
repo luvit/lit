@@ -15,7 +15,8 @@ local pathJoin = require('luvi').path.join
 local listToMap = require('git').listToMap
 
 local function evalModule(data, name)
-  local fn = assert(loadstring(data, name))
+  local fn, err = loadstring(data, name)
+  if not fn then return nil, err end
   local exports = {}
   local module = { exports = exports }
   setfenv(fn, {
