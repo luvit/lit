@@ -18,7 +18,6 @@ local git = require('git')
 local modes = git.modes
 local encoders = git.encoders
 local semver = require('semver')
-local normalize = semver.normalize
 local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
@@ -31,7 +30,7 @@ local filterTree = require('rules').filterTree
 local luvi = require('luvi')
 local makeDb = require('db')
 local import = require('import')
-local export = require('export')
+local install = require('install')
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -265,150 +264,11 @@ local function makeCore(config)
     end
   end
 
-  local hashToDep = {}
-
-  local function addDep(deps, fs, modulesDir, alias, author, name, version)
-    -- Check for existing packages in the "deps" dir on disk
-    if modulesDir then
-      local meta, path = pkg.query(fs, pathJoin(modulesDir, alias))
-      if meta then
-        if meta.name ~= author .. '/' .. name then
-          local message = string.format("%s %s ~= %s/%s",
-            alias, meta.name, author, name)
-          log("alias conflict (disk)", message, "failure")
-        elseif version and meta.version:match("%d+%.%d+%.%d+") ~= version:match("%d+%.%d+%.%d+") then
-          local message = string.format("%s %s ~= %s",
-            alias, meta.version, version)
-          log("version mismatch (disk)", message, "highlight")
-        end
-
-        deps[alias] = {
-          author = author,
-          name = name,
-          version = meta.version,
-          disk = path
-        }
-
-        if not meta.dependencies then return end
-        return core.processDeps(deps, fs, modulesDir, meta.dependencies)
-      end
-    end
-
-    -- Find best match in local and remote databases
-    local match, hash = db.match(author, name, version)
-    if match then
-      version = match
-
-      -- Check for conflicts with already added dependencies
-      local existing = deps[alias]
-      if existing then
-        if existing.author == author and existing.name == name then
-          -- If this exact version is already done, stop recursion here.
-          if existing.version == version then return end
-
-          -- Warn about incompatable versions being required
-          local message = string.format("%s %s ~= %s",
-            alias, existing.version, version)
-          log("version mismatch", message, "failure")
-          -- Use the newer version in case of mismatch
-          if semver.gte(existing.version, version) then return end
-        else
-          -- Warn about alias name conflicts
-          local message = string.format("%s %s/%s ~= %s/%s",
-            alias, existing.author, existing.name, author, name)
-          log("alias conflict", message, "failure")
-          -- Use the first added in case of mismatch
-          return
-        end
-      end
-    end
-
-    if not match then
-      error("No such "
-        .. (config.upstream and "" or "local ")
-        .. (version and "version" or "package") .. ": "
-        .. author .. "/" .. name
-        .. (version and '@' .. version or '')
-        .. (config.upstream and "" or " (perhaps add an upstream)"))
-    end
-
-    deps[alias] = {
-      author = author,
-      name = name,
-      version = version,
-      hash = hash
-    }
-    hashToDep[hash] = alias
-
-    deps[#deps + 1] = hash
+  function core.installList(path, deps)
+    local fs
+    fs, path = vfs(path)
+    return install(db, fs, pathJoin(path, "deps"), deps)
   end
-
-  function core.processDeps(deps, fs, modulesDir, list)
-
-    for alias, dep in pairs(list) do
-      if type(alias) == "number" then
-        alias = string.match(dep, "/([^@]+)")
-      end
-      local author, name = string.match(dep, "^([^/@]+)/([^@]+)")
-      local version = string.match(dep, "@(.+)")
-      if not author then
-        error("Package names must include owner/name at a minimum")
-      end
-      if version then version = normalize(version) end
-      addDep(deps, fs, modulesDir, alias, author, name, version)
-    end
-    local hashes = {}
-    for i = 1, #deps do
-      hashes[i] = deps[i]
-      deps[i] = nil
-    end
-    if db.fetch then
-      db.fetch(hashes)
-    end
-    for i = 1, #hashes do
-      local meta = pkg.queryDb(db, hashes[i])
-      if meta then
-        if meta.dependencies then
-          core.processDeps(deps, fs, modulesDir, meta.dependencies)
-        end
-      else
-        local hash = hashes[i]
-        local alias = hashToDep[hash] or "unknown"
-        log("warning", "Can't find metadata in package: " .. alias .. "-" .. hash)
-      end
-    end
-
-  end
-
-  local function install(modulesDir, deps)
-    if db.fetch then
-      local hashes = {}
-      for _, dep in pairs(deps) do
-        if dep.hash then
-          hashes[#hashes + 1] = dep.hash
-        end
-      end
-      db.fetch(hashes)
-    end
-    for alias, dep in pairs(deps) do
-      if dep.hash then
-        local tag = db.loadAs("tag", dep.hash)
-        local target = pathJoin(modulesDir, alias) ..
-          (tag.type == "blob" and ".lua" or "")
-        local filename = "deps/" .. alias .. (tag.type == "blob" and ".lua" or "/")
-        log("installing", string.format("%s/%s@%s -> %s",
-          dep.author, dep.name, dep.version, filename), "highlight")
-        export(db, tag.object, fs, target)
-      end
-    end
-  end
-
-  function core.installList(path, list)
-    local deps = {}
-    core.processDeps(deps, fs, nil, list)
-    return install(pathJoin(path, "deps"), deps)
-  end
-
 
   function core.installDeps(path)
     local fs
@@ -418,10 +278,7 @@ local function makeCore(config)
       log("no dependencies", path)
       return
     end
-    local deps = {}
-    local modulesDir = pathJoin(path, "deps")
-    core.processDeps(deps, fs, modulesDir, meta.dependencies)
-    return install(modulesDir, deps)
+    return install(db, fs, pathJoin(path, "deps"), meta.dependencies)
   end
 
   local function importBlob(writer, path, hash)
