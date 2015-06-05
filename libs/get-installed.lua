@@ -1,7 +1,7 @@
 local pathJoin = require('luvi').path.join
 local pkgQuery = require('pkg').query
 
-return function (fs, path)
+return function (fs, rootPath)
   local deps = {}
   local function check(dir)
     local iter = fs.scandir(dir)
@@ -14,16 +14,19 @@ return function (fs, path)
         baseName = entry.name
       end
       if baseName then
-        local path = pathJoin(dir, entry.name)
-        local meta = pkgQuery(fs, path)
+        local path, meta
+        path = pathJoin(dir, entry.name)
+        meta, path = pkgQuery(fs, path)
         if meta then
+          meta.fs = fs
+          meta.path = path
           meta.location = dir:match("[^/]+$")
           deps[baseName] = meta
         end
       end
     end
   end
-  check(pathJoin(path, "deps"))
-  check(pathJoin(path, "libs"))
+  check(pathJoin(rootPath, "deps"))
+  check(pathJoin(rootPath, "libs"))
   return deps
 end

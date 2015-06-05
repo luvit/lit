@@ -45,7 +45,8 @@ local validKeys = {
   author = "table", -- person {name=name, email=email, url=url}
   contributors = "table", -- list of people
   dependencies = "table", -- list of strings
-  luvi = "table", -- {flavor=flavor,version=version}
+  luvi = "table", -- {flavor=flavor,version=version},
+  files = "table",
 }
 
 function exports.query(fs, path)
