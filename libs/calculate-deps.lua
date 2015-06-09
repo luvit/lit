@@ -60,6 +60,7 @@ return function (db, deps, newDeps)
       end
       local kind
       meta, kind = assert(queryDb(db, hash))
+      meta.db = db
       meta.hash = hash
       meta.kind = kind
       deps[alias] = meta

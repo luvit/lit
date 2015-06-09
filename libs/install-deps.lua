@@ -1,10 +1,12 @@
 local import = require('import')
 local modes = require('git').modes
+local export = require('export')
+local pathJoin = require('luvi').path.join
 
 -- Given a db tree and a set of dependencies, create a new tree with the deps
 -- folder synthisized from the deps list.
 
-return function (db, rootHash, deps)
+function exports.toDb(db, rootHash, deps)
   local tree = db.loadAs("tree", rootHash)
   local depsTree = {}
   for alias, meta in pairs(deps) do
@@ -32,4 +34,16 @@ return function (db, rootHash, deps)
     hash = db.saveAs("tree", depsTree)
   }
   return db.saveAs("tree", tree)
+end
+
+function exports.toFs(fs, rootPath, deps)
+  for alias, meta in pairs(deps) do
+    if meta.hash then
+      local path = pathJoin(rootPath, "deps", alias)
+      if meta.kind == "blob" then
+        path = path .. ".lua"
+      end
+      export(meta.db, meta.hash, fs, path)
+    end
+  end
 end

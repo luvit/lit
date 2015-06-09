@@ -23,14 +23,16 @@ local miniz = require('miniz')
 local vfs = require('./vfs')
 local fs = require('coro-fs')
 local http = require('coro-http')
-local dbFs = require('db-fs')
 local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
-local filterTree = require('rules').filterTree
 local luvi = require('luvi')
 local makeDb = require('db')
 local import = require('import')
-local install = require('install')
+local export = require('export')
+local getInstalled = require('get-installed')
+local calculateDeps = require('calculate-deps')
+local queryFs = require('pkg').query
+local installDeps = require('install-deps').toDb
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -44,8 +46,12 @@ end
 local function luviUrl(meta)
 
   local arch
-  if require('jit').os == "Windows" then
-    arch = "Windows-amd64.exe"
+  if jit.os == "Windows" then
+    if jit.arch == "x64" then
+      arch = "Windows-amd64.exe"
+    else
+      arch = "Windows-ia32.exe"
+    end
   else
     arch = run("uname", "-s") .. "_" .. run("uname", "-m")
   end
@@ -264,21 +270,131 @@ local function makeCore(config)
     end
   end
 
-  function core.installList(path, deps)
-    local fs
-    fs, path = vfs(path)
-    return install(db, fs, pathJoin(path, "deps"), deps)
+  local function makeZip(rootHash, target)
+    log("creating binary", target, "highlight")
+    local meta = pkg.queryDb(db, rootHash)
+
+    local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
+    local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
+
+    local binSize
+    if meta.luvi and not (meta.luvi.flavor == "regular" and semver.gte(luvi.version, meta.luvi.version)) then
+      local url = luviUrl(meta.luvi)
+      log("downloading custom luvi", url)
+      -- TODO: stream the binary and show progress
+      local res, bin = http.request("GET", url, {})
+      assert(res.code == 200, bin)
+      binSize = #bin
+      uv.fs_write(fd, bin, -1)
+    else      -- Copy base binary
+      do
+        local source = uv.exepath()
+
+        local reader = miniz.new_reader(source)
+        if reader then
+          -- If contains a zip, find where the zip starts
+          binSize = reader:get_offset()
+        else
+          -- Otherwise just read the file size
+          binSize = uv.fs_stat(source).size
+        end
+        local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
+        log("copying binary prefix", binSize .. " bytes from " .. source)
+        assert(uv.fs_sendfile(fd, fd2, 0, binSize))
+        uv.fs_close(fd2)
+      end
+    end
+
+    local writer = miniz.new_writer()
+
+    local function importEntry(hash, path, mode)
+      local kind, value = db.loadAny(hash)
+      mode = mode or modes[kind]
+      if mode == modes.tree then
+        if path then
+          writer:add(path .. "/", "")
+        end
+        for i = 1, #value do
+          local entry = value[i]
+          local newPath = path and path .. '/' .. entry.name or entry.name
+          importEntry(entry.hash, newPath, entry.mode)
+        end
+      elseif modes.isFile(mode) then
+        local base = path:match("^(.*)%.lua$")
+        if base then
+          -- TODO: add an option to disable this in case you want uncompiled lua files.
+          log("compiling", path)
+          value = string.dump(assert(loadstring(value, "bundle:" .. path)))
+        end
+        writer:add(path, value, 9)
+      else
+        error("Can't handle entry for " .. path)
+      end
+    end
+
+    importEntry(rootHash)
+
+    assert(uv.fs_write(fd, writer:finalize(), binSize))
+    uv.fs_close(fd)
+    assert(uv.fs_rename(tempFile, target))
+    log("done building", target)
+  end
+
+  local function defaultTarget(meta)
+    local target = meta.target or meta.name:match("[^/]+$")
+    if jit.os == "Windows" then
+      target = target .. ".exe"
+    end
+    return target
+  end
+
+  function core.make(source, target)
+    local meta = queryFs(fs, source)
+    target = target or defaultTarget(meta)
+    local kind, hash = assert(import(core.db, fs, source, {"-" .. target}, true))
+    assert(kind == "tree", "Only tree packages are supported for now")
+    local deps = getInstalled(fs, source)
+    calculateDeps(core.db, deps, meta.dependencies)
+    hash = installDeps(core.db, hash, deps)
+    return makeZip(hash, target)
+  end
+
+  function core.makeUrl()
+    local fullUrl = url
+    for i = 1, #aliases, 2 do
+      fullUrl = fullUrl:gsub(aliases[i], aliases[i + 1])
+    end
+    for i = 1, #handlers, 2 do
+      local match = {fullUrl:match(handlers[i])}
+      if #match > 0 then return handlers[i + 1](target, unpack(match)) end
+    end
+    error("Not a file or valid url: " .. fullUrl)
+  end
+
+  function core.installList(path, newDeps)
+    local deps = getInstalled(fs, path)
+    calculateDeps(core.db, deps, newDeps)
+    for alias, meta in pairs(deps) do
+      if meta.hash then
+        local packagePath = pathJoin(path, alias)
+        local tag = db.loadAs("tag", meta.hash)
+        if tag.type == "blob" then
+          packagePath = packagePath .. ".lua"
+        end
+        log("installing package", string.format("%s@v%s", meta.name, meta.version), "highlight")
+        export(db, tag.object, fs, packagePath)
+      end
+    end
+    return deps
   end
 
   function core.installDeps(path)
-    local fs
-    fs, path = vfs(path)
     local meta = pkg.query(fs, path)
     if not meta.dependencies then
       log("no dependencies", path)
       return
     end
-    return install(db, fs, pathJoin(path, "deps"), meta.dependencies)
+    return core.installList(path, meta.dependencies)
   end
 
   function core.sync(author, name)
