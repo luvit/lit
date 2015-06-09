@@ -86,6 +86,7 @@ end
 function exports.queryDb(db, hash)
   local kind, value = db.loadAny(hash)
   if kind == "tag" then
+    hash = value.object
     kind, value = db.loadAny(value.object)
   end
   local meta
@@ -108,7 +109,7 @@ function exports.queryDb(db, hash)
   else
     error("Illegal kind: " .. kind)
   end
-  return meta, kind
+  return meta, kind, hash
 end
 
 function exports.normalize(meta)

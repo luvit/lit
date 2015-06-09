@@ -308,7 +308,7 @@ local function makeCore(config)
     local writer = miniz.new_writer()
 
     local function importEntry(hash, path, mode)
-      local kind, value = db.loadAny(hash)
+      local kind, value = assert(db.loadAny(hash))
       mode = mode or modes[kind]
       if mode == modes.tree then
         if path then
@@ -324,7 +324,8 @@ local function makeCore(config)
         if base then
           -- TODO: add an option to disable this in case you want uncompiled lua files.
           log("compiling", path)
-          value = string.dump(assert(loadstring(value, "bundle:" .. path)))
+          local fn = assert(loadstring(value, "bundle:" .. path))
+          value = string.dump(fn)
         end
         writer:add(path, value, 9)
       else
@@ -349,17 +350,97 @@ local function makeCore(config)
   end
 
   function core.make(source, target)
-    local meta = queryFs(fs, source)
+    local zfs
+    -- Use vfs so that source can be a zip file or a folder.
+    zfs, source = vfs(source)
+    local meta = queryFs(zfs, source)
     target = target or defaultTarget(meta)
-    local kind, hash = assert(import(core.db, fs, source, {"-" .. target}, true))
+    local kind, hash = assert(import(core.db, zfs, source, {"-" .. target}, true))
     assert(kind == "tree", "Only tree packages are supported for now")
-    local deps = getInstalled(fs, source)
+    local deps = getInstalled(zfs, source)
     calculateDeps(core.db, deps, meta.dependencies)
     hash = installDeps(core.db, hash, deps)
     return makeZip(hash, target)
   end
 
-  function core.makeUrl()
+  local function makeGit(target, url)
+    local path = (url:match("([^/]+).git$") or target or "app") .. ".git-clone"
+    log("downloading repo", url)
+    local stdout, stderr, code, signal = exec("git", "clone", "--depth=1", "--recursive", url, path)
+    if code == 0 and signal == 0 then
+      core.make(path, target)
+    else
+      error("Problem cloning: " .. stdout .. stderr)
+    end
+    exec("rm", "-rf", path)
+  end
+
+  local function makeHttp(target, url)
+    log("downloading zip", url)
+    local res, body = http.request("GET", url)
+    assert(res.code == 200, body)
+    local filename
+    for i = 1, #res do
+      local key, value = unpack(res[i])
+      if key:lower() == "content-disposition" then
+        filename = value:match("filename=\"?([^;\"]+)")
+      end
+    end
+
+    local path = filename or (target or "app") .. ".zip"
+    fs.writeFile(path, body)
+    core.make(path, target)
+    fs.unlink(path)
+  end
+
+  local function makeLit(target, author, name, version)
+    local tag = author .. '/' .. name
+    local match, hash = db.match(author, name, version)
+    if not match then
+      if version then tag = tag .. "@" .. version end
+      error("No such lit package: " ..  tag)
+    end
+    tag = tag .. "@" .. match
+
+    if db.fetch then
+      db.fetch({hash})
+    end
+    local meta = pkg.queryDb(db, hash)
+    if not meta then
+      error("Not a valid package: " .. tag)
+    end
+
+    target = target or defaultTarget(meta)
+    local deps = {}
+    calculateDeps(core.db, deps, meta.dependencies)
+    local tagObj = db.loadAs("tag", hash)
+    if not tagObj.type == "tree" then
+      error("Only tags pointing to trees are currently supported for make")
+    end
+    hash = installDeps(core.db, tagObj.object, deps)
+    return makeZip(hash, target)
+  end
+
+  local aliases = {
+    "^github://([^/]+)/([^/@]+)/?@(.+)$", "https://github.com/%1/%2/archive/%3.zip",
+    "^github://([^/]+)/([^/]+)/?$", "https://github.com/%1/%2/archive/master.zip",
+    "^gist://([^/]+)/(.+)/?$", "https://gist.github.com/%1/%2.git",
+  }
+  core.urlAilases = aliases
+
+  local handlers = {
+    "^(https?://[^#]+%.git)$", makeGit,
+    "^(https?://[^#]+)$", makeHttp,
+    "^(git://.*)$", makeGit,
+    "^lit://([^/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^lit://([^/]+)/([^@]+)$", makeLit,
+    "^([^@/]+)/([^@]+)@v?(.+)$", makeLit,
+    "^([^@/]+)/([^@]+)$", makeLit,
+    "^([^ :/@]+%@.*)$", makeGit,
+  }
+  core.urlHandlers = handlers
+
+  function core.makeUrl(url, target)
     local fullUrl = url
     for i = 1, #aliases, 2 do
       fullUrl = fullUrl:gsub(aliases[i], aliases[i + 1])

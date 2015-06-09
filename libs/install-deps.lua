@@ -18,7 +18,7 @@ function exports.toDb(db, rootHash, deps)
     else
       kind, hash = import(db, meta.fs, meta.path, nil, true)
     end
-    entry.mode = modes[kind]
+    entry.mode = assert(modes[kind])
     entry.hash = hash
     if kind == "blob" then
       entry.name = alias .. ".lua"

@@ -47,7 +47,6 @@ return function (db, deps, newDeps)
           log("version mismatch", message, "highlight")
         end
       end
-
     else
       local author, pname = name:match("^([^/]+)/(.*)$")
       local match, hash = db.match(author, pname, version)
@@ -59,10 +58,11 @@ return function (db, deps, newDeps)
           .. (version and '@' .. version or ''))
       end
       local kind
-      meta, kind = assert(queryDb(db, hash))
+      meta, kind, hash = assert(queryDb(db, hash))
       meta.db = db
       meta.hash = hash
       meta.kind = kind
+      log("using dependency", string.format("%s as %s", hash, alias))
       deps[alias] = meta
     end
 
