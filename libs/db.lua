@@ -34,6 +34,9 @@ db.isOwner(org, author) -> bool        - Check if a user is an org owner
 db.addOwner(org, author)               - Add a new owner
 db.removeOwner(org, author)            - Remove an owner
 
+db.import(fs, path) -> kind, hash      - Import a file or tree into database
+db.export(hash, path) -> kind          - Export a hash to a path
+
 ]]
 
 return function (rootPath)
@@ -41,6 +44,8 @@ return function (rootPath)
   local normalize = semver.normalize
   local fs = require('coro-fs')
   local gitMount = require('git').mount
+  local import = require('import')
+  local export = require('export')
 
   local db = gitMount(fs.chroot(rootPath))
   local storage = db.storage
@@ -168,6 +173,15 @@ return function (rootPath)
       end
     end
     storage.write(ownersPath(org), table.concat(list, "\n") .. "\n")
+  end
+
+
+  function db.import(fs, path) --> kind, hash
+    return import(db, fs, path)
+  end
+
+  function db.export(hash, path) --> kind
+    return export(db, hash, fs, path)
   end
 
   return db
