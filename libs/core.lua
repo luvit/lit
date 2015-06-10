@@ -33,6 +33,7 @@ local getInstalled = require('get-installed')
 local calculateDeps = require('calculate-deps')
 local queryFs = require('pkg').query
 local installDeps = require('install-deps').toDb
+local isWindows = jit.os == "Windows"
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -46,7 +47,7 @@ end
 local function luviUrl(meta)
 
   local arch
-  if jit.os == "Windows" then
+  if isWindows then
     if jit.arch == "x64" then
       arch = "Windows-amd64.exe"
     else
@@ -343,7 +344,7 @@ local function makeCore(config)
 
   local function defaultTarget(meta)
     local target = meta.target or meta.name:match("[^/]+$")
-    if jit.os == "Windows" then
+    if isWindows then
       target = target .. ".exe"
     end
     return target
@@ -372,7 +373,7 @@ local function makeCore(config)
     else
       error("Problem cloning: " .. stdout .. stderr)
     end
-    exec("rm", "-rf", path)
+    assert(fs.rmrf(path))
   end
 
   local function makeHttp(target, url)
