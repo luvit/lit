@@ -1,4 +1,22 @@
 --[[
+
+Copyright 2014-2015 The Luvit Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS-IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+--]]
+
+--[[
 REST API
 ========
 
@@ -45,6 +63,7 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
+GET /packages/$AUTHOR/$TAG/$VERSION.zip -> zip bundle of app and dependencies
 
 GET /search/$query -> list of matches
 
@@ -56,7 +75,10 @@ local date = require('os').date
 local jsonStringify = require('json').stringify
 local jsonParse = require('json').parse
 local modes = require('git').modes
-
+local exportZip = require('export-zip')
+local calculateDeps = require('calculate-deps')
+local queryDb = require('pkg').queryDb
+local installDeps = require('install-deps').toDb
 
 local litVersion = "Lit " .. require('../package').version
 
@@ -115,7 +137,7 @@ return function (db, prefix)
   local function loadMeta(author, name, version)
     local hash
     if not version then
-      version, hash = db.match(author, name)
+      version, hash = (db.offlineMatch or db.match)(author, name)
     else
       hash = db.read(author, name, version)
     end
@@ -162,6 +184,26 @@ return function (db, prefix)
         versions = prefix .. "/packages/{author}/{name}",
         package = prefix .. "/packages/{author}/{name}/{version}",
         search = prefix .. "/search/{query}",
+      }
+    end,
+    "^/packages/([^/]+)/(.+)/v([^/]+)%.zip$", function (author, name, version)
+
+      local meta, kind, hash = queryDb(db, db.read(author, name, version))
+
+      if kind ~= "tree" then
+        error("Can only create zips from trees")
+      end
+
+      local deps = {}
+      calculateDeps(db, deps, meta.dependencies)
+      hash = installDeps(db, hash, deps)
+
+      local zip = exportZip(db, hash)
+      local filename = meta.name:match("[^/]+$") .. "-v" .. meta.version .. ".zip"
+
+      return zip, {
+        {"Content-Type", "application/zip"},
+        {"Content-Disposition", "attachment; filename=" .. filename}
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
@@ -298,6 +340,7 @@ return function (db, prefix)
       local res = {
         query = query,
         matches = matches,
+        upstream = db.upstream,
       }
       return res
     end

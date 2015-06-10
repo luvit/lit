@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-fs"
-exports.version = "1.2.4"
+exports.version = "1.3.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
 exports.description = "A coro style interface to the filesystem."
 exports.tags = {"coro", "fs"}
@@ -86,6 +86,23 @@ end
 function fs.rmdir(path)
   uv.fs_rmdir(path, makeCallback())
   return coroutine.yield()
+end
+function fs.rmrf(path)
+  local success, err
+  success, err = fs.rmdir(path)
+  if success then return success end
+  if err:match("^ENOTDIR:") then return fs.unlink(path) end
+  if not err:match("^ENOTEMPTY:") then return success, err end
+  for entry in assert(fs.scandir(path)) do
+    local subPath = pathJoin(path, entry.name)
+    if entry.type == "directory" then
+      success, err = fs.rmrf(pathJoin(path, entry.name))
+    else
+      success, err = fs.unlink(subPath)
+    end
+    if not success then return success, err end
+  end
+  return fs.rmdir(path)
 end
 function fs.scandir(path)
   uv.fs_scandir(path, makeCallback())
@@ -185,6 +202,9 @@ function fs.chroot(base)
   end
   function chroot.rmdir(path)
     return fs.rmdir(resolve(path))
+  end
+  function chroot.rmrf(path)
+    return fs.rmrf(resolve(path))
   end
   function chroot.scandir(path, iter)
     return fs.scandir(resolve(path), iter)
