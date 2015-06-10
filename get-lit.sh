@@ -5,7 +5,7 @@ LIT_VERSION=2.0.0
 
 LUVI_ARCH=`uname -s`_`uname -m`
 LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH"
-LIT_URL="https://github.com/luvit/lit/archive/$LIT_VERSION.zip"
+LIT_URL="https://lit.luvit.io/packages/luvit/lit/v$LIT_VERSION.zip"
 
 # Download Files
 echo "Downloading $LUVI_URL to luvi"
