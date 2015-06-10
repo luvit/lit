@@ -1,5 +1,5 @@
 exports.name = "creationix/semver"
-exports.version = "1.0.3"
+exports.version = "1.0.4"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
 exports.description = "Parser, comparer and matcher for semantic versions strings."
 exports.tags = {"semver"}
