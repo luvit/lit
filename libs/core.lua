@@ -476,7 +476,7 @@ local function makeCore(config)
     calculateDeps(core.db, deps, newDeps)
     for alias, meta in pairs(deps) do
       if meta.hash then
-        local packagePath = pathJoin(path, alias)
+        local packagePath = pathJoin(path, "deps", alias)
         local kind, value = db.loadAny(meta.hash)
         local hash
         if kind == "tag" then
