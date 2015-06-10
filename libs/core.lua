@@ -33,7 +33,6 @@ local githubQuery = require('./github-request')
 local pkg = require('./pkg')
 local sshRsa = require('ssh-rsa')
 local git = require('git')
-local modes = git.modes
 local encoders = git.encoders
 local semver = require('semver')
 local pathJoin = require('luvi').path.join
@@ -52,6 +51,7 @@ local calculateDeps = require('calculate-deps')
 local queryFs = require('pkg').query
 local installDeps = require('install-deps').toDb
 local isWindows = jit.os == "Windows"
+local exportZip = require('export-zip')
 
 local function run(...)
   local stdout, stderr, code, signal = exec(...)
@@ -324,37 +324,7 @@ local function makeCore(config)
       end
     end
 
-    local writer = miniz.new_writer()
-
-    local function importEntry(hash, path, mode)
-      local kind, value = assert(db.loadAny(hash))
-      mode = mode or modes[kind]
-      if mode == modes.tree then
-        if path then
-          writer:add(path .. "/", "")
-        end
-        for i = 1, #value do
-          local entry = value[i]
-          local newPath = path and path .. '/' .. entry.name or entry.name
-          importEntry(entry.hash, newPath, entry.mode)
-        end
-      elseif modes.isFile(mode) then
-        local base = path:match("^(.*)%.lua$")
-        if base then
-          -- TODO: add an option to disable this in case you want uncompiled lua files.
-          log("compiling", path)
-          local fn = assert(loadstring(value, "bundle:" .. path))
-          value = string.dump(fn)
-        end
-        writer:add(path, value, 9)
-      else
-        error("Can't handle entry for " .. path)
-      end
-    end
-
-    importEntry(rootHash)
-
-    assert(uv.fs_write(fd, writer:finalize(), binSize))
+    assert(uv.fs_write(fd, exportZip(db, rootHash, true), binSize))
     uv.fs_close(fd)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)

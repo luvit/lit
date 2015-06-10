@@ -63,6 +63,7 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
+GET /packages/$AUTHOR/$TAG/$VERSION.zip -> zip bundle of app and dependencies
 
 GET /search/$query -> list of matches
 
@@ -74,7 +75,10 @@ local date = require('os').date
 local jsonStringify = require('json').stringify
 local jsonParse = require('json').parse
 local modes = require('git').modes
-
+local exportZip = require('export-zip')
+local calculateDeps = require('calculate-deps')
+local queryDb = require('pkg').queryDb
+local installDeps = require('install-deps').toDb
 
 local litVersion = "Lit " .. require('../package').version
 
@@ -180,6 +184,26 @@ return function (db, prefix)
         versions = prefix .. "/packages/{author}/{name}",
         package = prefix .. "/packages/{author}/{name}/{version}",
         search = prefix .. "/search/{query}",
+      }
+    end,
+    "^/packages/([^/]+)/(.+)/v([^/]+)%.zip$", function (author, name, version)
+
+      local meta, kind, hash = queryDb(db, db.read(author, name, version))
+
+      if kind ~= "tree" then
+        error("Can only create zips from trees")
+      end
+
+      local deps = {}
+      calculateDeps(db, deps, meta.dependencies)
+      hash = installDeps(db, hash, deps)
+
+      local zip = exportZip(db, hash)
+      local filename = meta.name:match("[^/]+$") .. "-v" .. meta.version .. ".zip"
+
+      return zip, {
+        {"Content-Type", "application/zip"},
+        {"Content-Disposition", "attachment; filename=" .. filename}
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
