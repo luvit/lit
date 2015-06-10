@@ -477,12 +477,20 @@ local function makeCore(config)
     for alias, meta in pairs(deps) do
       if meta.hash then
         local packagePath = pathJoin(path, alias)
-        local tag = db.loadAs("tag", meta.hash)
-        if tag.type == "blob" then
+        local kind, value = db.loadAny(meta.hash)
+        local hash
+        if kind == "tag" then
+          kind = value.type
+          hash = value.object
+        else
+          hash = meta.hash
+        end
+
+        if kind == "blob" then
           packagePath = packagePath .. ".lua"
         end
         log("installing package", string.format("%s@v%s", meta.name, meta.version), "highlight")
-        export(db, tag.object, fs, packagePath)
+        export(db, hash, fs, packagePath)
       end
     end
     return deps
