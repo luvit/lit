@@ -133,7 +133,7 @@ return function (db, prefix)
   local function loadMeta(author, name, version)
     local hash
     if not version then
-      version, hash = db.match(author, name)
+      version, hash = (db.offlineMatch or db.match)(author, name)
     else
       hash = db.read(author, name, version)
     end
@@ -316,6 +316,7 @@ return function (db, prefix)
       local res = {
         query = query,
         matches = matches,
+        upstream = db.upstream,
       }
       return res
     end

@@ -111,6 +111,8 @@ return function(db, url)
     return data
   end
 
+  db.upstream = url
+
   db.offlineMatch = db.match
   function db.match(author, name, version)
     local match, hash = db.offlineMatch(author, name, version)
