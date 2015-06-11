@@ -73,7 +73,7 @@ local function zipFs(zip, autoChroot)
     local i = index + 1
     local num = zip:get_num_files()
     return function ()
-      while i < num do
+      while i <= num do
         local filename = zip:get_filename(i)
         i = i + 1
         if string.sub(filename, 1, #path) ~= path then return end
@@ -127,4 +127,3 @@ return function (path)
     return fs, path
   end
 end
-
