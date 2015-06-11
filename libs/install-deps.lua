@@ -51,6 +51,7 @@ function exports.toDb(db, rootHash, deps, nativeOnly)
 
     depsTree[#depsTree + 1] = entry
   end
+  if #depsTree == 0 then return rootHash end
   tree[#tree + 1] = {
     name = "deps",
     mode = modes.tree,
