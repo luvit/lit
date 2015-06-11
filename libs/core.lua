@@ -63,7 +63,7 @@ end
 local function luviUrl(meta)
 
   local arch
-  if isWindows then
+  if jit.os == "Windows" then
     if jit.arch == "x64" then
       arch = "Windows-amd64.exe"
     else
@@ -330,7 +330,7 @@ local function makeCore(config)
 
   local function defaultTarget(meta)
     local target = meta.target or meta.name:match("[^/]+$")
-    if isWindows then
+    if jit.os == "Windows" then
       target = target .. ".exe"
     end
     return target
