@@ -17,6 +17,7 @@ Local configuration
 
 Package Management
 ------------------
+ lit ls [path]               List packages in folder or zip.
  lit install                 Install deps of package in cwd.
  lit install names*          Install dependencies.
  lit sync [author] [name]    Sync down upstream updates for any locally cached

@@ -20,11 +20,13 @@ local import = require('import')
 local modes = require('git').modes
 local export = require('export')
 local pathJoin = require('luvi').path.join
+local filterTree = require('rules').filterTree
+local log = require('log')
 
 -- Given a db tree and a set of dependencies, create a new tree with the deps
 -- folder synthisized from the deps list.
 
-function exports.toDb(db, rootHash, deps)
+function exports.toDb(db, rootHash, deps, nativeOnly)
   local tree = db.loadAs("tree", rootHash)
   local depsTree = {}
   for alias, meta in pairs(deps) do
@@ -36,13 +38,16 @@ function exports.toDb(db, rootHash, deps)
     else
       kind, hash = import(db, meta.fs, meta.path, nil, true)
     end
-    entry.mode = assert(modes[kind])
-    entry.hash = hash
     if kind == "blob" then
       entry.name = alias .. ".lua"
     else
       entry.name = alias
+      if nativeOnly then
+        hash = filterTree(db, "deps://" .. alias, hash, nil, nativeOnly)
+      end
     end
+    entry.mode = assert(modes[kind])
+    entry.hash = hash
 
     depsTree[#depsTree + 1] = entry
   end
@@ -54,14 +59,18 @@ function exports.toDb(db, rootHash, deps)
   return db.saveAs("tree", tree)
 end
 
-function exports.toFs(fs, rootPath, deps)
+function exports.toFs(db, fs, rootPath, deps, nativeOnly)
   for alias, meta in pairs(deps) do
     if meta.hash then
       local path = pathJoin(rootPath, "deps", alias)
+      local hash = meta.hash
       if meta.kind == "blob" then
         path = path .. ".lua"
+      elseif nativeOnly then
+        hash = filterTree(db, path, hash, nil, nativeOnly)
       end
-      export(meta.db, meta.hash, fs, path)
+      log("installing package", string.format("%s@v%s", meta.name, meta.version), "highlight")
+      export(meta.db, hash, fs, path)
     end
   end
 end

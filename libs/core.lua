@@ -35,7 +35,6 @@ local sshRsa = require('ssh-rsa')
 local git = require('git')
 local encoders = git.encoders
 local semver = require('semver')
-local pathJoin = require('luvi').path.join
 local miniz = require('miniz')
 local vfs = require('./vfs')
 local fs = require('coro-fs')
@@ -45,12 +44,11 @@ local prompt = require('prompt')(require('pretty-print'))
 local luvi = require('luvi')
 local makeDb = require('db')
 local import = require('import')
-local export = require('export')
 local getInstalled = require('get-installed')
 local calculateDeps = require('calculate-deps')
 local queryFs = require('pkg').query
 local installDeps = require('install-deps').toDb
-local isWindows = jit.os == "Windows"
+local installDepsFs = require('install-deps').toFs
 local exportZip = require('export-zip')
 
 local function run(...)
@@ -348,7 +346,7 @@ local function makeCore(config)
     assert(kind == "tree", "Only tree packages are supported for now")
     local deps = getInstalled(zfs, source)
     calculateDeps(core.db, deps, meta.dependencies)
-    hash = installDeps(core.db, hash, deps)
+    hash = installDeps(core.db, hash, deps, true)
     return makeZip(hash, target)
   end
 
@@ -406,7 +404,7 @@ local function makeCore(config)
     if not tagObj.type == "tree" then
       error("Only tags pointing to trees are currently supported for make")
     end
-    hash = installDeps(core.db, tagObj.object, deps)
+    hash = installDeps(core.db, tagObj.object, deps, true)
     return makeZip(hash, target)
   end
 
@@ -444,25 +442,7 @@ local function makeCore(config)
   function core.installList(path, newDeps)
     local deps = getInstalled(fs, path)
     calculateDeps(core.db, deps, newDeps)
-    for alias, meta in pairs(deps) do
-      if meta.hash then
-        local packagePath = pathJoin(path, "deps", alias)
-        local kind, value = db.loadAny(meta.hash)
-        local hash
-        if kind == "tag" then
-          kind = value.type
-          hash = value.object
-        else
-          hash = meta.hash
-        end
-
-        if kind == "blob" then
-          packagePath = packagePath .. ".lua"
-        end
-        log("installing package", string.format("%s@v%s", meta.name, meta.version), "highlight")
-        export(db, hash, fs, packagePath)
-      end
-    end
+    installDepsFs(core.db, fs, path, deps, true)
     return deps
   end
 

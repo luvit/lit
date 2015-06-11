@@ -78,4 +78,3 @@ return function (db, fs, path, rules, nativeOnly)
   if not hash then return end
   return modes.toType(mode), hash
 end
-

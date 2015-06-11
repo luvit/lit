@@ -1,8 +1,15 @@
-local fs = require('coro-fs')
 local uv = require('uv')
+local pathJoin = require('luvi').path.join
 local getInstalled = require('get-installed')
 
-local deps = getInstalled(fs, uv.cwd())
+local source = uv.cwd()
+if args[2] then
+  source = pathJoin(source, args[2])
+end
+local fs
+fs, source = require('vfs')(source)
+
+local deps = getInstalled(fs, source)
 
 local list = {}
 for alias, meta in pairs(deps) do

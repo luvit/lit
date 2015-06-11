@@ -26,6 +26,7 @@ return function (db, deps, newDeps)
   local addDep, processDeps
 
   function processDeps(dependencies)
+    if not dependencies then return end
     for alias, dep in pairs(dependencies) do
       local name, version = dep:match("^([^@]+)@?(.*)$")
       if #version == 0 then
@@ -84,9 +85,7 @@ return function (db, deps, newDeps)
       deps[alias] = meta
     end
 
-    if meta.dependencies then
-      processDeps(meta.dependencies)
-    end
+    processDeps(meta.dependencies)
 
   end
 

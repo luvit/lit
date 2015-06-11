@@ -129,12 +129,12 @@ function exports.filterTree(db, path, hash, rules, nativeOnly) --> hash
       local entry = tree[i]
       if entry.name == "package.lua" then
         if modes.isFile(entry.mode) then
-          meta = db.loadAs("blob", entry.hash)
+          local lua = db.loadAs("blob", entry.hash)
+          meta = assert(loadstring(lua, pathJoin(path, "package.lua")))()
         end
         break
       end
     end
-    if meta then meta = loadstring(meta)() end
     if meta and meta.files then
       filters[#filters + 1] = compileFilter(path, meta.files, nativeOnly)
     end
