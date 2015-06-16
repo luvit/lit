@@ -39,7 +39,11 @@ return function (db, deps, newDeps)
         error("Package names must include owner/name at a minimum")
       end
       if version then
-        version = normalize(version)
+        local ok
+        ok, version = pcall(normalize, version)
+        if not ok then
+          error("Invalid dependency version: " .. dep)
+        end
       end
       addDep(alias, name, version)
     end
