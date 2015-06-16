@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.5-2"
+exports.version = "1.0.6"
 exports.dependencies = {
   "creationix/coro-channel@1.1.0"
 }
