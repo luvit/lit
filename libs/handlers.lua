@@ -16,10 +16,10 @@ limitations under the License.
 
 --]]
 
-local log = require('log')
+local log = require('log').log
 local git = require('git')
 local digest = require('openssl').digest.digest
-local githubQuery = require('./github-request')
+local githubQuery = require('github-request')
 local jsonParse = require('json').parse
 local verifySignature = require('verify-signature')
 

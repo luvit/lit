@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 
 local ffi = require('ffi')
-local log = require('log')
+local log = require('log').log
 local pathJoin = require('luvi').path.join
 local modes = require('git').modes
 

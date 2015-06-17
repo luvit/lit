@@ -1,4 +1,4 @@
-local log = require('log')
+local log = require('log').log
 local updater = require('auto-updater')
 local uv = require('uv')
 local pathJoin = require('luvi').path.join

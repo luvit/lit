@@ -18,7 +18,7 @@ limitations under the License.
 
 local normalize = require('semver').normalize
 local gte = require('semver').gte
-local log = require('log')
+local log = require('log').log
 local queryDb = require('pkg').queryDb
 
 return function (db, deps, newDeps)

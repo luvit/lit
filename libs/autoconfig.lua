@@ -16,7 +16,7 @@ limitations under the License.
 
 --]]
 
-local log = require('./log')
+local log = require('log').log
 local fs = require('coro-fs')
 local env = require('env')
 

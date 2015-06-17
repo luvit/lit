@@ -28,15 +28,15 @@ core.add(path) -> author, name, version, hash - Import a package complete with s
 
 local uv = require('uv')
 local jsonStringify = require('json').stringify
-local log = require('./log')
-local githubQuery = require('./github-request')
-local pkg = require('./pkg')
+local log = require('log').log
+local githubQuery = require('github-request')
+local pkg = require('pkg')
 local sshRsa = require('ssh-rsa')
 local git = require('git')
 local encoders = git.encoders
 local semver = require('semver')
 local miniz = require('miniz')
-local vfs = require('./vfs')
+local vfs = require('vfs')
 local fs = require('coro-fs')
 local http = require('coro-http')
 local exec = require('exec')
@@ -112,7 +112,7 @@ local function makeCore(config)
 
   local db = makeDb(config.database)
   if config.upstream then
-    db = require('./rdb')(db, config.upstream, config.timeout)
+    db = require('rdb')(db, config.upstream, config.timeout)
   end
   local core = {
     config = config,

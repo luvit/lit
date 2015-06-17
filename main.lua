@@ -29,7 +29,7 @@ local aliases = {
 _G.p = require('pretty-print').prettyPrint
 local version = require('./package').version
 coroutine.wrap(function ()
-  local log = require('log')
+  local log = require('log').log
   local command = args[1] or "help"
   if command:sub(1, 2) == "--" then
     command = command:sub(3)

@@ -18,7 +18,8 @@ limitations under the License.
 
 local pp = require('pretty-print')
 local colorize = pp.colorize
-local stdout = pp.stdout
-return function(key, value, color)
-  stdout:write(key .. ": " .. (color and colorize(color, value) or value) .. "\n")
+
+exports.stream = pp.stdout
+function exports.log(key, value, color)
+  exports.stream:write(key .. ": " .. (color and colorize(color, value) or value) .. "\n")
 end

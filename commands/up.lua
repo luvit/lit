@@ -1,5 +1,5 @@
 local config = require('core')().config
-local log = require('log')
+local log = require('log').log
 
 local upstream = args[2] or config.defaultUpstream
 log("upstream", upstream, "highlight")

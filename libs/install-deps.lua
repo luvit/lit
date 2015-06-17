@@ -21,7 +21,7 @@ local modes = require('git').modes
 local export = require('export')
 local pathJoin = require('luvi').path.join
 local filterTree = require('rules').filterTree
-local log = require('log')
+local log = require('log').log
 
 -- Given a db tree and a set of dependencies, create a new tree with the deps
 -- folder synthisized from the deps list.

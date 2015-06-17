@@ -2,7 +2,7 @@ local core = require('core')()
 local prompt = require('prompt')(require('pretty-print'))
 local fs = require('coro-fs')
 local env = require('env')
-local log = require('log')
+local log = require('log').log
 local exec = require('exec')
 
 local config = core.config

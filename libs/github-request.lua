@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 
 local env = require('env')
-local log = require('./log')
+local log = require('log').log
 local jsonParse = require('json').parse
 local http = require('coro-http')
 

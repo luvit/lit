@@ -18,11 +18,11 @@ limitations under the License.
 
 local uv = require('uv')
 local semver = require('semver')
-local log = require('./log')
+local log = require('log').log
 local tcpConnect = require('coro-tcp').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
-local makeRemote = require('./codec').makeRemote
+local makeRemote = require('codec').makeRemote
 local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local tlsWrap = require('coro-tls').wrap
