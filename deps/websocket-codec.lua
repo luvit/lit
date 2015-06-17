@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.3"
+exports.version = "1.0.4"
 exports.dependencies = {
   "creationix/hex-bin@1.0.0"
 }
@@ -121,7 +121,7 @@ function exports.encode(item)
     )),
     char(bor(
       mask and 0x80 or 0,
-      len < 0x10 and len or len < 0x10000 and 126 or 127
+      len < 0x80 and len or len < 0x10000 and 126 or 127
     ))
   }
   if len >= 0x10000 then
@@ -133,7 +133,7 @@ function exports.encode(item)
     chars[8] = char(band(rshift(len, 16), 0xff))
     chars[9] = char(band(rshift(len, 8), 0xff))
     chars[10] = char(band(len, 0xff))
-  elseif len >= 0x10 then
+  elseif len >= 0x80 then
     chars[3] = char(band(rshift(len, 8), 0xff))
     chars[4] = char(band(len, 0xff))
   end

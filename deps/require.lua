@@ -18,7 +18,7 @@ limitations under the License.
 
 if exports then
   exports.name = "luvit/require"
-  exports.version = "1.2.0"
+  exports.version = "1.2.1"
   exports.homepage = "https://github.com/luvit/luvit/blob/master/deps/require.lua"
   exports.description = "Luvit's custom require system with relative requires and sane search paths."
   exports.tags = {"luvit", "require"}
@@ -229,9 +229,10 @@ end
 
 function Module:resolve(name)
   assert(name, "Missing name to resolve")
-  if name:byte(1) == 46 then -- Starts with "."
+  local debundled_name = name:match("^bundle:(.*)") or name
+  if debundled_name:byte(1) == 46 then -- Starts with "."
     return fixedRequire(pathJoin(self.dir, name))
-  elseif name:byte(1) == 47 then -- Starts with "/"
+  elseif debundled_name:byte(1) == 47 then -- Starts with "/"
     return fixedRequire(name)
   end
   return moduleRequire(self.dir, name)
@@ -250,7 +251,7 @@ function Module:require(name)
     local success, value = pcall(realRequire, name)
     if success then return value end
     if not success then
-      error("No such module '" .. name .. "' in '" .. self.path .. "'")
+      error("No such module '" .. name .. "' in '" .. self.path .. "'\r\n" ..  value)
     end
   end
 
