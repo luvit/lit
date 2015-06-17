@@ -73,10 +73,11 @@ local function luviUrl(meta)
     arch = run("uname", "-s") .. "_" .. run("uname", "-m")
   end
   meta = meta or {}
-
+  local flavor = meta.flavor or "regular"
+  local version = semver.normalize(meta.version or luvi.version)
   return string.format(
     "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s",
-    meta.version or luvi.version, meta.flavor or "regular", arch)
+    version, flavor, arch)
 end
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -115,7 +116,7 @@ local function makeCore(config)
   end
   local core = {
     config = config,
-    db = db
+    db = db,
   }
 
   local privateKey
@@ -223,7 +224,17 @@ local function makeCore(config)
 
   end
 
+
+  local lastImport = {}
   function core.importKeys(username)
+
+    local last = lastImport[username]
+    local now = uv.now()
+    if last and last + 10000 > now then
+      return
+    end
+
+    lastImport[username] = now
 
     local path = "/users/" .. username .. "/keys"
     local etag = db.getEtag(username)
@@ -273,6 +284,8 @@ local function makeCore(config)
 
     return url
   end
+
+  db.importKeys = core.importKeys
 
   function core.authUser()
     local key = assert(getKey(), "No private key")

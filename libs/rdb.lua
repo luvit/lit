@@ -26,6 +26,9 @@ local makeRemote = require('./codec').makeRemote
 local wrapper = require('coro-wrapper')
 local readWrap, writeWrap = wrapper.reader, wrapper.writer
 local tlsWrap = require('coro-tls').wrap
+local deframe = require('git').deframe
+local decodeTag = require('git').decoders.tag
+local verifySignature = require('verify-signature')
 
 local function connectRemote(url)
   local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
@@ -162,6 +165,18 @@ return function(db, url)
         for i = 1, #wants do
           local hash = wants[i]
           local data = remote.readAs("send")
+          if data:sub(1, 3) == "tag" then
+            local kind, raw = deframe(data)
+            assert(kind == "tag")
+            local tag = decodeTag(raw)
+            local owner = tag.tag:match("[^/]+")
+            local ok = verifySignature(db, owner, raw)
+            if ok then
+              log("importing", tag.tag, "highlight")
+            else
+              log("importing", tag.tag, "failure")
+            end
+          end
           local actual = db.save(data)
           if actual ~= hash then
             p {

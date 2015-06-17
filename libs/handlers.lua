@@ -19,9 +19,9 @@ limitations under the License.
 local log = require('log')
 local git = require('git')
 local digest = require('openssl').digest.digest
-local sshRsa = require('ssh-rsa')
 local githubQuery = require('./github-request')
 local jsonParse = require('json').parse
+local verifySignature = require('verify-signature')
 
 local function split(line)
   local args = {}
@@ -80,41 +80,6 @@ return function (core)
     return handlers.wants(remote, {hash})
   end
 
-  local function verifySignature(username, raw)
-    core.importKeys(username)
-    local body, fingerprint, signature = string.match(raw, "^(.*)"
-      .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
-      .. "Format: sha256%-ssh%-rsa\n"
-      .. "Fingerprint: ([^\n]+)\n\n"
-      .. "(.*)\n"
-      .. "%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
-
-    if not signature then
-      error("Missing sha256-ssh-rsa signature")
-    end
-    signature = signature:gsub("\n", "")
-    local sshKey = db.readKey(username, fingerprint)
-    if not sshKey then
-      local iter = db.owners(username)
-      if iter then
-        for owner in iter do
-          core.importKeys(owner)
-          sshKey = db.readKey(owner, fingerprint)
-          if sshKey then break end
-        end
-        if not sshKey then
-          error("Not in group: " .. username)
-        end
-      end
-      if not sshKey then
-        error("Invalid fingerprint")
-      end
-    end
-    sshKey = sshRsa.loadPublic(sshKey)
-    assert(sshRsa.fingerprint(sshKey) == fingerprint, "fingerprint mismatch")
-    return sshRsa.verify(body, signature, sshKey)
-  end
-
   function handlers.send(remote, data)
     local authorized = remote.authorized or {}
     local kind, raw = git.deframe(data)
@@ -127,7 +92,7 @@ return function (core)
       end
       local tag = git.decoders.tag(raw)
       local username = string.match(tag.tag, "^[^/]+")
-      if not verifySignature(username, raw) then
+      if not verifySignature(db, username, raw) then
         return remote.writeAs("error", "Signature verification failure")
       end
       tag.hash = hash
@@ -173,7 +138,7 @@ return function (core)
 
   local function verifyRequest(raw)
     local data = assert(jsonParse(string.match(raw, "([^\n]+)")))
-    assert(verifySignature(data.username, raw), "Signature verification failure")
+    assert(verifySignature(db, data.username, raw), "Signature verification failure")
     return data
   end
 
