@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-tcp"
-exports.version = "1.0.6"
+exports.version = "1.1.0"
 exports.dependencies = {
   "creationix/coro-channel@1.1.0"
 }
@@ -13,9 +13,22 @@ exports.author = { name = "Tim Caswell" }
 local uv = require('uv')
 local wrapStream = require('coro-channel').wrapStream
 
-local function makeCallback()
+local function makeCallback(timeout)
   local thread = coroutine.running()
+  local timer, done
+  if timeout then
+    timer = uv.new_timer()
+    timer:start(timeout, 0, function ()
+      if done then return end
+      done = true
+      timer:close()
+      return assert(coroutine.resume(thread, nil, "timeout"))
+    end)
+  end
   return function (err, data)
+    if done then return end
+    done = true
+    if timer then timer:close() end
     if err then
       return assert(coroutine.resume(thread, nil, err))
     end
@@ -24,13 +37,13 @@ local function makeCallback()
 end
 exports.makeCallback = makeCallback
 
-function exports.connect(host, port)
+function exports.connect(host, port, timeout)
   local res, success, err
-  uv.getaddrinfo(host, port, { socktype = "stream", family="inet" }, makeCallback())
+  uv.getaddrinfo(host, port, { socktype = "stream", family="inet" }, makeCallback(timeout))
   res, err = coroutine.yield()
   if not res then return nil, err end
   local socket = uv.new_tcp()
-  socket:connect(res[1].addr, res[1].port, makeCallback())
+  socket:connect(res[1].addr, res[1].port, makeCallback(timeout))
   success, err = coroutine.yield()
   if not success then return nil, err end
   local read, write = wrapStream(socket)
