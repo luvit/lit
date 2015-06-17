@@ -112,7 +112,7 @@ local function makeCore(config)
 
   local db = makeDb(config.database)
   if config.upstream then
-    db = require('./rdb')(db, config.upstream)
+    db = require('./rdb')(db, config.upstream, config.timeout)
   end
   local core = {
     config = config,

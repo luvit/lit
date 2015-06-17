@@ -19,7 +19,7 @@ limitations under the License.
 local uv = require('uv')
 local semver = require('semver')
 local log = require('./log')
-local connect = require('coro-tcp').connect
+local tcpConnect = require('coro-tcp').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('./codec').makeRemote
@@ -30,7 +30,7 @@ local deframe = require('git').deframe
 local decodeTag = require('git').decoders.tag
 local verifySignature = require('verify-signature')
 
-local function connectRemote(url)
+local function connectRemote(url, timeout)
   local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
   local tls
   if protocol == "ws" then
@@ -44,7 +44,7 @@ local function connectRemote(url)
   end
   if #path == 0 then path = "/" end
 
-  local rawRead, rawWrite, socket = assert(connect(host, port))
+  local rawRead, rawWrite, socket = assert(tcpConnect(host, port, timeout))
   if tls then
     rawRead, rawWrite = tlsWrap(rawRead, rawWrite)
   end
@@ -75,33 +75,33 @@ local function connectRemote(url)
   return socket, makeRemote(read, write, true)
 end
 
-return function(db, url)
+return function(db, url, timeout)
 
   -- Implement very basic connection keepalive using an uv_idle timer
   -- This will disconnect very quickly if a connect() isn't called
   -- soon after a disconnect()
-  local timeout, remote, socket
+  local keepalive, remote, socket
   local function connect()
     if remote then
-      timeout:stop()
+      keepalive:stop()
     else
       log("connecting", url)
-      socket, remote = connectRemote(url)
-      timeout = uv.new_timer()
+      socket, remote = connectRemote(url, timeout)
+      keepalive = uv.new_timer()
     end
   end
   local function close()
     if remote then
       -- log("disconnecting", url)
       socket:close()
-      timeout:close()
-      timeout = nil
+      keepalive:close()
+      keepalive = nil
       remote = nil
       socket = nil
     end
   end
   local function disconnect()
-    timeout:start(1000, 0, close)
+    keepalive:start(1000, 0, close)
   end
 
   function db.readRemote(author, name, version)
