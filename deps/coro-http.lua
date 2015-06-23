@@ -1,7 +1,7 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.0.7-2"
+exports.version = "1.1.0"
 exports.dependencies = {
-  "creationix/coro-tcp@1.0.5",
+  "creationix/coro-net@1.1.0",
   "creationix/coro-tls@1.2.0",
   "creationix/coro-wrapper@1.0.0",
   "luvit/http-codec@1.0.0"
@@ -13,13 +13,14 @@ exports.license = "MIT"
 exports.author = { name = "Tim Caswell" }
 
 local httpCodec = require('http-codec')
-local connect = require('coro-tcp').connect
-local createServer = require('coro-tcp').createServer
+local net = require('coro-net')
+local connect = net.connect
+local createServer = net.createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
 
-function exports.createServer(addr, port, onConnect)
-  createServer(addr, port, function (rawRead, rawWrite, socket)
+function exports.createServer(host, port, onConnect)
+  createServer({host=host,port=port}, function (rawRead, rawWrite, socket)
     local read = wrapper.reader(rawRead, httpCodec.decoder())
     local write = wrapper.writer(rawWrite, httpCodec.encoder())
     for head in read do
@@ -70,7 +71,7 @@ local function getConnection(host, port, tls)
       end
     end
   end
-  local read, write, socket = assert(connect(host, port))
+  local read, write, socket = assert(connect({host=host,port=port}))
   if tls then
     read, write = tlsWrap(read, write)
   end

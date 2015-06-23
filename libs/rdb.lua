@@ -19,7 +19,7 @@ limitations under the License.
 local uv = require('uv')
 local semver = require('semver')
 local log = require('log').log
-local tcpConnect = require('coro-tcp').connect
+local netConnect = require('coro-net').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('codec').makeRemote
@@ -44,7 +44,7 @@ local function connectRemote(url, timeout)
   end
   if #path == 0 then path = "/" end
 
-  local rawRead, rawWrite, socket = assert(tcpConnect(host, port, timeout))
+  local rawRead, rawWrite, socket = assert(netConnect({host=host, port=port}, timeout))
   if tls then
     rawRead, rawWrite = tlsWrap(rawRead, rawWrite)
   end
