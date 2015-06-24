@@ -142,7 +142,7 @@ function exports.request(method, url, headers, body)
   end
 
   -- Follow redirects
-  if method == "GET" and res.code == 302 then
+  if method == "GET" and (res.code == 302 or res.code == 307) then
     for i = 1, #res do
       local key, location = unpack(res[i])
       if key:lower() == "location" then
