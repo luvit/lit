@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-spawn"
-exports.version = "0.2.0"
+exports.version = "0.2.1"
 exports.dependencies = {
   "creationix/coro-channel@1.2.0"
 }
@@ -18,6 +18,12 @@ local wrapWrite = channel.wrapWrite
 return function (path, options)
   local stdin, stdout, stderr
   local stdio = options.stdio
+
+  -- If no custom stdio is passed in, create pipes for stdin, stdout, stderr.
+  if not stdio then
+    stdio = {true, true, true}
+    options.stdio = stdio
+  end
 
   if stdio then
     if stdio[1] == true then
