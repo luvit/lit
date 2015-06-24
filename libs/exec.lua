@@ -32,14 +32,13 @@ return function (command, ...)
   split(function ()
     local parts = {}
     for data in child.stdout.read do
-      p("stdin", data)
       parts[#parts + 1] = data
     end
     stdout = table.concat(parts)
   end, function ()
     local parts = {}
     for data in child.stderr.read do
-      p("stdout", data)
+      parts[#parts + 1] = data
     end
     stderr = table.concat(parts)
   end, function ()
