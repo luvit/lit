@@ -22,7 +22,8 @@ local split = require('coro-split')
 return function (command, ...)
   local child = spawn(command, {
     args = {...},
-    stdio = {false}
+    -- Tell spawn to create coroutine pipes for stdout and stderr only
+    stdio = {nil, true, true}
   })
   local stdout, stderr, code, signal
 
