@@ -119,7 +119,7 @@ function exports.request(method, url, headers, body)
   end
 
   if type(body) == "string" then
-    if not (contentLength and chunked) then
+    if not chunked and not contentLength then
       req[#req + 1] = {"Content-Length", #body}
     end
   end
