@@ -22,7 +22,6 @@ return {
     "creationix/coro-wrapper@1.0.0",
     "creationix/coro-spawn@0.2.0",
     "creationix/coro-split@0.1.0",
-    "creationix/hex-bin@1.0.0",
     "creationix/semver@1.0.4",
     "creationix/git@2.0.2",
     "creationix/prompt@1.0.3",

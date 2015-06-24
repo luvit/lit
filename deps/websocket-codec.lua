@@ -1,8 +1,5 @@
 exports.name = "creationix/websocket-codec"
 exports.version = "1.0.5"
-exports.dependencies = {
-  "creationix/hex-bin@1.0.0"
-}
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
 exports.description = "A codec implementing websocket framing and helpers for handshakeing"
 exports.tags = {"http", "websocket", "codec"}
@@ -12,7 +9,6 @@ exports.author = { name = "Tim Caswell" }
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
 local random = require('openssl').random
-local hexToBin = require('hex-bin').hexToBin
 
 local band = bit.band
 local bor = bit.bor
@@ -147,7 +143,7 @@ end
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 function exports.acceptKey(key)
-  return gsub(base64(hexToBin(digest("sha1", key .. websocketGuid))), "\n", "")
+  return gsub(base64(digest("sha1", key .. websocketGuid, true)), "\n", "")
 end
 local acceptKey = exports.acceptKey
 
