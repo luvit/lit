@@ -12,7 +12,6 @@ exports.author = { name = "Tim Caswell" }
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
 local random = require('openssl').random
-local hexToBin = require('hex-bin').hexToBin
 
 local band = bit.band
 local bor = bit.bor
@@ -147,7 +146,7 @@ end
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 function exports.acceptKey(key)
-  return gsub(base64(hexToBin(digest("sha1", key .. websocketGuid))), "\n", "")
+  return gsub(base64(digest("sha1", key .. websocketGuid, true)), "\n", "")
 end
 local acceptKey = exports.acceptKey
 
