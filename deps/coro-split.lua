@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-split"
-exports.version = "0.1.0"
+exports.version = "0.1.1"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-split.lua"
 exports.description = "An coro style helper for running tasks concurrently."
 exports.tags = {"coro", "split"}
@@ -21,7 +21,6 @@ return function (...)
   local results = {}
   local function check()
     left = left - 1
-    p{left=left,results=results}
     if left == 0 then
       assert(coroutine.resume(thread, unpack(results)))
     end
