@@ -1,0 +1,91 @@
+
+exports.name = "creationix/coro-spawn"
+exports.version = "0.1.0"
+exports.dependencies = {
+  "creationix/coro-channel@1.2.0"
+}
+exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-spawn.lua"
+exports.description = "An coro style interface to child processes."
+exports.tags = {"coro", "spawn", "child", "process"}
+exports.license = "MIT"
+exports.author = { name = "Tim Caswell" }
+
+local uv = require('uv')
+local channel = require('coro-channel')
+local wrapRead = channel.wrapRead
+local wrapWrite = channel.wrapWrite
+
+return function (path, options)
+  local stdin, stdout, stderr
+  local stdio = options.stdio or {}
+  options.stdio = stdio
+
+  if not stdio[1] then
+    stdin = uv.new_pipe(false)
+    stdio[1] = stdin
+  end
+
+  if not stdio[2] then
+    stdout = uv.new_pipe(false)
+    stdio[2] = stdout
+  end
+
+  if not stdio[3] then
+    stderr = uv.new_pipe(false)
+    stdio[3] = stderr
+  end
+
+  local exitThread, exitCode, exitSignal
+
+  local function onExit(code, signal)
+    exitCode = code
+    exitSignal = signal
+    if not exitThread then return end
+    local thread = exitThread
+    exitThread = nil
+    return assert(coroutine.resume(thread, code, signal))
+  end
+
+  local handle, pid = uv.spawn(path, options, onExit)
+
+  -- If the process has exited already, return the cached result.
+  -- Otherwise, wait for it to exit and return the result.
+  local function waitExit()
+    if exitCode then
+      return exitCode, exitSignal
+    end
+    assert(not exitThread, "Already waiting on exit")
+    exitThread = coroutine.running()
+    return coroutine.yield()
+  end
+
+  local result = {
+    handle = handle,
+    pid = pid,
+    waitExit = waitExit
+  }
+
+  if stdin then
+    result.stdin = {
+      handle = stdin,
+      write = wrapWrite(stdin)
+    }
+  end
+
+  if stdout then
+    result.stdout = {
+      handle = stdout,
+      read = wrapRead(stdout)
+    }
+  end
+
+  if stderr then
+    result.stderr = {
+      handle = stderr,
+      read = wrapRead(stderr)
+    }
+  end
+
+  return result
+
+end

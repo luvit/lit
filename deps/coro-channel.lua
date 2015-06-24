@@ -1,30 +1,16 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.1.0"
+exports.version = "1.2.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
 exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
 exports.tags = {"coro", "adapter"}
 exports.license = "MIT"
 exports.author = { name = "Tim Caswell" }
 
--- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
-function exports.wrapStream(socket)
+local function wrapRead(socket)
   local paused = true
   local queue = {}
   local waiting
-
   local onRead
-
-  local function read()
-    if #queue > 0 then
-      return unpack(table.remove(queue, 1))
-    end
-    if paused then
-      paused = false
-      assert(socket:read_start(onRead))
-    end
-    waiting = coroutine.running()
-    return coroutine.yield()
-  end
 
   function onRead(err, chunk)
     local data = err and {nil, err} or {chunk}
@@ -41,10 +27,26 @@ function exports.wrapStream(socket)
     end
   end
 
+  return function ()
+    if #queue > 0 then
+      return unpack(table.remove(queue, 1))
+    end
+    if paused then
+      paused = false
+      assert(socket:read_start(onRead))
+    end
+    waiting = coroutine.running()
+    return coroutine.yield()
+  end
+
+end
+
+local function wrapWrite(socket)
+
   local function wait()
     local thread = coroutine.running()
     return function (err)
-      coroutine.resume(thread, err)
+      assert(coroutine.resume(thread, err))
     end
   end
 
@@ -56,7 +58,7 @@ function exports.wrapStream(socket)
     end
   end
 
-  local function write(chunk)
+  return function (chunk)
     if chunk == nil then
       return shutdown()
     end
@@ -65,7 +67,14 @@ function exports.wrapStream(socket)
     return not err, err
   end
 
-  return read, write
+end
+
+exports.wrapRead = wrapRead
+exports.wrapWrite = wrapWrite
+
+-- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
+function exports.wrapStream(socket)
+  return wrapRead(socket), wrapWrite(socket)
 end
 
 
