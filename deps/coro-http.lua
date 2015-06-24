@@ -66,7 +66,7 @@ local function getConnection(host, port, tls)
     if connection.host == host and connection.port == port and connection.tls == tls then
       table.remove(connections, i)
       -- Make sure the connection is still alive before reusing it.
-      if not connection.socket:is_closing() and connection.socket:is_active() then
+      if not connection.socket:is_closing() then
         return connection
       end
     end
