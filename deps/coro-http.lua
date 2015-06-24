@@ -1,7 +1,7 @@
 exports.name = "creationix/coro-http"
-exports.version = "1.1.0"
+exports.version = "1.1.0-1"
 exports.dependencies = {
-  "creationix/coro-net@1.1.0",
+  "creationix/coro-net@1.1.1",
   "creationix/coro-tls@1.2.0",
   "creationix/coro-wrapper@1.0.0",
   "luvit/http-codec@1.0.0"

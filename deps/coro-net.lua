@@ -1,6 +1,6 @@
 
 exports.name = "creationix/coro-net"
-exports.version = "1.1.0-1"
+exports.version = "1.1.1-1"
 exports.dependencies = {
   "creationix/coro-channel@1.2.0"
 }
@@ -51,7 +51,7 @@ local function normalize(options)
       options.host or "127.0.0.1",
       assert(options.port, "options.port is required for tcp connections")
   elseif options.path then
-    return false
+    return false, options.path
   else
     error("Must set either options.path or options.port")
   end
@@ -72,7 +72,7 @@ function exports.connect(options)
     socket:connect(res[1].addr, res[1].port, makeCallback(options.timeout))
   else
     socket = uv.new_pipe(false)
-    socket:connect(options.path, makeCallback(options.timeout))
+    socket:connect(host, makeCallback(options.timeout))
   end
   success, err = coroutine.yield()
   if not success then return nil, err end
@@ -88,7 +88,7 @@ function exports.createServer(options, onConnect)
     assert(server:bind(host, port))
   else
     server = uv.new_pipe(false)
-    assert(server:bind(options.path))
+    assert(server:bind(host))
   end
   assert(server:listen(256, function (err)
     assert(not err, err)
