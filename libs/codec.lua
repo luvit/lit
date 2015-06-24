@@ -16,8 +16,7 @@ limitations under the License.
 
 --]]
 
-local binToHex = require('hex-bin').binToHex
-local hexToBin = require('hex-bin').hexToBin
+local hex = require('openssl').hex
 local deflate = require('miniz').deflate
 local inflate = require('miniz').inflate
 
@@ -43,7 +42,7 @@ local function decodeBinary(message)
     local wants = {}
     for i = 1, byte(message, 2) do
       local start = i * 20 - 17
-      wants[i] = binToHex(sub(message, start, start + 19))
+      wants[i] = hex(sub(message, start, start + 19), true)
     end
     return "wants", wants
   end
@@ -67,7 +66,7 @@ function encoders.wants(hashes)
   assert(#hashes > 0, "Can't sent empty wants list")
   local data = {}
   for i = 1, #hashes do
-    data[i] = hexToBin(hashes[i])
+    data[i] = hex(hashes[i], false)
   end
   return {
     opcode = 2,
