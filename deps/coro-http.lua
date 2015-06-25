@@ -151,16 +151,16 @@ function exports.request(method, url, headers, body)
   if req.method == "HEAD" then
     connection.reset()
   else
-    local continue = false
-    for item in read do
+    while true do
+      local item = read()
+      if not item then
+        res.keepAlive = false
+        break
+      end
       if #item == 0 then
-        continue = true
         break
       end
       body[#body + 1] = item
-    end
-    if not continue then
-      res.keepAlive = false
     end
   end
 
