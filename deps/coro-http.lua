@@ -130,9 +130,16 @@ function exports.request(method, url, headers, body)
   if not res then error("Connection closed") end
 
   body = {}
+  local continue = false
   for item in read do
-    if #item == 0 then break end
+    if #item == 0 then
+      continue = true
+      break
+    end
     body[#body + 1] = item
+  end
+  if not continue then
+    res.keepAlive = false
   end
 
   if res.keepAlive then
