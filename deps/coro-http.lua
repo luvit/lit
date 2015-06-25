@@ -77,13 +77,19 @@ local function getConnection(host, port, tls)
   if tls then
     read, write = tlsWrap(read, write)
   end
+  local httpRead, updateRead = wrapper.reader(read, httpCodec.decoder())
   return {
     socket = socket,
     host = host,
     port = port,
     tls = tls,
-    read = wrapper.reader(read, httpCodec.decoder()),
+    read = httpRead,
     write = wrapper.writer(write, httpCodec.encoder()),
+    reset = function ()
+      -- This is called after parsing the response head from a HEAD request.
+      -- If you forget, the codec might hang waiting for a body that doesn't exist.
+      updateRead(httpCodec.decoder())
+    end
   }
 end
 exports.getConnection = getConnection
@@ -142,16 +148,20 @@ function exports.request(method, url, headers, body)
   end
 
   body = {}
-  local continue = false
-  for item in read do
-    if #item == 0 then
-      continue = true
-      break
+  if req.method == "HEAD" then
+    connection.reset()
+  else
+    local continue = false
+    for item in read do
+      if #item == 0 then
+        continue = true
+        break
+      end
+      body[#body + 1] = item
     end
-    body[#body + 1] = item
-  end
-  if not continue then
-    res.keepAlive = false
+    if not continue then
+      res.keepAlive = false
+    end
   end
 
   if res.keepAlive then
