@@ -292,6 +292,7 @@ local function makeCore(config)
   end
 
   db.importKeys = core.importKeys
+  db.config = core.config
 
   function core.authUser()
     local key = assert(getKey(), "No private key")

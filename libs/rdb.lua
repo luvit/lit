@@ -169,12 +169,14 @@ return function(db, url, timeout)
             local kind, raw = deframe(data)
             assert(kind == "tag")
             local tag = decodeTag(raw)
-            local owner = tag.tag:match("[^/]+")
-            local ok = verifySignature(db, owner, raw)
-            if ok then
-              log("importing", tag.tag, "highlight")
-            else
-              log("importing", tag.tag, "failure")
+            if db.config.verifySignatures then
+              local owner = tag.tag:match("[^/]+")
+              local ok = verifySignature(db, owner, raw)
+              if ok then
+                log("importing", tag.tag, "highlight")
+              else
+                log("importing", tag.tag, "failure")
+              end
             end
           end
           local actual = db.save(data)
