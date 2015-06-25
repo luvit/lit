@@ -68,6 +68,7 @@ local function getConnection(host, port, tls)
       -- Make sure the connection is still alive before reusing it.
       if not connection.socket:is_closing() then
         connection.reused = true
+        connection.socket:ref()
         return connection
       end
     end
@@ -90,6 +91,7 @@ exports.getConnection = getConnection
 local function saveConnection(connection)
   if connection.socket:is_closing() then return end
   connections[#connections + 1] = connection
+  connection.socket:unref()
 end
 exports.saveConnection = saveConnection
 
