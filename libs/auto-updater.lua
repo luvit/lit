@@ -30,8 +30,7 @@ function exports.matchVersions(name, version)
   local versions = assert(jsonParse(body), "Problem parsing JSON response from lit")
   local key
   return semver.match(version, function ()
-    local n = next(versions, key)
-    key = n
+    key = next(versions, key)
     return key
   end)
 end

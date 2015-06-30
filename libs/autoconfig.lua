@@ -65,31 +65,6 @@ end
 
 local meta = require('../package')
 
-if config.upstream then
-  -- Only check for updates when online
-  local now = os.time()
-  -- Only check if we haven't checked for a while
-  -- TODO: only check if has internet.
-  if not config.checked or tonumber(config.checked) < now - 1000 then
-    config.checked = os.time()
-    dirty = true
-    log("checking for update", meta.version)
-    if not pcall(function ()
-      config.toupdate = require('auto-updater').check(meta)
-    end) then
-      log("no connection to update server", "lit.luvit.io")
-    end
-  end
-
-end
-if config.toupdate == meta.version then
-  config.toupdate = nil
-  dirty = true
-end
-
-if config.toupdate then
-  log("lit update available", config.toupdate, "highlight")
-end
 
 if not config.database then
   config.database = prefix .. "litdb.git"
