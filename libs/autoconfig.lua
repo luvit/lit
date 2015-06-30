@@ -63,9 +63,6 @@ if not config.defaultUpstream then
   dirty = true
 end
 
-local meta = require('../package')
-
-
 if not config.database then
   config.database = prefix .. "litdb.git"
   dirty = true
