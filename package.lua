@@ -7,7 +7,7 @@ return {
   license = "Apache 2",
   author = { name = "Tim Caswell" },
   luvi = {
-    version = "2.1.2",
+    version = "2.1.3",
     flavor = "regular",
   },
   dependencies = {
