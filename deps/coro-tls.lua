@@ -82,7 +82,16 @@ exports.wrap = function (read, write, options)
   local function shutdown()
     if done then return end
     done = true
-    ssl:shutdown()
+    while true do
+      if ssl:shutdown() then break end
+      flush()
+      local chunk = read()
+      if chunk then
+        bin:write(chunk)
+      else
+        break
+      end
+    end
     flush()
     write()
   end
