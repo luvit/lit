@@ -149,12 +149,16 @@ return function (db, prefix)
     local tag = db.loadAs("tag", hash)
     local meta = tag.message:match("%b{}")
     meta = meta and jsonParse(meta) or {}
-    meta.url = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
     meta.version = version
     meta.hash = hash
     meta.tagger = tag.tagger
     meta.type = tag.type
     meta.object = tag.object
+    local filename = author .. "/" .. name .. "/v" .. version
+    if meta.type == "blob" then
+      filename = filename .. ".lua"
+    end
+    meta.url = makeUrl(meta.type, meta.object, filename)
     metaCache[hash] = meta
     return meta
   end
@@ -209,11 +213,6 @@ return function (db, prefix)
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
       local meta = loadMeta(author, name, version)
       meta.score = nil
-      local filename = author .. "/" .. name .. "-v" .. version
-      if meta.type == "blob" then
-        filename = filename .. ".lua"
-      end
-      meta.url = makeUrl(meta.type, meta.object, filename)
       return meta
     end,
     "^/packages/([^/]+)/(.+)$", function (author, name)

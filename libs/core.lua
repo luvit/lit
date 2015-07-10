@@ -307,15 +307,18 @@ local function makeCore(config)
     end
   end
 
-  local function makeZip(rootHash, target)
+  local function makeZip(rootHash, target, luvi_source)
     log("creating binary", target, "highlight")
+    if luvi_source then
+      log("using luvi from", luvi_source, "highlight")
+    end
     local meta = pkg.queryDb(db, rootHash)
 
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
     local binSize
-    if meta.luvi and not (meta.luvi.flavor == "regular" and semver.gte(luvi.version, meta.luvi.version)) then
+    if meta.luvi and not (meta.luvi.flavor == "regular" and semver.gte(luvi.version, meta.luvi.version)) and not luvi_source then
       local url = luviUrl(meta.luvi)
       log("downloading custom luvi", url)
       -- TODO: stream the binary and show progress
@@ -325,7 +328,7 @@ local function makeCore(config)
       uv.fs_write(fd, bin, -1)
     else      -- Copy base binary
       do
-        local source = uv.exepath()
+        local source = luvi_source or uv.exepath()
 
         local reader = miniz.new_reader(source)
         if reader then
@@ -356,7 +359,7 @@ local function makeCore(config)
     return target
   end
 
-  function core.make(source, target)
+  function core.make(source, target, luvi_source)
     local zfs
     -- Use vfs so that source can be a zip file or a folder.
     zfs, source = vfs(source)
@@ -375,7 +378,7 @@ local function makeCore(config)
     local deps = getInstalled(zfs, source)
     calculateDeps(core.db, deps, meta.dependencies)
     hash = installDeps(core.db, hash, deps, true)
-    return makeZip(hash, target)
+    return makeZip(hash, target, luvi_source)
   end
 
   local function makeGit(target, url)
