@@ -318,7 +318,7 @@ local function makeCore(config)
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
     local binSize
-    if meta.luvi and not (meta.luvi.flavor == "regular" and semver.gte(luvi.version, meta.luvi.version)) and not luvi_source then
+    if not luvi_source and meta.luvi and (meta.luvi.url or meta.luvi.flavor ~= "regular" or not semver.gte(luvi.version, meta.luvi.version)) then
       local url = luviUrl(meta.luvi)
       log("downloading custom luvi", url)
       -- TODO: stream the binary and show progress
