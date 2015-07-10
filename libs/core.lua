@@ -82,7 +82,7 @@ local function luviUrl(meta)
   local flavor = meta.flavor or "regular"
   local version = semver.normalize(meta.version or luvi.version)
   return string.format(
-    "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s",
+    meta.url or "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s",
     version, flavor, arch)
 end
 
