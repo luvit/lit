@@ -51,6 +51,8 @@ local queryFs = require('pkg').query
 local installDeps = require('install-deps').toDb
 local installDepsFs = require('install-deps').toFs
 local exportZip = require('export-zip')
+local digest = require('openssl').digest.digest
+local request = require('coro-http').request
 
 local quotepattern = '(['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..'])'
 local function escape(str)
@@ -64,26 +66,6 @@ local function run(...)
   else
     return nil, string.gsub(stderr, "%s*$", "")
   end
-end
-
-local function luviUrl(meta)
-
-  local arch
-  if jit.os == "Windows" then
-    if jit.arch == "x64" then
-      arch = "Windows-amd64.exe"
-    else
-      arch = "Windows-ia32.exe"
-    end
-  else
-    arch = run("uname", "-s") .. "_" .. run("uname", "-m")
-  end
-  meta = meta or {}
-  local flavor = meta.flavor or "regular"
-  local version = semver.normalize(meta.version or luvi.version)
-  return string.format(
-    meta.url or "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s",
-    version, flavor, arch)
 end
 
 -- Takes a time struct with a date and time in UTC and converts it into
@@ -178,6 +160,69 @@ local function makeCore(config)
     db.write(author, name, version, tagHash)
     log("new tag", fullTag, "success")
     return author, name, version, tagHash
+  end
+
+  local defaultTemplate = "https://github.com/luvit/luvi/releases/download/v%s/luvi-%s-%s"
+  -- Given the luvi section of a package metadata, return the fs path to luvi.
+  -- This will block and download it if needed.
+  function core.getLuvi(meta)
+    local flavor = meta and meta.flavor or "regular"
+    local version = semver.normalize(meta and meta.version or luvi.version)
+    local template = meta and meta.url or defaultTemplate
+    local arch
+    if jit.os == "Windows" then
+      if jit.arch == "x64" then
+        arch = "Windows-amd64.exe"
+      else
+        arch = "Windows-ia32.exe"
+      end
+    else
+      arch = run("uname", "-s") .. "_" .. run("uname", "-m")
+    end
+    local url = string.format(template, version, flavor, arch)
+    local path = pathJoin(db.storage.fs.base, "cache", digest("sha1", url), "luvi")
+
+    -- If it's already cached, return the path
+    if fs.access(path, "rx") then
+      return path
+    end
+
+    -- If the desired version matches our process try to extract it.
+    if template == defaultTemplate and flavor == "regular" and version == semver.normalize(luvi.version) then
+      local exe = uv.exepath()
+      local stdout = exec(exe, "-v")
+      local iversion = stdout:match("luvi version: v(%d+%.%d+%.%d+)")
+                    or stdout:match("luvi v(%d+%.%d+%.%d+)")
+      if iversion == version then
+        log("extracting luvi", exe)
+        local reader = miniz.new_reader(exe)
+        local binSize
+        if reader then
+          -- If contains a zip, find where the zip starts
+          binSize = reader:get_offset()
+        else
+          -- Otherwise just read the file size
+          binSize = assert(uv.fs_stat(exe)).size
+        end
+        assert(fs.mkdirp(pathJoin(path, "..")))
+        local fd = assert(fs.open(path, "w", 493)) -- 0755
+        local fd2 = assert(fs.open(exe, "r", 384)) -- 0600
+        assert(uv.fs_sendfile(fd, fd2, 0, binSize))
+        fs.close(fd2)
+        fs.close(fd)
+        return path
+      end
+    end
+
+    -- Otherwise download it fresh
+    log("downloading", url)
+    local head, body = request("GET", url)
+    assert(head.code == 200, "Problem downloading custom luvi: " .. url)
+    assert(fs.mkdirp(pathJoin(path, "..")))
+    local fd = assert(fs.open(path, "w", 493))
+    assert(fs.write(fd, body))
+    fs.close(fd)
+    return path
   end
 
   function core.publish(path)
