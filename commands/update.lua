@@ -9,6 +9,8 @@ local binDir = pathJoin(uv.exepath(), "..")
 local request = require('coro-http').request
 local semver = require('semver')
 local jsonParse = require('json').parse
+local luviUrl = require('luvi-url')
+local fs = require('coro-fs')
 
 -- Returns current version, latest version and latest compat version.
 local function checkUpdate()
@@ -39,7 +41,7 @@ local toupdate
 print("Detected running lit version " .. version)
 if version == latest then
   print("Lit is up to date")
-elseif version == best then
+elseif not best or version == best then
   print("Major update available to version " .. latest);
   toupdate = latest
 elseif best then
@@ -52,10 +54,61 @@ else
 end
 
 if toupdate then
-  -- Download zip
+  local target = uv.exepath()
+  local stdout = exec(target, "-v")
+  if not stdout:match("^lit version:") then
+    print("Current binary (" .. target .. ") is not lit")
+    if jit.os == "Windows" then
+      target = "C:\\luvit\\lit.exe"
+    else
+      target = "/usr/local/bin/lit"
+    end
+    print("defaulting to " .. target .. " for target")
+  end
+
+  -- Download meta
+  local url = "http://lit.luvit.io/packages/luvit/lit/v" .. toupdate
+  local head, body = request("GET", url)
+  if head.code ~= 200 then
+    error("Expected 200 response from lit server, but got " .. head.code)
+  end
+  local meta = jsonParse(body)
+
   -- Ensure proper luvi binary
+  url = luviUrl(meta.luvi)
+  print("Downloading " .. url .. "...")
+  head, body = request("GET", url)
+  if head.code ~= 200 then
+    error("Expected 200 response from lit server, but got " .. head.code)
+  end
+
+  local tempPath = pathJoin(uv.cwd(), "lit-temp")
+
+  local fd = assert(fs.open(tempPath, "w", 493))
+  fs.write(fd, body)
+
+  -- Download zip
+  url = "https://lit.luvit.io/packages/luvit/lit/v" .. toupdate .. ".zip"
+  print("Downloading " .. url .. "...")
+  head, body = request("GET", url)
+  if head.code ~= 200 then
+    error("Expected 200 response from lit server, but got " .. head.code)
+  end
+
   -- build zip using zip and luvi
+  fs.write(fd, body)
+  fs.close(fd)
+
   -- replace installed lit binary
+  local old = fs.stat(target)
+  if old then
+    fs.rename(target, target .. ".old")
+  end
+  fs.rename(tempPath, target)
+  if old then
+    fs.unlink(target .. ".old")
+  end
+
   -- run update recursivly as detached child and kill self
 end
 
