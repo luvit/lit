@@ -362,33 +362,12 @@ local function makeCore(config)
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
 
-    local binSize
-    if not luvi_source and meta.luvi and (meta.luvi.url or meta.luvi.flavor ~= "regular" or not semver.gte(luvi.version, meta.luvi.version)) then
-      local url = luviUrl(meta.luvi)
-      log("downloading custom luvi", url)
-      -- TODO: stream the binary and show progress
-      local res, bin = http.request("GET", url, {})
-      assert(res.code == 200, bin)
-      binSize = #bin
-      uv.fs_write(fd, bin, -1)
-    else      -- Copy base binary
-      do
-        local source = luvi_source or uv.exepath()
-
-        local reader = miniz.new_reader(source)
-        if reader then
-          -- If contains a zip, find where the zip starts
-          binSize = reader:get_offset()
-        else
-          -- Otherwise just read the file size
-          binSize = uv.fs_stat(source).size
-        end
-        local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
-        log("copying binary prefix", binSize .. " bytes from " .. source)
-        assert(uv.fs_sendfile(fd, fd2, 0, binSize))
-        uv.fs_close(fd2)
-      end
-    end
+    local source = luvi_source or core.getLuvi(meta.luvi)
+    local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
+    local binSize = assert(uv.fs_fstat(fd2)).size
+    log("inserting luvi", source)
+    assert(uv.fs_sendfile(fd, fd2, 0, binSize))
+    uv.fs_close(fd2)
 
     assert(uv.fs_write(fd, exportZip(db, rootHash, true), binSize))
     uv.fs_close(fd)
