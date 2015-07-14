@@ -4,9 +4,12 @@ $LIT_VERSION = "2.1.8"
 
 if (test-path env:LUVI_ARCH) {
   $LUVI_ARCH = $env:LUVI_ARCH
-}
-else {
-  $LUVI_ARCH = "Windows-amd64"
+} else {
+  if ([System.Environment]::Is64BitProcess) {
+    $LUVI_ARCH = "Windows-amd64"
+  } else {
+    $LUVI_ARCH = "Windows-ia32"
+  }
 }
 $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"
 $LIT_URL = "https://lit.luvit.io/packages/luvit/lit/v$LIT_VERSION.zip"
