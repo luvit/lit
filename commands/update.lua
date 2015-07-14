@@ -1,41 +1,126 @@
 local log = require('log').log
-local updater = require('auto-updater')
+local core = require('core')()
 local uv = require('uv')
 local pathJoin = require('luvi').path.join
 local exec = require('exec')
-local prompt = require('prompt')(require('pretty-print'))
-local miniz = require('miniz')
-local binDir = pathJoin(uv.exepath(), "..")
+local request = require('coro-http').request
+local semver = require('semver')
+local jsonParse = require('json').parse
+local fs = require('coro-fs')
+local spawn = require('coro-spawn')
+local updater = require('auto-updater')
 
-
-local function updateLit()
-  local config = require('autoconfig')
-  config.checked = nil
-  config.toupdate = nil
-  config.save()
-  return updater.check(require('../package'), uv.exepath())
+local function fetch(url)
+  log("downloading", url)
+  local head, body = request("GET", url)
+  if head.code ~= 200 then
+    error("Expected 200 response from " .. url .. ", but got " .. head.code)
+  end
+  return body
 end
 
-local function updateLuvit()
-  local luvitPath = pathJoin(binDir, "luvit")
-  if require('ffi').os == "Windows" then
+-- Returns current version, latest version and latest compat version.
+local function checkUpdate()
+  -- Read the current lit version
+  local meta = require('../package')
+  local version = semver.normalize(meta.version)
+  local body = fetch("https://lit.luvit.io/packages/luvit/lit")
+  local versions = assert(jsonParse(body), "Problem parsing JSON response from lit")
+  local key
+  local best = semver.match(version, function ()
+    key = next(versions, key)
+    return key
+  end)
+  key = nil
+  local latest = semver.match(nil, function ()
+    key = next(versions, key)
+    return key
+  end)
+  return version, latest, best
+end
+
+local version, latest, best = checkUpdate()
+local toupdate
+if version == latest then
+  log("lit is up to date", version, "highlight")
+elseif not best or version == best then
+  log("update status", "major update available: " .. latest)
+  toupdate = latest
+elseif best then
+  log("update status", "update available: " .. best)
+  toupdate = best
+elseif not semver.gte(latest, version) then
+  log("update status", "newer than published: " .. latest)
+else
+  log("update status", "unknown series")
+end
+
+if toupdate then
+  -- Guess path to lit install
+  local target = uv.exepath()
+  local stdout = exec(target, "-v")
+  if not stdout:match("^lit version:") then
+    target = pathJoin(target, "..", "lit")
+    if jit.os == "Windows" then
+      target = target .. ".exe"
+    end
+  end
+
+  -- Download metadata for updated lit version
+  local meta = jsonParse(fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate))
+
+  -- Ensure proper luvi binary
+  local luviPath = core.getLuvi(meta.luvi)
+
+  -- Copy luvi to start of new file
+  local tempPath = pathJoin(uv.cwd(), "lit-temp")
+  local fd = assert(fs.open(tempPath, "w", 493)) -- 755
+  local fd2 = assert(fs.open(luviPath, "r"))
+  local size = assert(fs.fstat(fd2)).size
+  assert(uv.fs_sendfile(fd, fd2, 0, size))
+  fs.close(fd2)
+
+  -- Download and append zip
+  local zip = fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate .. ".zip")
+  assert(fs.write(fd, zip))
+  fs.close(fd)
+
+  -- replace installed lit binary
+  local old = fs.stat(target)
+  if old then
+    fs.rename(target, target .. ".old")
+  end
+  fs.rename(tempPath, target)
+  if old then
+    fs.unlink(target .. ".old")
+  end
+  log("recursivly running update", target .. ' update', 'highlight')
+  local child = spawn(target, {
+    args = {"update"},
+    stdio = {0, 1, 2}
+  })
+  return(child.waitExit())
+end
+
+do
+  local luvitPath = pathJoin(uv.exepath(), "..", "luvit")
+  if jit.os == "Windows" then
     luvitPath = luvitPath .. ".exe"
   end
   if uv.fs_stat(luvitPath) then
     local bundle = require('luvi').makeBundle({luvitPath})
-    local fs = {
+    updater.check(require('pkg').query({
       readFile = bundle.readfile,
       stat = bundle.stat,
-    }
-    return updater.check(require('pkg').query(fs, "."), luvitPath)
+    }, "."), luvitPath)
   else
-    return updater.check({ name = "luvit/luvit" }, luvitPath)
+    updater.check({ name = "luvit/luvit" }, luvitPath)
   end
 end
 
-local function updateLuvi()
-  local target = pathJoin(binDir, "luvi")
-  if require('ffi').os == "Windows" then
+do
+  local target = pathJoin(uv.exepath(), "..", "luvi")
+  if jit.os == "Windows" then
     target = target .. ".exe"
   end
   local new, old
@@ -50,11 +135,6 @@ local function updateLuvi()
 
     if version then
       log("found system luvi", version)
-      local res = prompt("Are you sure you wish to update " .. target .. " to luvi " .. toupdate .. "?", "Y/n")
-      if not res:match("[yY]") then
-        log("canceled update", version, "err")
-        return
-      end
     end
 
     log("updating luvi", toupdate)
@@ -67,16 +147,8 @@ local function updateLuvi()
   end
 
   local fd = assert(uv.fs_open(new, "w", 511)) -- 0777
-  local source = uv.exepath()
-  local reader = miniz.new_reader(source)
-  local binSize
-  if reader then
-    -- If contains a zip, find where the zip starts
-    binSize = reader:get_offset()
-  else
-    -- Otherwise just read the file size
-    binSize = uv.fs_stat(source).size
-  end
+  local source = core.getLuvi()
+  local binSize = uv.fs_stat(source).size
   local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
   assert(uv.fs_sendfile(fd, fd2, 0, binSize))
   uv.fs_close(fd2)
@@ -91,19 +163,3 @@ local function updateLuvi()
     log("luvi install complete", toupdate, "success")
   end
 end
-
-local commands = {
-  luvi = updateLuvi,
-  luvit = updateLuvit,
-  lit = updateLit,
-  all = function ()
-    updateLit()
-    updateLuvit()
-    updateLuvi()
-  end
-}
-local cmd = commands[args[2] or "all"]
-if not cmd then
-  error("Unknown update command: " .. args[2])
-end
-cmd()
