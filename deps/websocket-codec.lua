@@ -210,7 +210,9 @@ function exports.handleHandshake(head, protocol)
   end
 
   -- Must have 'Upgrade: websocket' and 'Connection: Upgrade' headers
-  if not headers.connection or lower(headers.connection) ~= "upgrade" then return end
+  if not (headers.connection and headers.upgrade and
+          headers.connection:lower():find("upgrade", 1, true) and
+          headers.upgrade:lower():find("websocket", 1, true)) then return end
 
   -- Make sure it's a new client speaking v13 of the protocol
   if tonumber(headers["sec-websocket-version"]) < 13 then
