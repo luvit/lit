@@ -1,5 +1,5 @@
 exports.name = "creationix/websocket-codec"
-exports.version = "1.0.6"
+exports.version = "1.0.7"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
 exports.description = "A codec implementing websocket framing and helpers for handshakeing"
 exports.tags = {"http", "websocket", "codec"}
