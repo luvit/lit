@@ -158,8 +158,8 @@ function exports.handshake(options, request)
     path = path,
     {"Connection", "Upgrade"},
     {"Upgrade", "websocket"},
-    {"Sec-Websocket-Version", "13"},
-    {"Sec-Websocket-Key", key},
+    {"Sec-WebSocket-Version", "13"},
+    {"Sec-WebSocket-Key", key},
   }
   for i = 1, #options do
     req[#req + 1] = options[i]
@@ -168,7 +168,7 @@ function exports.handshake(options, request)
     req[#req + 1] = {"Host", host}
   end
   if protocol then
-    req[#req + 1] = {"Sec-Websocket-Protocol", protocol}
+    req[#req + 1] = {"Sec-WebSocket-Protocol", protocol}
   end
   local res = request(req)
   if not res then
@@ -199,7 +199,7 @@ end
 
 function exports.handleHandshake(head, protocol)
 
-  -- Websocket connections must be GET requests
+  -- WebSocket connections must be GET requests
   if not head.method == "GET" then return end
 
   -- Parse the headers for quick reading
