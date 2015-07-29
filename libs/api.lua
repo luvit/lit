@@ -376,7 +376,15 @@ return function (db, prefix)
     end
     if not prefix then
       local host = headers.host
-      prefix = host and "http://" .. host or ""
+      if host then
+        if host:match("localhost") then
+          prefix = "http://" .. host
+        else
+          prefix = "https://" .. host
+        end
+      else
+        prefix = ""
+      end
     end
     local body, extra
     for i = 1, #routes, 2 do

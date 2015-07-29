@@ -265,7 +265,7 @@ Lit servers export a simple REST based interface for browsing the package conten
 This is a simple rest API for reading the remote database over HTTP.
 It uses hypermedia in the JSON responses to make linking between requests simple.
 
-The API for the main lit repository can be found at http://lit.luvit.io/
+The API for the main lit repository can be found at https://lit.luvit.io/
 
 ```
 GET / -> api json {
