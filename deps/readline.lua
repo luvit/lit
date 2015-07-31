@@ -16,7 +16,7 @@ limitations under the License.
 
 --]]
 exports.name = "luvit/readline"
-exports.version = "1.1.0-1"
+exports.version = "1.1.1-1"
 exports.homepage = "https://github.com/luvit/luvit/blob/master/deps/readline.lua"
 exports.description = "A readline interface for terminals in pure lua."
 exports.tags = {"readline", "tty"}
@@ -440,7 +440,7 @@ function Editor:readLine(prompt, callback)
 
   self.prompt = prompt
   self.promptLength = #prompt
-  self.columns = self.stdout:get_winsize() or 80
+  self.columns = self.stdout.get_winsize and self.stdout:get_winsize() or 80
 
   function onKey(err, key)
     local r, out, reason = pcall(function ()
