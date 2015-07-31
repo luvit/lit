@@ -1,7 +1,7 @@
 exports.name = "creationix/prompt"
-exports.version = "1.0.3-1"
+exports.version = "1.0.3-2"
 exports.dependencies = {
-  "luvit/readline@1.1.0"
+  "luvit/readline@1.1.1"
 }
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
 exports.description = "A simple wrapper around readline for quick terminal prompts."
