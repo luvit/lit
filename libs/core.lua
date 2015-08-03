@@ -142,7 +142,7 @@ local function makeCore(config)
       end
       error("Tag already exists, but there are local changes.\nBump " .. fullTag .. " and try again.")
     end
-    if meta.dependencies then
+    if meta.dependencies and kind == "tree" then
       local deps = {}
       calculateDeps(core.db, deps, meta.dependencies)
       meta.snapshot = installDeps(core.db, hash, deps, false)
