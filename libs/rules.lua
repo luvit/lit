@@ -55,8 +55,15 @@ function exports.compileFilter(path, rules, nativeOnly)
     }
   end
 
+  local default = not rules[1].allowed
+  if default then
+    log("compiling filter", path .. "/** includes by default (first rule is negative)")
+  else
+    log("compiling filter", path .. "/** excludes by default (first rule is positive)")
+  end
+
   return {
-    default = not rules[1].allowed,
+    default = default,
     prefix = "^" .. pathJoin(path:gsub(quotepattern, "%%%1"), '(.*)'),
     match = function (path)
       local allowed
@@ -104,7 +111,7 @@ function exports.isAllowed(path, entry, filters)
   end
 
   if subPath then
-    if allow and not isTree then
+    if not isTree then
       log("including", subPath)
     elseif not allow then
       log("skipping", subPath)
