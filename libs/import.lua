@@ -34,8 +34,10 @@ return function (db, fs, path, rules, nativeOnly)
 
   function importEntry(path, stat)
     if stat.type == "directory" then
-      local hash = importTree(path)
-      if not hash then return end
+      local hash, err = importTree(path)
+      if not hash then
+        return nil, err or "problem importing directory: " .. path
+      end
       return modes.tree, hash
     end
     if stat.type == "file" then
@@ -43,12 +45,30 @@ return function (db, fs, path, rules, nativeOnly)
         stat = fs.stat(path)
       end
       local mode = bit.band(stat.mode, 73) > 0 and modes.exec or modes.file
-      return mode, db.saveAs("blob", assert(fs.readFile(path)))
+      local data, hash, err
+      data, err = fs.readFile(path)
+      if not data then
+        return nil, err or "Problem reading file: " .. path
+      end
+      hash, err = db.saveAs("blob", data)
+      if not hash then
+        return nil, err or "Problem saving blob: " .. path
+      end
+      return mode, hash
     end
     if stat.type == "link" then
-      return modes.sym, db.saveAs("blob", assert(fs.readlink(path)))
+      local data, hash, err
+      data, err = fs.readlink(path)
+      if not data then
+        return nil, err or "Problem reading symlink: " .. path
+      end
+      hash, err = db.saveAs("blob", data)
+      if not hash then
+        return nil, err or "Problem saving symlink: " .. path
+      end
+      return modes.sym, hash
     end
-    error("Unsupported type at " .. path .. ": " .. tostring(stat.type))
+    return nil, "Unsupported entry type at " .. path .. ": " .. tostring(stat.type)
   end
 
   function importTree(path)
@@ -61,20 +81,46 @@ return function (db, fs, path, rules, nativeOnly)
       filters[#filters + 1] = compileFilter(path, meta.files, nativeOnly)
     end
 
-    for entry in assert(fs.scandir(path)) do
+    local iter, err = fs.scandir(path)
+    if not iter then
+      return nil, err or "Problem scanning directory: " .. path
+    end
+
+    for entry in iter do
       local fullPath = pathJoin(path, entry.name)
-      entry.type = entry.type or fs.stat(fullPath).type
+      if not entry.type then
+        local stat, err = fs.stat(fullPath)
+        if not (stat and stat.type) then
+          return nil, err or "Cannot determine entry type: " .. fullPath
+        end
+        entry.type = stat.type
+      end
       if isAllowed(fullPath, entry, filters) then
-        entry.mode, entry.hash = importEntry(fullPath, entry)
+        local mode, hash = importEntry(fullPath, entry)
+        if not mode then
+          return nil, hash or "Problem importing entry: " .. fullPath
+        end
+        entry.mode, entry.hash = mode, hash
         if entry.hash then
           items[#items + 1] = entry
         end
       end
     end
-    return #items > 0 and db.saveAs("tree", items)
+    if #items > 0 then
+      return db.saveAs("tree", items)
+    end
   end
 
-  local mode, hash = importEntry(path, assert(fs.stat(path)))
-  if not hash then return end
+  local stat, err = fs.stat(path)
+  if not stat then
+    return nil, err or "Problem statting: " .. path
+  end
+  local mode, hash = importEntry(path, stat)
+  if not mode then
+    return nil, hash or "Problem importing: " .. path
+  end
+  if not hash then
+    return nil, "Nothing to import"
+  end
   return modes.toType(mode), hash
 end
