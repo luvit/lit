@@ -198,9 +198,15 @@ return function (db, prefix)
         error("Can only create zips from trees")
       end
 
-      local deps = {}
-      calculateDeps(db, deps, meta.dependencies)
-      hash = installDeps(db, hash, deps)
+      local hash
+      -- Use snapshot if there is one
+      if meta.snapshot then
+        hash = meta.snapshot
+      else
+        local deps = {}
+        calculateDeps(db, deps, meta.dependencies)
+        hash = installDeps(db, hash, deps)
+      end
 
       local zip = exportZip(db, hash)
       local filename = meta.name:match("[^/]+$") .. "-v" .. meta.version .. ".zip"

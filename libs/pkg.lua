@@ -31,6 +31,7 @@ local isFile = require('git').modes.isFile
 local semver = require('semver')
 local pathJoin = require('luvi').path.join
 local listToMap = require('git').listToMap
+local jsonParse = require('json').parse
 
 local function evalModule(data, name)
   local fn, err = loadstring(data, name)
@@ -113,7 +114,16 @@ function exports.queryDb(db, hash)
   local kind, value = db.loadAny(hash)
   if kind == "tag" then
     hash = value.object
-    kind, value = db.loadAny(value.object)
+
+    -- Use metata data in tag message if found
+    local meta = jsonParse(value.message)
+    if meta then
+      return meta, value.type, hash
+    end
+
+    -- Otherwise search root tree or blob
+    kind, value = db.loadAny(hash)
+    assert(kind == value.type, "type mismatch")
   end
   local meta
   if kind == "tree" then
