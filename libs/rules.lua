@@ -82,16 +82,16 @@ local compileFilter = exports.compileFilter
 function exports.isAllowed(path, entry, filters)
 
   -- Ignore all hidden files and folders always.
-  local allow, subPath, default
+  local allow, matchesFilter, default, relativePath
   default = true
   for i = 1, #filters do
     local filter = filters[i]
-    local newPath = path:match(filter.prefix)
-    if newPath then
+    relativePath = path:match(filter.prefix)
+    if relativePath then
       default = filter.default
-      local newAllow = filter.match(newPath)
+      local newAllow = filter.match(relativePath)
       if newAllow ~= nil then
-        subPath = newPath
+        matchesFilter = true
         allow = newAllow
       end
     end
@@ -110,15 +110,13 @@ function exports.isAllowed(path, entry, filters)
     end
   end
 
-  if subPath then
-    if not isTree then
-      log("including", subPath)
-    elseif not allow then
-      log("skipping", subPath)
-    end
+  if allow and not isTree then
+    log("including", relativePath)
+  elseif not allow and matchesFilter then
+    log("skipping", relativePath)
   end
 
-  return allow, default, subPath
+  return allow, default, matchesFilter and relativePath
 end
 local isAllowed = exports.isAllowed
 
