@@ -387,7 +387,7 @@ local function makeCore(config)
     local zfs
     -- Use vfs so that source can be a zip file or a folder.
     zfs, source = vfs(source)
-    local meta = queryFs(zfs, source)
+    local meta = assert(queryFs(zfs, source))
     target = pathJoin(uv.cwd(), target or defaultTarget(meta))
 
     -- Determine if target is inside the source we're reading fom

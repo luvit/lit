@@ -71,24 +71,32 @@ function exports.query(fs, path)
   local packagePath = path
   local stat, data, err
   stat, err = fs.stat(path)
+  local attempts = {}
   if stat then
     if stat.type == "directory" then
       packagePath = path .. "/"
-      data, err = fs.readFile(pathJoin(path, "package.lua"))
+      local fullPath = pathJoin(path, "package.lua")
+      attempts[#attempts + 1] = fullPath
+      data, err = fs.readFile(fullPath)
       if err and not err:match("^ENOENT:") then error(err) end
       if not data then
-        data, err = fs.readFile(pathJoin(path, "init.lua"))
+        fullPath = pathJoin(path, "init.lua")
+        attempts[#attempts + 1] = fullPath
+        data, err = fs.readFile(fullPath)
         if err and not err:match("^ENOENT:") then error(err) end
       end
     else
+      attempts[#attempts + 1] = packagePath
       data, err = fs.readFile(packagePath)
     end
   elseif err:match("^ENOENT:") then
     packagePath = packagePath .. ".lua"
+    attempts[#attempts + 1] = packagePath
     data, err = fs.readFile(packagePath)
   end
   if not data then
-    return data, err or "Can't find package at " .. path
+    local sep = "\n  Looked in: "
+    return data, "Can't find package at " .. path .. sep .. table.concat(attempts, sep)
   end
   local meta = evalModule(data, packagePath)
   local clean = {}

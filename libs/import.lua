@@ -35,8 +35,8 @@ return function (db, fs, path, rules, nativeOnly)
   function importEntry(path, stat)
     if stat.type == "directory" then
       local hash, err = importTree(path)
-      if not hash then
-        return nil, err or "problem importing directory: " .. path
+      if not hash and err then
+        return nil, err
       end
       return modes.tree, hash
     end
