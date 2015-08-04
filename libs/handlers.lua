@@ -99,6 +99,10 @@ return function (core)
       remote.tag = tag
       remote.authorized = authorized
       hashes[#hashes + 1] = tag.object
+      local meta = jsonParse(tag.message)
+      if meta and meta.snapshot then
+        hashes[#hashes + 1] = meta.snapshot
+      end
     else
       if not authorized[hash] then
         return remote.writeAs('error', "Attempt to send unauthorized object: " .. hash)
@@ -116,7 +120,7 @@ return function (core)
     local wants = {}
     for i = 1, #hashes do
       local hash = hashes[i]
-      if not db.has(hash) then
+      if not (authorized[hash] or db.has(hash)) then
         wants[#wants + 1] = hash
         authorized[hash] = true
       end
