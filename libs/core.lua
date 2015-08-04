@@ -463,6 +463,7 @@ local function makeCore(config)
 
     -- Use snapshot if there is one
     if meta.snapshot then
+      log("using snapshot", meta.snapshot, "highlight")
       return makeZip(meta.snapshot, target)
     end
 
