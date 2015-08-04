@@ -14,7 +14,7 @@ test: lit
 	tests/run.sh
 
 clean:
-	rm -rf lit luvi test-offline test-pull test-push test-server
+	git clean -xdf
 
 install: lit
 	install lit /usr/local/bin
