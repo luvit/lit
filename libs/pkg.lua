@@ -121,9 +121,10 @@ function exports.queryDb(db, hash)
       return meta, value.type, hash
     end
 
+    local tagType = value.type
     -- Otherwise search root tree or blob
     kind, value = db.loadAny(hash)
-    assert(kind == value.type, "type mismatch")
+    assert(kind == tagType, "type mismatch")
   end
   local meta
   if kind == "tree" then
