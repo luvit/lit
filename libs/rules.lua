@@ -20,6 +20,7 @@ local ffi = require('ffi')
 local log = require('log').log
 local pathJoin = require('luvi').path.join
 local modes = require('git').modes
+local colorize = require('pretty-print').colorize
 
 local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
 
@@ -56,10 +57,17 @@ function exports.compileFilter(path, rules, nativeOnly)
   end
 
   local default = not rules[1].allowed
-  if default then
-    log("compiling filter", path .. "/** includes by default (first rule is negative)")
-  else
-    log("compiling filter", path .. "/** excludes by default (first rule is positive)")
+  if not rules.ignore then
+    local action, first
+    if default then
+      action = colorize("string", "includes")
+      first = colorize("thread", "negative")
+    else
+      action = colorize("thread", "excludes")
+      first = colorize("string", "positive")
+    end
+    log("compiling filter", string.format("%s %s by default (first rule is %s)",
+      pathJoin(path, "**"), action, first))
   end
 
   return {
@@ -110,10 +118,12 @@ function exports.isAllowed(path, entry, filters)
     end
   end
 
-  if allow and not isTree then
-    log("including", relativePath)
-  elseif not allow and matchesFilter then
-    log("skipping", relativePath)
+  if relativePath then
+    if allow and not isTree then
+      log("including", relativePath)
+    elseif not allow and matchesFilter then
+      log("skipping", relativePath)
+    end
   end
 
   return allow, default, matchesFilter and relativePath

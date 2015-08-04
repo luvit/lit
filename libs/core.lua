@@ -402,7 +402,7 @@ local function makeCore(config)
     local inside = target:match("^" .. escape(source) .. "[/\\](.*)$")
     if inside then
       -- If it is, add an ignore rule for it.
-      rules = { "!" .. inside }
+      rules = { "!" .. inside, ignore = true }
     end
     local kind, hash = assert(import(core.db, zfs, source, rules, true))
     assert(kind == "tree", "Only tree packages are supported for now")

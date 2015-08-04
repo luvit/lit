@@ -20,6 +20,7 @@ local normalize = require('semver').normalize
 local gte = require('semver').gte
 local log = require('log').log
 local queryDb = require('pkg').queryDb
+local colorize = require('pretty-print').colorize
 
 return function (db, deps, newDeps)
 
@@ -64,10 +65,6 @@ return function (db, deps, newDeps)
             alias, meta.version, version)
           log("version conflict", message, "failure")
           return
-        elseif meta.version:match("%d+%.%d+%.%d+") ~= version:match("%d+%.%d+%.%d+") then
-          local message = string.format("%s %s ~= %s",
-            alias, meta.version, version)
-          log("version mismatch", message, "highlight")
         end
       end
     else
@@ -85,7 +82,6 @@ return function (db, deps, newDeps)
       meta.db = db
       meta.hash = hash
       meta.kind = kind
-      log("using dependency", string.format("%s as %s", hash, alias))
       deps[alias] = meta
     end
 
@@ -94,6 +90,19 @@ return function (db, deps, newDeps)
   end
 
   processDeps(newDeps)
+
+  local names = {}
+  for k in pairs(deps) do
+    names[#names + 1] = k
+  end
+  table.sort(names)
+  for i = 1, #names do
+    local name = names[i]
+    local meta = deps[name]
+    log("including dependency", string.format("%s (%s)",
+      colorize("highlight", name), meta.path or meta.version))
+  end
+
 
   return deps
 end

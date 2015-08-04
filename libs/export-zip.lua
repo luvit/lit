@@ -41,9 +41,16 @@ return function (db, rootHash, compileLua)
       if compileLua then
         local base = path:match("^(.*)%.lua$")
         if base then
-          log("compiling", path)
           local fn = assert(loadstring(value, "bundle:" .. path))
-          value = string.dump(fn)
+          local newValue = string.dump(fn)
+          local saved = #value - #newValue
+          if saved > 0 then
+            local percent = 100 - math.floor(1000 * #newValue / #value) / 10
+            log("compiling", string.format("%s (%s%% reduction)", path, percent))
+            value = newValue
+          else
+            log("storing", path)
+          end
         end
       end
       writer:add(path, value, 9)

@@ -35,16 +35,16 @@ function exports.toDb(db, rootHash, deps, nativeOnly)
     if meta.hash then
       hash = meta.hash
       kind = meta.kind
+      if nativeOnly and kind == "tree" then
+        hash = filterTree(db, "deps/" .. alias, hash, nil, nativeOnly)
+      end
     else
-      kind, hash = import(db, meta.fs, meta.path, nil, true)
+      kind, hash = import(db, meta.fs, meta.path, nil, nativeOnly)
     end
     if kind == "blob" then
       entry.name = alias .. ".lua"
     else
       entry.name = alias
-      if nativeOnly then
-        hash = filterTree(db, "deps://" .. alias, hash, nil, nativeOnly)
-      end
     end
     entry.mode = assert(modes[kind])
     entry.hash = hash
