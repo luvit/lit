@@ -18,3 +18,4 @@ for file in deps/*
 do
   $LIT publish $file
 done
+$LIT publish .
