@@ -198,7 +198,6 @@ return function (db, prefix)
         error("Can only create zips from trees")
       end
 
-      local hash
       -- Use snapshot if there is one
       if meta.snapshot then
         hash = meta.snapshot
