@@ -294,7 +294,7 @@ local function makeCore(config)
 
     lastImport[username] = now
 
-    local path = "/users/" .. username .. "/keys"
+    local path = "/users/" .. username .. "/keys?per_page=100"
     local etag = db.getEtag(username)
     local head, keys, url = githubQuery(path, etag)
 
