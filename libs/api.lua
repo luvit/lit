@@ -142,7 +142,9 @@ return function (db, prefix)
       hash = db.read(author, name, version)
     end
     if not hash then
-      error("No such version " .. author .. "/" .. name .. "@" .. version)
+      local message = "No such version " .. author .. "/" .. name
+      if version then message = message .. "@" .. version end
+      error(message)
     end
     local cached = metaCache[hash]
     if cached then return cached end
