@@ -278,7 +278,6 @@ return function (db, prefix)
           query.search = terms
         end
       end
-      p{query=query}
 
       local matches = {}
       for author in db.authors() do
