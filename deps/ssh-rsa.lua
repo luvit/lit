@@ -1,5 +1,5 @@
 exports.name = "creationix/ssh-rsa"
-exports.version = "1.0.0-1"
+exports.version = "1.0.1"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/ssh-rsa.lua"
 exports.description = "Addons to lua-openssl for working with openssh rsa keys."
 exports.tags = {"ssh", "rsa"}
