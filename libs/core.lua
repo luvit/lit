@@ -38,7 +38,7 @@ local encoders = git.encoders
 local semver = require('semver')
 local miniz = require('miniz')
 local vfs = require('vfs')
-local fs = require('coro-fs')
+local gfs = require('coro-fs')
 local http = require('coro-http')
 local exec = require('exec')
 local prompt = require('prompt')(require('pretty-print'))
@@ -71,7 +71,7 @@ end
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
 -- Trickier than you'd think because os.time assumes the struct is in local time.
-local function now()
+local function getdate()
   local t_secs = os.time() -- get seconds if t was in local time.
   local t = os.date("*t", t_secs) -- find out if daylight savings was applied.
   local t_UTC = os.date("!*t", t_secs) -- find out what UTC t was converted to.
@@ -111,7 +111,7 @@ local function makeCore(config)
   local function getKey()
     if not config.privateKey then return end
     if privateKey then return privateKey end
-    local keyData = assert(fs.readFile(config.privateKey))
+    local keyData = assert(gfs.readFile(config.privateKey))
     privateKey = require('openssl').pkey.read(keyData, true)
     return privateKey
   end
@@ -156,7 +156,7 @@ local function makeCore(config)
       tagger = {
         name = config.name,
         email = config.email,
-        date = now()
+        date = getdate()
       },
       message = jsonStringify(meta)
     })
@@ -190,7 +190,7 @@ local function makeCore(config)
     local path = pathJoin(db.storage.fs.base, "cache", digest("sha1", url), "luvi")
 
     -- If it's already cached, return the path
-    if fs.access(path, "rx") then
+    if gfs.access(path, "rx") then
       return path
     end
 
@@ -211,12 +211,12 @@ local function makeCore(config)
           -- Otherwise just read the file size
           binSize = assert(uv.fs_stat(exe)).size
         end
-        assert(fs.mkdirp(pathJoin(path, "..")))
-        local fd = assert(fs.open(path, "w", 493)) -- 0755
-        local fd2 = assert(fs.open(exe, "r", 384)) -- 0600
+        assert(gfs.mkdirp(pathJoin(path, "..")))
+        local fd = assert(gfs.open(path, "w", 493)) -- 0755
+        local fd2 = assert(gfs.open(exe, "r", 384)) -- 0600
         assert(uv.fs_sendfile(fd, fd2, 0, binSize))
-        fs.close(fd2)
-        fs.close(fd)
+        gfs.close(fd2)
+        gfs.close(fd)
         return path
       end
     end
@@ -225,10 +225,10 @@ local function makeCore(config)
     log("downloading", url)
     local head, body = request("GET", url)
     assert(head.code == 200, "Problem downloading custom luvi: " .. url)
-    assert(fs.mkdirp(pathJoin(path, "..")))
-    local fd = assert(fs.open(path, "w", 493))
-    assert(fs.write(fd, body))
-    fs.close(fd)
+    assert(gfs.mkdirp(pathJoin(path, "..")))
+    local fd = assert(gfs.open(path, "w", 493))
+    assert(gfs.write(fd, body))
+    gfs.close(fd)
     return path
   end
 
@@ -237,7 +237,7 @@ local function makeCore(config)
       error("Must be configured with upstream to publish")
     end
     local author, name = core.add(path)
-    local tag = author .. '/' .. name
+    local tagname = author .. '/' .. name
 
     -- Loop through all local versions that aren't upstream
     local queue = {}
@@ -262,13 +262,13 @@ local function makeCore(config)
       if skip then
         log("skipping", author .. "/" .. name .. "@" .. version .. ": " .. skip)
       else
-        local tag = string.format("%s/%s/v%s", author, name, version)
-        queue[#queue + 1] = {tag, version, hash}
+        local fulltag = string.format("%s/%s/v%s", author, name, version)
+        queue[#queue + 1] = {fulltag, version, hash}
       end
     end
 
     if #queue == 0 then
-      log("nothing to publish", tag)
+      log("nothing to publish", tagname)
       return
     end
 
@@ -421,7 +421,7 @@ local function makeCore(config)
     else
       error("Problem cloning: " .. stdout .. stderr)
     end
-    assert(fs.rmrf(path))
+    assert(gfs.rmrf(path))
   end
 
   local function makeHttp(target, url)
@@ -437,9 +437,9 @@ local function makeCore(config)
     end
 
     local path = filename or (target or "app") .. ".zip"
-    fs.writeFile(path, body)
+    gfs.writeFile(path, body)
     core.make(path, target)
-    fs.unlink(path)
+    gfs.unlink(path)
   end
 
   local function makeLit(target, author, name, version)
@@ -509,14 +509,14 @@ local function makeCore(config)
   end
 
   function core.installList(path, newDeps)
-    local deps = getInstalled(fs, path)
+    local deps = getInstalled(gfs, path)
     calculateDeps(core.db, deps, newDeps)
-    installDepsFs(core.db, fs, path, deps, true)
+    installDepsFs(core.db, gfs, path, deps, true)
     return deps
   end
 
   function core.installDeps(path)
-    local meta = pkg.query(fs, path)
+    local meta = pkg.query(gfs, path)
     if not meta.dependencies then
       log("no dependencies", path)
       return
@@ -524,7 +524,7 @@ local function makeCore(config)
     return core.installList(path, meta.dependencies)
   end
 
-  function core.sync(author, name)
+  function core.sync(mainAuthor, mainName)
     local hashes = {}
     local tags = {}
     local function check(author, name)
@@ -547,14 +547,14 @@ local function makeCore(config)
       end
     end
 
-    if author then
-      if name then
-        log("checking for updates", author .. '/' .. name)
-        check(author, name)
+    if mainAuthor then
+      if mainName then
+        log("checking for updates", mainAuthor .. '/' .. mainName)
+        check(mainAuthor, mainName)
       else
-        log("checking for updates", author .. "/*")
-        for name in db.names(author) do
-          check(author, name)
+        log("checking for updates", mainAuthor .. "/*")
+        for name in db.names(mainAuthor) do
+          check(mainAuthor, name)
         end
       end
     else
