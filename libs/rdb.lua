@@ -226,6 +226,7 @@ return function(db, url, timeout)
           remote.writeAs("send", db.load(data[i]))
         end
       elseif name == "done" then
+        disconnect()
         return data
       else
         error(name
@@ -233,7 +234,6 @@ return function(db, url, timeout)
           or "Disconnected while waiting for 'wants' or 'done'")
       end
     end
-    disconnect()
   end
 
   function db.upquery(name, request)

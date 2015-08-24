@@ -60,12 +60,12 @@ db.export(hash, path) -> kind          - Export a hash to a path
 return function (rootPath)
   local semver = require('semver')
   local normalize = semver.normalize
-  local fs = require('coro-fs')
+  local gfs = require('coro-fs')
   local gitMount = require('git').mount
   local import = require('import')
   local export = require('export')
 
-  local db = gitMount(fs.chroot(rootPath))
+  local db = gitMount(gfs.chroot(rootPath))
   local storage = db.storage
 
   local function assertHash(hash)
@@ -199,7 +199,7 @@ return function (rootPath)
   end
 
   function db.export(hash, path) --> kind
-    return export(db, hash, fs, path)
+    return export(db, hash, gfs, path)
   end
 
   return db

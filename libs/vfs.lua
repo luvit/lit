@@ -16,7 +16,7 @@ limitations under the License.
 
 --]]
 
-local fs = require('coro-fs')
+local gfs = require('coro-fs')
 local miniz = require('miniz')
 local pathJoin = require('luvi').path.join
 
@@ -124,6 +124,6 @@ return function (path)
     fs.base = path
     return fs, newPath
   else
-    return fs, path
+    return gfs, path
   end
 end

@@ -85,37 +85,39 @@ return function (core)
     local kind, raw = git.deframe(data)
     local hashes = {}
 
-    local hash = digest("sha1", data)
-    if kind == "tag" then
-      if remote.tag then
-        return remote.writeAs("error", "package upload already in progress: " .. remote.tag.tag)
-      end
-      local tag = git.decoders.tag(raw)
-      local username = string.match(tag.tag, "^[^/]+")
-      if not verifySignature(db, username, raw) then
-        return remote.writeAs("error", "Signature verification failure")
-      end
-      tag.hash = hash
-      remote.tag = tag
-      remote.authorized = authorized
-      hashes[#hashes + 1] = tag.object
-      local meta = jsonParse(tag.message)
-      if meta and meta.snapshot then
-        hashes[#hashes + 1] = meta.snapshot
-      end
-    else
-      if not authorized[hash] then
-        return remote.writeAs('error', "Attempt to send unauthorized object: " .. hash)
-      end
-      authorized[hash] = nil
-      if kind == "tree" then
-        local tree = git.decoders.tree(raw)
-        for i = 1, #tree do
-          hashes[#hashes + 1] = tree[i].hash
+    do
+      local hash = digest("sha1", data)
+      if kind == "tag" then
+        if remote.tag then
+          return remote.writeAs("error", "package upload already in progress: " .. remote.tag.tag)
+        end
+        local tag = git.decoders.tag(raw)
+        local username = string.match(tag.tag, "^[^/]+")
+        if not verifySignature(db, username, raw) then
+          return remote.writeAs("error", "Signature verification failure")
+        end
+        tag.hash = hash
+        remote.tag = tag
+        remote.authorized = authorized
+        hashes[#hashes + 1] = tag.object
+        local meta = jsonParse(tag.message)
+        if meta and meta.snapshot then
+          hashes[#hashes + 1] = meta.snapshot
+        end
+      else
+        if not authorized[hash] then
+          return remote.writeAs('error', "Attempt to send unauthorized object: " .. hash)
+        end
+        authorized[hash] = nil
+        if kind == "tree" then
+          local tree = git.decoders.tree(raw)
+          for i = 1, #tree do
+            hashes[#hashes + 1] = tree[i].hash
+          end
         end
       end
+      assert(db.save(data) == hash)
     end
-    assert(db.save(data) == hash)
 
     local wants = {}
     for i = 1, #hashes do

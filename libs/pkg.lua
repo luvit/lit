@@ -97,7 +97,9 @@ function exports.query(fs, path)
   end
   if not data then
     local sep = "\n  Looked in: "
-    return data, "Can't find package at " .. path .. sep .. table.concat(attempts, sep)
+    local message = "\nCan't find package at " .. path .. sep .. table.concat(attempts, sep)
+    if err then message = message .. "\n" .. err end
+    return data, message
   end
   local meta = evalModule(data, packagePath)
   local clean = {}

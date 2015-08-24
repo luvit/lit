@@ -17,17 +17,16 @@ limitations under the License.
 --]]
 
 local pathJoin = require('luvi').path.join
-local rules = require('rules')
-local isAllowed = rules.isAllowed
-local compileFilter = rules.compileFilter
+local isAllowed = require('rules').isAllowed
+local compileFilter = require('rules').compileFilter
 local modes = require('git').modes
 
 -- Import a fs path into the database
-return function (db, fs, path, rules, nativeOnly)
+return function (db, fs, rootpath, rules, nativeOnly)
   if nativeOnly == nil then nativeOnly = false end
   local filters = {}
   if rules then
-    filters[#filters + 1] = compileFilter(path, rules, nativeOnly)
+    filters[#filters + 1] = compileFilter(rootpath, rules, nativeOnly)
   end
 
   local importEntry, importTree
@@ -89,9 +88,9 @@ return function (db, fs, path, rules, nativeOnly)
     for entry in iter do
       local fullPath = pathJoin(path, entry.name)
       if not entry.type then
-        local stat, err = fs.stat(fullPath)
+        local stat, e = fs.stat(fullPath)
         if not (stat and stat.type) then
-          return nil, err or "Cannot determine entry type: " .. fullPath
+          return nil, e or "Cannot determine entry type: " .. fullPath
         end
         entry.type = stat.type
       end
@@ -111,13 +110,13 @@ return function (db, fs, path, rules, nativeOnly)
     end
   end
 
-  local stat, err = fs.stat(path)
+  local stat, err = fs.stat(rootpath)
   if not stat then
-    return nil, err or "Problem statting: " .. path
+    return nil, err or "Problem statting: " .. rootpath
   end
-  local mode, hash = importEntry(path, stat)
+  local mode, hash = importEntry(rootpath, stat)
   if not mode then
-    return nil, hash or "Problem importing: " .. path
+    return nil, hash or "Problem importing: " .. rootpath
   end
   if not hash then
     return nil, "Nothing to import"

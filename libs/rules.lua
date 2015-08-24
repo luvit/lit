@@ -33,7 +33,7 @@ local patterns = {
   native = {ffi.os, ffi.arch},
 }
 
-function exports.compileFilter(path, rules, nativeOnly)
+function exports.compileFilter(rootPath, rules, nativeOnly)
   assert(#rules > 0, "Empty files rule list not allowed")
   local os, arch = unpack(patterns[nativeOnly and "native" or "all"])
   for i = 1, #rules do
@@ -67,12 +67,12 @@ function exports.compileFilter(path, rules, nativeOnly)
       first = colorize("string", "positive")
     end
     log("compiling filter", string.format("%s %s by default (first rule is %s)",
-      pathJoin(path, "**"), action, first))
+      pathJoin(rootPath, "**"), action, first))
   end
 
   return {
     default = default,
-    prefix = "^" .. pathJoin(path:gsub(quotepattern, "%%%1"), '(.*)'),
+    prefix = "^" .. pathJoin(rootPath:gsub(quotepattern, "%%%1"), '(.*)'),
     match = function (path)
       local allowed
       for i = 1, #rules do
@@ -130,10 +130,10 @@ function exports.isAllowed(path, entry, filters)
 end
 local isAllowed = exports.isAllowed
 
-function exports.filterTree(db, path, hash, rules, nativeOnly) --> hash
+function exports.filterTree(db, rootPath, rootHash, rules, nativeOnly) --> hash
   local filters = {}
   if rules and #rules > 0 then
-    filters[#filters + 1] = compileFilter(path, rules, nativeOnly)
+    filters[#filters + 1] = compileFilter(rootPath, rules, nativeOnly)
   end
 
   local function copyTree(path, hash)
@@ -179,5 +179,5 @@ function exports.filterTree(db, path, hash, rules, nativeOnly) --> hash
     return not changed and hash or #tree > 0 and db.saveAs("tree", tree)
   end
 
-  return copyTree(path, hash)
+  return copyTree(rootPath, rootHash)
 end

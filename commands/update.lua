@@ -39,67 +39,69 @@ local function checkUpdate()
   return version, latest, best
 end
 
-local version, latest, best = checkUpdate()
-local toupdate
-if version == latest then
-  log("lit is up to date", version, "highlight")
-elseif not best or version == best then
-  log("update status", "major update available: " .. latest)
-  toupdate = latest
-elseif best then
-  log("update status", "update available: " .. best)
-  toupdate = best
-elseif not semver.gte(latest, version) then
-  log("update status", "newer than published: " .. latest)
-else
-  log("update status", "unknown series")
-end
+do
+  local version, latest, best = checkUpdate()
+  local toupdate
+  if version == latest then
+    log("lit is up to date", version, "highlight")
+  elseif not best or version == best then
+    log("update status", "major update available: " .. latest)
+    toupdate = latest
+  elseif best then
+    log("update status", "update available: " .. best)
+    toupdate = best
+  elseif not semver.gte(latest, version) then
+    log("update status", "newer than published: " .. latest)
+  else
+    log("update status", "unknown series")
+  end
 
-if toupdate then
-  -- Guess path to lit install
-  local target = uv.exepath()
-  local stdout = exec(target, "-v")
-  if not stdout:match("^lit version:") then
-    target = pathJoin(target, "..", "lit")
-    if jit.os == "Windows" then
-      target = target .. ".exe"
+  if toupdate then
+    -- Guess path to lit install
+    local target = uv.exepath()
+    local stdout = exec(target, "-v")
+    if not stdout:match("^lit version:") then
+      target = pathJoin(target, "..", "lit")
+      if jit.os == "Windows" then
+        target = target .. ".exe"
+      end
     end
+
+    -- Download metadata for updated lit version
+    local meta = jsonParse(fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate))
+
+    -- Ensure proper luvi binary
+    local luviPath = core.getLuvi(meta.luvi)
+
+    -- Copy luvi to start of new file
+    local tempPath = pathJoin(uv.cwd(), "lit-temp")
+    local fd = assert(fs.open(tempPath, "w", 493)) -- 755
+    local fd2 = assert(fs.open(luviPath, "r"))
+    local size = assert(fs.fstat(fd2)).size
+    assert(uv.fs_sendfile(fd, fd2, 0, size))
+    fs.close(fd2)
+
+    -- Download and append zip
+    local zip = fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate .. ".zip")
+    assert(fs.write(fd, zip))
+    fs.close(fd)
+
+    -- replace installed lit binary
+    local old = fs.stat(target)
+    if old then
+      fs.rename(target, target .. ".old")
+    end
+    fs.rename(tempPath, target)
+    if old then
+      fs.unlink(target .. ".old")
+    end
+    log("recursivly running update", target .. ' update', 'highlight')
+    local child = spawn(target, {
+      args = {"update"},
+      stdio = {0, 1, 2}
+    })
+    return(child.waitExit())
   end
-
-  -- Download metadata for updated lit version
-  local meta = jsonParse(fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate))
-
-  -- Ensure proper luvi binary
-  local luviPath = core.getLuvi(meta.luvi)
-
-  -- Copy luvi to start of new file
-  local tempPath = pathJoin(uv.cwd(), "lit-temp")
-  local fd = assert(fs.open(tempPath, "w", 493)) -- 755
-  local fd2 = assert(fs.open(luviPath, "r"))
-  local size = assert(fs.fstat(fd2)).size
-  assert(uv.fs_sendfile(fd, fd2, 0, size))
-  fs.close(fd2)
-
-  -- Download and append zip
-  local zip = fetch("https://lit.luvit.io/packages/luvit/lit/v" .. toupdate .. ".zip")
-  assert(fs.write(fd, zip))
-  fs.close(fd)
-
-  -- replace installed lit binary
-  local old = fs.stat(target)
-  if old then
-    fs.rename(target, target .. ".old")
-  end
-  fs.rename(tempPath, target)
-  if old then
-    fs.unlink(target .. ".old")
-  end
-  log("recursivly running update", target .. ' update', 'highlight')
-  local child = spawn(target, {
-    args = {"update"},
-    stdio = {0, 1, 2}
-  })
-  return(child.waitExit())
 end
 
 do
