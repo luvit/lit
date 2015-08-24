@@ -144,7 +144,7 @@ return function (db, prefix)
     if not hash then
       local message = "No such version " .. author .. "/" .. name
       if version then message = message .. "@" .. version end
-      error(message)
+      return nil, message
     end
     local cached = metaCache[hash]
     if cached then return cached end
@@ -218,7 +218,7 @@ return function (db, prefix)
       }
     end,
     "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
-      local meta = loadMeta(author, name, version)
+      local meta = assert(loadMeta(author, name, version))
       meta.score = nil
       return meta
     end,
@@ -278,6 +278,7 @@ return function (db, prefix)
           query.search = terms
         end
       end
+      p{query=query}
 
       local matches = {}
       for author in db.authors() do
@@ -306,7 +307,7 @@ return function (db, prefix)
             local meta
             if not skip then
               meta = loadMeta(author, name)
-              if meta.obsolete then
+              if not meta or meta.obsolete then
                 skip = true
               end
             end
