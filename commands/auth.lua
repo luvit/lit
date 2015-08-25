@@ -3,7 +3,7 @@ local prompt = require('prompt')(require('pretty-print'))
 local fs = require('coro-fs')
 local env = require('env')
 local log = require('log').log
-local exec = require('exec')
+local pathJoin = require('luvi').path.join
 
 local config = core.config
 local dirty = false
@@ -24,18 +24,29 @@ local function confirm(name, value)
   return value
 end
 
-local function run(...)
-  local stdout, stderr, code, signal = exec(...)
-  if code == 0 and signal == 0 then
-    return string.gsub(stdout, "%s*$", "")
-  else
-    return nil, string.gsub(stderr, "%s*$", "")
+local ini
+local function getConfig(name)
+  ini = ini or fs.readFile(pathJoin(env.get("HOME"), ".gitconfig"))
+  local section
+  for line in ini:gmatch("[^\n]+") do
+    local s = line:match("^%[([^%]]+)%]$")
+    if s then
+      section = s
+    else
+      local key, value = line:match("^%s*(%w+)%s*=%s*(.+)$")
+      if key and section .. '.' .. key == name then
+        if tonumber(value) then return tonumber(value) end
+        if value == "true" then return true end
+        if value == "false" then return false end
+        return value
+      end
+    end
   end
 end
 
 confirm("username", args[2])
-confirm("name", args[3] or run("git", "config", "--get", "user.name"))
-confirm("email", args[4] or run("git", "config", "--get", "user.email"))
+confirm("name", args[3] or getConfig("user.name"))
+confirm("email", args[4] or getConfig("user.email"))
 
 local path = (env.get("HOME") or env.get("HOMEPATH")) .. '/.ssh/id_rsa'
 if fs.access(path, "r") then
