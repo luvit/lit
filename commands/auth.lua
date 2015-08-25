@@ -1,7 +1,7 @@
 local core = require('core')()
 local prompt = require('prompt')(require('pretty-print'))
 local fs = require('coro-fs')
-local env = require('env')
+local uv = require('uv')
 local log = require('log').log
 local pathJoin = require('luvi').path.join
 
@@ -24,7 +24,7 @@ local function confirm(name, value)
   return value
 end
 
-local home = env.get("HOME") or env.get("HOMEPATH") or ""
+local home = uv.os_homedir()
 local ini
 local function getConfig(name)
   ini = ini or fs.readFile(pathJoin(home, ".gitconfig"))
