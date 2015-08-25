@@ -1,8 +1,9 @@
 
 exports.name = "creationix/coro-net"
-exports.version = "1.1.1-1"
+exports.version = "1.2.0"
 exports.dependencies = {
-  "creationix/coro-channel@1.2.0"
+  "creationix/coro-channel@1.2.0",
+  "creationix/coro-fs@1.3.0",
 }
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
 exports.description = "An coro style client and server helper for tcp and pipes."
@@ -12,6 +13,9 @@ exports.author = { name = "Tim Caswell" }
 
 local uv = require('uv')
 local wrapStream = require('coro-channel').wrapStream
+local fs = require('coro-fs')
+local env = require('env')
+local isWindows = require('luvipath').isWindows
 
 local function makeCallback(timeout)
   local thread = coroutine.running()
@@ -56,6 +60,76 @@ local function normalize(options)
     error("Must set either options.path or options.port")
   end
 end
+
+local quotepattern = '(['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..'])'
+local function escape(str)
+    return str:gsub(quotepattern, "%%%1")
+end
+
+local resolve
+do
+  local hosts
+  local expires = 0
+  local hostsPath = isWindows and
+    env.get("SYSTEMROOT") .. "\\System32\\Drivers\\etc\\hosts" or
+    "/etc/hosts"
+  function resolve(host, port, options)
+    options = options or {}
+    local now = uv.now()
+    if not hosts or now > expires then
+      local err
+      expires = now + 1000 * 60 * 5
+      hosts, err = fs.readFile(hostsPath)
+      if not hosts then return nil, err end
+    end
+    local list = {}
+    local ipv4Pattern = "^%s*(%d+%.%d+%.%d+%.%d+)%s[^\n]*" .. escape(host)
+    local ipv6Pattern = "^%s*([0-9a-fA-F][0-9a-fA-F:]+[0-9a-fA-F])%s[^\n]*" .. escape(host)
+
+    if port then
+      uv.getaddrinfo(nil, port, {socktype="stream"}, makeCallback(options.timeout))
+      local result = coroutine.yield()
+      port = result and result[1] and result[1].port
+    end
+
+    for line in hosts:gmatch("[^\n]+") do
+      local addr = line:match(ipv4Pattern)
+      if addr then
+        list[#list + 1] = {
+          addr = addr,
+          family = "inet",
+          port = port,
+          source = hostsPath,
+          socktype = options.socktype,
+        }
+      end
+      addr = line:match(ipv6Pattern)
+      if addr then
+        list[#list + 1] = {
+          addr = addr,
+          family = "inet6",
+          port = port,
+          source = hostsPath,
+          socktype = options.socktype,
+        }
+      end
+    end
+    if #list == 0 then
+      assert(uv.getaddrinfo(host, port, options, makeCallback(options.timeout)))
+      local result, err = coroutine.yield()
+      if result then
+        for i = 1, #result do
+          list[#list + 1] = result[i]
+        end
+      end
+      if #list == 0 then
+        return nil, err
+      end
+    end
+    return list
+  end
+end
+exports.resolve = resolve
 
 function exports.connect(options)
   local socket, success, err
