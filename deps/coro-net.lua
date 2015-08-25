@@ -74,6 +74,7 @@ do
     env.get("SYSTEMROOT") .. "\\System32\\Drivers\\etc\\hosts" or
     "/etc/hosts"
   function resolve(host, port, options)
+    options = options or {}
     local now = uv.now()
     if not hosts or now > expires then
       local err
@@ -114,7 +115,8 @@ do
       end
     end
     if #list == 0 then
-      local result, err = resolve(host, port, options)
+      assert(uv.getaddrinfo(host, port, options, makeCallback(options.timeout)))
+      local result, err = coroutine.yield()
       if result then
         for i = 1, #result do
           list[#list + 1] = result[i]
