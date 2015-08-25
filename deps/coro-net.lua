@@ -100,7 +100,7 @@ do
           family = "inet",
           port = port,
           source = hostsPath,
-          socktype = options.socktype or "stream",
+          socktype = options.socktype,
         }
       end
       addr = line:match(ipv6Pattern)
@@ -110,7 +110,7 @@ do
           family = "inet6",
           port = port,
           source = hostsPath,
-          socktype = options.socktype or "stream",
+          socktype = options.socktype,
         }
       end
     end
