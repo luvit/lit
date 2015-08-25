@@ -24,9 +24,10 @@ local function confirm(name, value)
   return value
 end
 
+local home = env.get("HOME") or env.get("HOMEPATH") or ""
 local ini
 local function getConfig(name)
-  ini = ini or fs.readFile(pathJoin(env.get("HOME"), ".gitconfig"))
+  ini = ini or fs.readFile(pathJoin(home, ".gitconfig"))
   local section
   for line in ini:gmatch("[^\n]+") do
     local s = line:match("^%[([^%]]+)%]$")
@@ -48,11 +49,13 @@ confirm("username", args[2])
 confirm("name", args[3] or getConfig("user.name"))
 confirm("email", args[4] or getConfig("user.email"))
 
-local path = (env.get("HOME") or env.get("HOMEPATH")) .. '/.ssh/id_rsa'
-if fs.access(path, "r") then
-  config.privateKey = path
+do
+  local path = pathJoin(home, ".ssh", "id_rsa")
+  if fs.access(path, "r") then
+    config.privateKey = path
+  end
+  confirm("privateKey")
 end
-confirm("privateKey")
 
 core.authUser()
 
