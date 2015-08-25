@@ -414,7 +414,7 @@ local function makeCore(config)
 
   local function makeGit(target, url)
     local path = (url:match("([^/]+).git$") or target or "app") .. ".git-clone"
-    log("downloading repo", url)
+    log("cloning shallow repo", url)
     local stdout, stderr, code, signal = exec("git", "clone", "--depth=1", "--recursive", url, path)
     if code == 0 and signal == 0 then
       core.make(path, target)
