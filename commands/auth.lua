@@ -28,6 +28,7 @@ local home = env.get("HOME") or env.get("HOMEPATH") or ""
 local ini
 local function getConfig(name)
   ini = ini or fs.readFile(pathJoin(home, ".gitconfig"))
+  if not ini then return end
   local section
   for line in ini:gmatch("[^\n]+") do
     local s = line:match("^%[([^%]]+)%]$")
