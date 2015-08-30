@@ -7,7 +7,6 @@ local pathJoin = require("luvi").path.join
 local cwd = require('uv').cwd()
 
 local config = core.config
-local dirty = false
 
 local function getOutput()
   local output = prompt("Output to package.lua (1), or a init.lua (2)?")
