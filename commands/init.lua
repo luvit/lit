@@ -90,7 +90,7 @@ local message = "Enter to continue"
 local finish = prompt("Is this ok?", message)
 
 if finish == message then
-  local data, err = fs.writeFile(cwd .. "/" .. output .. ".test", data)
+  local data, err = fs.writeFile(cwd .. "/" .. output, data)
   if err == nil then
     log("Complete", "Created a new " .. output .. " file.")
   else
