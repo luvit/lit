@@ -5,6 +5,7 @@ local env = require("env")
 local log = require("log").log
 local pathJoin = require("luvi").path.join
 local cwd = require('uv').cwd()
+local sprintf = require("string").format
 
 local config = core.config
 
@@ -54,15 +55,6 @@ local function getConfig(name)
   end
 end
 
-local projectName = prompt("Project Name", config["username"] .. "/project-name")
-local projectVersion = prompt("Version", "0.0.1")
-local projectDescription = prompt("Description", "A simple description of my little package.")
-local projectTags = prompt("Tags (Comma Separated)", "lua, lit, luvit")
-local authorName = prompt("Author Name", getConfig("user.name"))
-local authorEmail = prompt("Author Email", getConfig("user.email"))
-local projectLicense = prompt("License", "MIT")
-local projectHomepage = prompt("Homepage", "https://github.com/" .. projectName)
-
 -- trim and wrap words in quotes
 function makeTags(csv)
   local tags = "{ "
@@ -74,22 +66,57 @@ function makeTags(csv)
   return tags .. " }"
 end
 
+local projectName = prompt("Project Name", config["username"] .. "/project-name")
+local projectVersion = prompt("Version", "0.0.1")
+local projectDescription = prompt("Description", "A simple description of my little package.")
+local projectTags = makeTags(prompt("Tags (Comma Separated)", "lua, lit, luvit"))
+local authorName = prompt("Author Name", getConfig("user.name"))
+local authorEmail = prompt("Author Email", getConfig("user.email"))
+local projectLicense = prompt("License", "MIT")
+local projectHomepage = prompt("Homepage", "https://github.com/" .. projectName)
+
 local data = ""
 
--- manually craft strings to control formatting
 if output == "init.lua" then
-  data = "exports.name = \"" .. projectName .. "\"\nexports.version = \"" .. projectVersion .. "\"\nexports.dependencies = {}\nexports.description = \"" .. projectDescription .. "\"\nexports.tags = " .. makeTags(projectTags) .. "\nexports.license = \"" .. projectLicense .. "\"\nexports.author = {\n  name = \"" .. authorName .. "\",\n  email = \"" .. authorEmail .. "\"\n}\nexports.homepage = \"" .. projectHomepage .. "\"\n"
+  local init = [[
+exports.name = "%s"
+exports.version = "%s"
+exports.dependencies = {}
+exports.description = "%s"
+exports.tags = %s
+exports.license = "%s"
+exports.author = { name = "%s", email = "%s" }
+exports.homepage = "%s"
+]]
+  data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, authorName, authorEmail, projectLicense, projectHomepage)
 elseif output == "package.lua" then
-  data = "return {\n  name = \"" .. projectName .. "\",\n  version = \"" .. projectVersion .. "\",\n  description = \"" .. projectDescription .. "\",\n  tags = " .. makeTags(projectTags) .. ",\n  license = \"" .. projectLicense .. "\",\n  author = { name = \"" .. authorName .. "\", email = \"" .. authorEmail .. "\" },\n  homepage = \"" .. projectHomepage .. "\",\n  dependencies = {},\n  files = {\n    \"**.lua\",\n    \"!test*\"\n  }\n}\n"
+  local package = [[
+return {
+  name = "%s",
+  version = "%s",
+  description = "%s",
+  tags = %s,
+  license = "%s",
+  author = { name = "%s", email = "%s" },
+  homepage = "%s",
+  dependencies = {},
+  files = {
+    "**.lua",
+    "!test*"
+  }
+}
+]]
+  data = sprintf(package, projectName, projectVersion, projectDescription, projectTags, authorName, authorEmail, projectLicense, projectHomepage)
 end
 
+-- give us a preview
 print("\n" .. data .. "\n")
 
 local message = "Enter to continue"
 local finish = prompt("Is this ok?", message)
 
 if finish == message then
-  local data, err = fs.writeFile(cwd .. "/" .. output, data)
+  local data, err = fs.writeFile(cwd .. "/" .. output .. ".test", data)
   if err == nil then
     log("Complete", "Created a new " .. output .. " file.")
   else
