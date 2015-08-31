@@ -79,26 +79,26 @@ local data = ""
 
 if output == "init.lua" then
   local init = [[
-exports.name = "%s"
-exports.version = "%s"
+exports.name = %q
+exports.version = %q
 exports.dependencies = {}
-exports.description = "%s"
+exports.description = %q
 exports.tags = %s
-exports.license = "%s"
-exports.author = { name = "%s", email = "%s" }
-exports.homepage = "%s"
+exports.license = %q
+exports.author = { name = %q, email = %q }
+exports.homepage = %q
 ]]
   data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, authorName, authorEmail, projectLicense, projectHomepage)
 elseif output == "package.lua" then
   local package = [[
 return {
-  name = "%s",
-  version = "%s",
-  description = "%s",
+  name = %q,
+  version = %q,
+  description = %q,
   tags = %s,
-  license = "%s",
-  author = { name = "%s", email = "%s" },
-  homepage = "%s",
+  license = %q,
+  author = { name = %q, email = %q },
+  homepage = %q,
   dependencies = {},
   files = {
     "**.lua",
