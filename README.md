@@ -94,6 +94,13 @@ in the interface to your terminal.
 This simple command will print the lit version and exit.  It's useful to verify
 which version of lit you have installed from a script.
 
+#### `lit init`
+
+This will run through a series of questions that will help you scaffold
+out either
+a `init.lua` file (used for simple packages) or a `package.lua` file
+(used for more complicated or advanced projects).
+
 ### Local Configuration
 
 These commands are for working with your local lit config file.
