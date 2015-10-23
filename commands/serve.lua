@@ -11,6 +11,11 @@ local core = require('core')()
 local handlers = require('handlers')(core)
 local handleRequest = require('api')(core.db, args[2])
 
+-- Ignore SIGPIPE if it exists on platform
+if uv.constants.SIGPIPE then
+  uv.new_signal():start("sigpipe")
+end
+
 createServer(4822, function (rawRead, rawWrite, socket)
 
   -- Handle the websocket handshake at the HTTP level
