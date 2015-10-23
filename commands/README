@@ -17,6 +17,8 @@ Local configuration
 
 Package Management
 ------------------
+ lit init                    Bootstrap a new package.lua file or an init.lua
+                             entry file
  lit ls [path]               List packages in folder or zip.
  lit install                 Install deps of package in cwd.
  lit install names*          Install dependencies.
