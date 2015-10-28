@@ -61,23 +61,23 @@ function exports.check(meta, target)
       log("canceled " .. basename .. " update", meta.version, "err")
       return
     end
-    action = "update"
+    action = {"updating", "update"}
     new = target .. ".new"
     old = target .. ".old"
   else
     toupdate = exports.matchVersions(name)
-    action = "install"
+    action = {"installing", "install"}
     new = target
     old = nil
   end
 
   core.makeUrl("lit://" .. meta.name .. "@" .. toupdate, new)
-  log(action .. "ing " .. basename .. " binary", target, "highlight")
+  log(action[2] .. basename .. " binary", target, "highlight")
   if old then
     uv.fs_rename(target, old)
     uv.fs_rename(new, target)
     uv.fs_unlink(old)
   end
-  log(basename .. " " .. action .. " complete", toupdate, "success")
+  log(basename .. " " .. action[1] .. " complete", toupdate, "success")
 
 end
