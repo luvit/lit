@@ -88,7 +88,7 @@ exports.license = %q
 exports.author = { name = %q, email = %q }
 exports.homepage = %q
 ]]
-  data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, authorName, authorEmail, projectLicense, projectHomepage)
+  data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
 elseif output == "package.lua" then
   local package = [[
 return {
@@ -106,7 +106,7 @@ return {
   }
 }
 ]]
-  data = sprintf(package, projectName, projectVersion, projectDescription, projectTags, authorName, authorEmail, projectLicense, projectHomepage)
+  data = sprintf(package, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
 end
 
 -- give us a preview
