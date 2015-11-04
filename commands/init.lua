@@ -33,7 +33,7 @@ end
 
 local output = getOutput()
 
-local home = env.get("HOME") or env.get("HOMEPATH") or ""
+local home = env.get("HOME") or (env.get("HOMEDRIVE") and env.get("HOMEPATH") and (env.get("HOMEDRIVE") .. env.get("HOMEPATH"))) or env.get("HOMEPATH") or ""
 local ini
 local function getConfig(name)
   ini = ini or fs.readFile(pathJoin(home, ".gitconfig"))
