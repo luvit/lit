@@ -53,14 +53,16 @@ function exports.decode(chunk)
   elseif len == 127 then
     if #chunk < 10 then return end
     len = bor(
-      lshift(byte(chunk, 3), 56),
-      lshift(byte(chunk, 4), 48),
-      lshift(byte(chunk, 5), 40),
-      lshift(byte(chunk, 6), 32),
+      lshift(byte(chunk, 3), 24),
+      lshift(byte(chunk, 4), 16),
+      lshift(byte(chunk, 5), 8),
+      byte(chunk, 6)
+    ) * 0x100000000 + bor(
       lshift(byte(chunk, 7), 24),
       lshift(byte(chunk, 8), 16),
       lshift(byte(chunk, 9), 8),
-      byte(chunk, 10))
+      byte(chunk, 10)
+    )
     offset = 10
   else
     offset = 2
@@ -121,10 +123,11 @@ function exports.encode(item)
     ))
   }
   if len >= 0x10000 then
-    chars[3] = char(band(rshift(len, 56), 0xff))
-    chars[4] = char(band(rshift(len, 48), 0xff))
-    chars[5] = char(band(rshift(len, 40), 0xff))
-    chars[6] = char(band(rshift(len, 32), 0xff))
+    local high = len / 0x100000000
+    chars[3] = char(band(rshift(high, 24), 0xff))
+    chars[4] = char(band(rshift(high, 16), 0xff))
+    chars[5] = char(band(rshift(high, 8), 0xff))
+    chars[6] = char(band(high, 0xff))
     chars[7] = char(band(rshift(len, 24), 0xff))
     chars[8] = char(band(rshift(len, 16), 0xff))
     chars[9] = char(band(rshift(len, 8), 0xff))
