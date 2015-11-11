@@ -76,7 +76,8 @@ but use the files in the git clone.
 ```
 > git clone --recursive git@github.com:luvit/lit.git
 > cd lit
-> make
+>  PATH-TO-LUVI . -- make . ./lit  PATH-TO-LUVI # for instance, /usr/local/bin/luvi
+> sudo install lit PATH-TO-LIT # For instance, /usr/local/bin
 ```
 
 ## Command-Line Interface
