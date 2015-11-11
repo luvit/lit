@@ -65,7 +65,7 @@ If the pre-built luvi binaries don't work on your machine, you can always build
 
 Once you have luvi, building lit is simple:
 
-```
+```sh
 > curl -L https://github.com/luvit/lit/archive/master.zip > lit.zip
 > luvi lit.zip -- make lit.zip
 ```
@@ -73,11 +73,25 @@ Once you have luvi, building lit is simple:
 Or you can clone lit from git and use the Makefile which will do the same thing
 but use the files in the git clone.
 
-```
+```sh
 > git clone --recursive git@github.com:luvit/lit.git
 > cd lit
->  PATH-TO-LUVI . -- make . ./lit  PATH-TO-LUVI # for instance, /usr/local/bin/luvi
-> sudo install lit PATH-TO-LIT # For instance, /usr/local/bin
+> make # If using official luvi binary
+```
+
+If you're using a custom built luvi binary instead of the official ones, you'll
+need to manually run the make step with something like:
+
+```sh
+# $CUSTOM_LUVI is the path to your custom luvi binary.
+> $CUSTOM_LUVI . -- make . ./lit $CUSTOM_LUVI
+```
+
+Once you have lit built, you'll want to install it somewhere in your path. (For
+example `/usr/local/bin/`.)
+
+```sh
+> sudo install lit /usr/local/bin
 ```
 
 ## Command-Line Interface
