@@ -74,7 +74,7 @@ Or you can clone lit from git and use the Makefile which will do the same thing
 but use the files in the git clone.
 
 ```
-> git clone git@github.com:luvit/lit.git
+> git clone --recursive git@github.com:luvit/lit.git
 > cd lit
 > make
 ```
