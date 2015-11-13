@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.2.0"
+exports.version = "1.2.1"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
 exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
 exports.tags = {"coro", "adapter"}
@@ -8,18 +8,24 @@ exports.author = { name = "Tim Caswell" }
 
 local function wrapRead(socket)
   local paused = true
-  local queue = {}
-  local waiting
-  local onRead
 
-  function onRead(err, chunk)
+  local queue = {}
+  local queueFirst = 0
+  local queueLast = 0
+  local reader = {}
+  local readerFirst = 0
+  local readerLast = 0
+
+  local function onRead(err, chunk)
     local data = err and {nil, err} or {chunk}
-    if waiting then
-      local thread = waiting
-      waiting = nil
+    if readerFirst < readerLast then
+      local thread = reader[readerFirst]
+      reader[readerFirst] = nil
+      readerFirst = readerFirst + 1
       assert(coroutine.resume(thread, unpack(data)))
     else
-      queue[#queue + 1] = data
+      queue[queueLast] = data
+      queueLast = queueLast + 1
       if not paused then
         paused = true
         assert(socket:read_stop())
@@ -28,14 +34,18 @@ local function wrapRead(socket)
   end
 
   return function ()
-    if #queue > 0 then
-      return unpack(table.remove(queue, 1))
+    if queueFirst < queueLast then
+      local data = queue[queueFirst]
+      queue[queueFirst] = nil
+      queueFirst = queueFirst + 1
+      return unpack(data)
     end
     if paused then
       paused = false
       assert(socket:read_start(onRead))
     end
-    waiting = coroutine.running()
+    reader[readerLast] = coroutine.running()
+    readerLast = readerLast + 1
     return coroutine.yield()
   end
 
