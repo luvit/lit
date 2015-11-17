@@ -1,13 +1,13 @@
 return {
   name = "luvit/lit",
-  version = "2.2.15",
+  version = "2.2.16",
   homepage = "https://github.com/luvit/lit",
   description = "The Luvit Invention Toolkit is a luvi app that handles dependencies and luvi builds.",
   tags = {"lit", "meta"},
   license = "Apache 2",
   author = { name = "Tim Caswell" },
   luvi = {
-    version = "2.3.5",
+    version = "2.4.0",
     flavor = "regular",
   },
   dependencies = {
