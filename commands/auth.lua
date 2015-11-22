@@ -50,10 +50,11 @@ confirm("username", args[2])
 confirm("name", args[3] or getConfig("user.name"))
 confirm("email", args[4] or getConfig("user.email"))
 
-do
+if not config.privateKey then
   local path = pathJoin(home, ".ssh", "id_rsa")
   if fs.access(path, "r") then
     config.privateKey = path
+    dirty = true
   end
   confirm("privateKey")
 end
