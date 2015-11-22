@@ -470,7 +470,7 @@ local function makeCore(config)
     local deps = {}
     calculateDeps(core.db, deps, meta.dependencies)
     local tagObj = db.loadAs("tag", hash)
-    if not tagObj.type == "tree" then
+    if tagObj.type ~= "tree" then
       error("Only tags pointing to trees are currently supported for make")
     end
     hash = installDeps(core.db, tagObj.object, deps, true)
