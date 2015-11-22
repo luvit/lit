@@ -35,6 +35,7 @@ coroutine.wrap(function ()
     command = command:sub(3)
   end
   command = aliases[command] or command
+  local invalid = false
   local success, err = xpcall(function ()
     log("lit version", version)
     log("luvi version", require('luvi').version)
@@ -43,12 +44,17 @@ coroutine.wrap(function ()
     if bundle.stat(path:sub(3)) then
       log("command", table.concat(args, " "), "highlight")
     else
+      invalid = command
       log("invalid command", command, "failure")
       command = "help"
       path = "./commands/" .. command .. ".lua"
     end
     require(path)
   end, debug.traceback)
+  if invalid then
+    success = false
+    err = "Invalid Command: " .. invalid
+  end
   if success then
     log("done", "success", "success")
     print()
