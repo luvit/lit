@@ -1,31 +1,27 @@
 exports.name = "creationix/coro-channel"
-exports.version = "1.2.1"
+exports.version = "1.3.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
 exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
 exports.tags = {"coro", "adapter"}
 exports.license = "MIT"
 exports.author = { name = "Tim Caswell" }
 
-local function wrapRead(socket)
+local function wrapRead(socket, decode)
   local paused = true
 
   local queue = {}
-  local queueFirst = 0
-  local queueLast = 0
-  local reader = {}
-  local readerFirst = 0
-  local readerLast = 0
+  local tindex = 0
+  local dindex = 0
 
-  local function onRead(err, chunk)
-    local data = err and {nil, err} or {chunk}
-    if readerFirst < readerLast then
-      local thread = reader[readerFirst]
-      reader[readerFirst] = nil
-      readerFirst = readerFirst + 1
+  local function dispatch(data)
+    if tindex > dindex then
+      local thread = queue[dindex]
+      queue[dindex] = nil
+      dindex = dindex + 1
       assert(coroutine.resume(thread, unpack(data)))
     else
-      queue[queueLast] = data
-      queueLast = queueLast + 1
+      queue[dindex] = data
+      dindex = dindex + 1
       if not paused then
         paused = true
         assert(socket:read_stop())
@@ -33,25 +29,42 @@ local function wrapRead(socket)
     end
   end
 
+  local buffer = ""
+  local function onRead(err, chunk)
+    if not decode or not chunk or err then
+      return dispatch(err and {nil, err} or {chunk})
+    end
+    buffer = buffer .. chunk
+    while true do
+      local item, extra = decode(buffer)
+      if not extra then return end
+      buffer = extra
+      dispatch({item})
+    end
+  end
+
   return function ()
-    if queueFirst < queueLast then
-      local data = queue[queueFirst]
-      queue[queueFirst] = nil
-      queueFirst = queueFirst + 1
+    if dindex > tindex then
+      local data = queue[tindex]
+      queue[tindex] = nil
+      tindex = tindex + 1
       return unpack(data)
     end
     if paused then
       paused = false
       assert(socket:read_start(onRead))
     end
-    reader[readerLast] = coroutine.running()
-    readerLast = readerLast + 1
+    queue[tindex] = coroutine.running()
+    tindex = tindex + 1
     return coroutine.yield()
+  end,
+  function (newDecode)
+    decode = newDecode
   end
 
 end
 
-local function wrapWrite(socket)
+local function wrapWrite(socket, encode)
 
   local function wait()
     local thread = coroutine.running()
@@ -72,9 +85,15 @@ local function wrapWrite(socket)
     if chunk == nil then
       return shutdown()
     end
+    if encode then
+      chunk = encode(chunk)
+    end
     assert(socket:write(chunk, wait()))
     local err = coroutine.yield()
     return not err, err
+  end,
+  function (newEncode)
+    encode = newEncode
   end
 
 end
@@ -83,8 +102,8 @@ exports.wrapRead = wrapRead
 exports.wrapWrite = wrapWrite
 
 -- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
-function exports.wrapStream(socket)
-  return wrapRead(socket), wrapWrite(socket)
+function exports.wrapStream(socket, encode, decode)
+  return wrapRead(socket, encode), wrapWrite(socket, decode)
 end
 
 
