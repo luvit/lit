@@ -412,19 +412,19 @@ local function makeCore(config)
     return makeZip(hash, target, luvi_source)
   end
 
-  local function makeGit(target, url)
+  local function makeGit(target, luvi_source, url)
     local path = (url:match("([^/]+).git$") or target or "app") .. ".git-clone"
     log("cloning shallow repo", url)
     local stdout, stderr, code, signal = exec("git", "clone", "--depth=1", "--recursive", url, path)
     if code == 0 and signal == 0 then
-      core.make(path, target)
+      core.make(path, target, luvi_source)
     else
       error("Problem cloning: " .. stdout .. stderr)
     end
     assert(gfs.rmrf(path))
   end
 
-  local function makeHttp(target, url)
+  local function makeHttp(target, luvi_source, url)
     log("downloading zip", url)
     local res, body = http.request("GET", url)
     assert(res.code == 200, body)
@@ -438,11 +438,11 @@ local function makeCore(config)
 
     local path = filename or (target or "app") .. ".zip"
     gfs.writeFile(path, body)
-    core.make(path, target)
+    core.make(path, target, luvi_source)
     gfs.unlink(path)
   end
 
-  local function makeLit(target, author, name, version)
+  local function makeLit(target, luvi_source, author, name, version)
     local tag = author .. '/' .. name
     local match, hash = db.match(author, name, version)
     if not match then
@@ -464,7 +464,7 @@ local function makeCore(config)
     -- Use snapshot if there is one
     if meta.snapshot then
       log("using snapshot", meta.snapshot, "highlight")
-      return makeZip(meta.snapshot, target)
+      return makeZip(meta.snapshot, target, luvi_source)
     end
 
     local deps = {}
@@ -474,7 +474,7 @@ local function makeCore(config)
       error("Only tags pointing to trees are currently supported for make")
     end
     hash = installDeps(core.db, tagObj.object, deps, true)
-    return makeZip(hash, target)
+    return makeZip(hash, target, luvi_source)
   end
 
   local aliases = {
@@ -496,14 +496,14 @@ local function makeCore(config)
   }
   core.urlHandlers = handlers
 
-  function core.makeUrl(url, target)
+  function core.makeUrl(url, target, luvi_source)
     local fullUrl = url
     for i = 1, #aliases, 2 do
       fullUrl = fullUrl:gsub(aliases[i], aliases[i + 1])
     end
     for i = 1, #handlers, 2 do
       local match = {fullUrl:match(handlers[i])}
-      if #match > 0 then return handlers[i + 1](target, unpack(match)) end
+      if #match > 0 then return handlers[i + 1](target, luvi_source, unpack(match)) end
     end
     error("Not a file or valid url: " .. fullUrl)
   end
