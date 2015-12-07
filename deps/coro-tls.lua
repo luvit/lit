@@ -1,5 +1,5 @@
 exports.name = "creationix/coro-tls"
-exports.version = "1.3.1"
+exports.version = "1.4.0"
 exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
 exports.description = "A coro-stream wrapper implementing tls sessions."
 exports.tags = {"coro", "tls", "ssl"}
@@ -60,7 +60,7 @@ exports.wrap = function (read, write, options)
   elseif DEFAULT_CA_STORE then
     ctx:cert_store(DEFAULT_CA_STORE)
   else
-    ctx:verify_mode({"none"})
+    ctx:verify_mode(openssl.ssl.none)
   end
 
   ctx:options(bit.bor(
