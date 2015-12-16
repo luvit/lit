@@ -19,31 +19,32 @@ limitations under the License.
 local sshRsa = require('ssh-rsa')
 
 return function (db, username, raw)
-  db.importKeys(username)
+
   local body, fingerprint, signature = string.match(raw, "^(.*)"
     .. "%-%-%-%-%-BEGIN RSA SIGNATURE%-%-%-%-%-\n"
     .. "Format: sha256%-ssh%-rsa\n"
     .. "Fingerprint: ([^\n]+)\n\n"
-    .. "(.*)\n"
+    .. "(.*)"
     .. "%-%-%-%-%-END RSA SIGNATURE%-%-%-%-%-")
 
   if not signature then
     return nil, "Missing sha256-ssh-rsa signature"
   end
   signature = signature:gsub("\n", "")
-  local sshKey = db.readKey(username, fingerprint)
-  if not sshKey then
-    local iter = db.owners(username)
-    if iter then
-      for owner in iter do
-        db.importKeys(owner)
-        sshKey = db.readKey(owner, fingerprint)
-        if sshKey then break end
-      end
-      if not sshKey then
-        error("Not in group: " .. username)
-      end
+  local iter = db.owners(username)
+  local sshKey
+  if iter then
+    for owner in iter do
+      db.importKeys(owner)
+      sshKey = db.readKey(owner, fingerprint)
+      if sshKey then break end
     end
+    if not sshKey then
+      return nil, "Not in group: " .. username
+    end
+  else
+    db.importKeys(username)
+    sshKey = db.readKey(username, fingerprint)
     if not sshKey then
       return nil, "Invalid fingerprint " .. fingerprint .. " for " .. username
     end
