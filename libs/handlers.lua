@@ -93,8 +93,9 @@ return function (core)
         end
         local tag = git.decoders.tag(raw)
         local username = string.match(tag.tag, "^[^/]+")
-        if not verifySignature(db, username, raw) then
-          return remote.writeAs("error", "Signature verification failure")
+        local success, err = verifySignature(db, username, raw)
+        if not success then
+          return remote.writeAs("error", err or "Signature verification failure")
         end
         tag.hash = hash
         remote.tag = tag
@@ -144,7 +145,8 @@ return function (core)
 
   local function verifyRequest(raw)
     local data = assert(jsonParse(string.match(raw, "([^\n]+)")))
-    assert(verifySignature(db, data.username, raw), "Signature verification failure")
+    local success, err = verifySignature(db, data.username, raw)
+    assert(success, err or "Signature verification failure")
     return data
   end
 
