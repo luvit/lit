@@ -191,23 +191,41 @@ local function loader(dir, path, bundleOnly)
     -- Module require
   end
   if useBundle then
+    local key = "bundle:" .. fullPath
     return function ()
-      return loadstring(bundle.readfile(fullPath), "bundle:" .. fullPath)()
-    end
+      if package.loaded[key] then
+        return package.loaded[key]
+      end
+      local code = bundle.readfile(fullPath)
+      local module = loadstring(code, key)()
+      package.loaded[key] = module
+      return module
+    end, key
   end
+  fullPath = uv.fs_realpath(fullPath)
   return function ()
-    return loadfile(fullPath)()
+    if package.loaded[fullPath] then
+      return package.loaded[fullPath]
+    end
+    local module = loadfile(fullPath)()
+    package.loaded[fullPath] = module
+    return module
   end
 end
 
 -- Register as a normal lua package loader.
 local cwd = uv.cwd()
-package.loaders[#package.loaders + 1] = function (path)
+table.insert(package.loaders, 1, function (path)
+
+  -- Ignore built-in libraries with this loader.
+  if path:match("^[a-z]+$") and package.preload[path] then
+    return
+  end
+
   local caller = debug.getinfo(3, "S").source
   if string.sub(caller, 1, 1) == "@" then
     return loader(pathJoin(cwd, caller:sub(2), ".."), path)
-  end
-  if string.sub(caller, 1, 7) == "bundle:" then
+  elseif string.sub(caller, 1, 7) == "bundle:" then
     return loader(pathJoin(caller:sub(8), ".."), path, true)
   end
-end
+end)
