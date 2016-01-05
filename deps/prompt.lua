@@ -1,13 +1,15 @@
-exports.name = "creationix/prompt"
-exports.version = "1.0.3-2"
-exports.dependencies = {
+--[[lit-meta
+name = "creationix/prompt"
+version = "1.0.3-2"
+dependencies = {
   "luvit/readline@1.1.1"
 }
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
-exports.description = "A simple wrapper around readline for quick terminal prompts."
-exports.tags = {"tty", "prompt"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
+description = "A simple wrapper around readline for quick terminal prompts."
+tags = {"tty", "prompt"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
 local readLine = require('readline').readLine
 

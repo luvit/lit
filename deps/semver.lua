@@ -1,11 +1,14 @@
-exports.name = "creationix/semver"
-exports.version = "1.0.4"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
-exports.description = "Parser, comparer and matcher for semantic versions strings."
-exports.tags = {"semver"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+name = "creationix/semver"
+version = "1.0.4"
+homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
+description = "Parser, comparer and matcher for semantic versions strings."
+tags = {"semver"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
+local exports = {}
 local parse, normalize, match
 -- Make the module itself callable
 setmetatable(exports, {
@@ -171,3 +174,5 @@ assert(match("5.0.0", iterator()) == "5.0.0-2")
 assert(match("6.0.0", iterator()) == "6.1.0")
 assert(not match("3.1.5", iterator()))
 assert(match(nil, iterator()) == "6.1.0")
+
+return exports

@@ -78,16 +78,18 @@ local projectHomepage = prompt("Homepage", "https://github.com/" .. projectName)
 local data = ""
 
 if output == "init.lua" then
-  local init = [[
-exports.name = %q
-exports.version = %q
-exports.dependencies = {}
-exports.description = %q
-exports.tags = %s
-exports.license = %q
-exports.author = { name = %q, email = %q }
-exports.homepage = %q
+  local init = [=[
+--[[lit-meta
+  name = %q
+  version = %q
+  dependencies = {}
+  description = %q
+  tags = %s
+  license = %q
+  author = { name = %q, email = %q }
+  homepage = %q
 ]]
+]=]
   data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
 elseif output == "package.lua" then
   local package = [[

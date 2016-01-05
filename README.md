@@ -335,9 +335,10 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
 
 Lit packages need some form of metadata embedded in the lua files.  Packages can
 be either single lua files or directories containing many files.  If your
-library is a single file, simply set `exports.name` and `exports.version` and
-optionally `exports.dependencies` at the top of your file.  It will then be able
-to be imported into lit and published to the repository.
+library is a single file, simply set `name` and `version` and optionally
+`dependencies` at the top of your file in a comment block wrapped with
+`--[[lit-meta ... ]]`.  It will then be able to be imported into lit and
+published to the repository.
 
 For more complex packages, lit will search first in `package.lua` and then in
 `init.lua`. The first file found will need to export or return a table
@@ -348,12 +349,16 @@ Here is an example of a single-file package
 ```lua
 -- bad-math.lua
 -- Dead simple library
-exports.name = "creationix/bad-math"
-exports.version = "0.0.1"
+--[[lit-meta
+  name = "creationix/bad-math"
+  version = "0.0.1"
+]]
 
-function exports.add(a, b)
+function add(a, b)
   return a - b
 end
+
+return { add = add }
 ```
 
 This can then be published with `lit publish bad-math.lua`, it can be installed

@@ -16,10 +16,10 @@ limitations under the License.
 
 --]]
 
-local uv = require('uv')
-require('luvi').bundle.register("luvit-require", "deps/require.lua")
 local bundle = require('luvi').bundle
-local require = require('luvit-require')("bundle:main.lua")
+loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
+
+local uv = require('uv')
 
 local aliases = {
   ["-v"] = "version",

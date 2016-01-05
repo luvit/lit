@@ -1,16 +1,18 @@
-exports.name = "creationix/coro-http"
-exports.version = "1.2.1-1"
-exports.dependencies = {
+--[[lit-meta
+name = "creationix/coro-http"
+version = "1.2.1-1"
+dependencies = {
   "creationix/coro-net@1.1.1",
   "creationix/coro-tls@1.2.1",
   "creationix/coro-wrapper@1.0.0",
   "luvit/http-codec@1.0.0"
 }
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
-exports.description = "An coro style http(s) client and server helper."
-exports.tags = {"coro", "http"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
+description = "An coro style http(s) client and server helper."
+tags = {"coro", "http"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
 local httpCodec = require('http-codec')
 local net = require('coro-net')
@@ -19,7 +21,7 @@ local createServer = net.createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
 
-function exports.createServer(host, port, onConnect)
+local function createServer(host, port, onConnect)
   createServer({host=host,port=port}, function (rawRead, rawWrite, socket)
     local read = wrapper.reader(rawRead, httpCodec.decoder())
     local write = wrapper.writer(rawWrite, httpCodec.encoder())
@@ -56,7 +58,6 @@ local function parseUrl(url)
     path = path
   }
 end
-exports.parseUrl = parseUrl
 
 local connections = {}
 
@@ -92,16 +93,14 @@ local function getConnection(host, port, tls)
     end
   }
 end
-exports.getConnection = getConnection
 
 local function saveConnection(connection)
   if connection.socket:is_closing() then return end
   connections[#connections + 1] = connection
   connection.socket:unref()
 end
-exports.saveConnection = saveConnection
 
-function exports.request(method, url, headers, body)
+local function request(method, url, headers, body)
   local uri = parseUrl(url)
   local connection = getConnection(uri.hostname, uri.port, uri.tls)
   local read = connection.read
@@ -142,7 +141,7 @@ function exports.request(method, url, headers, body)
     -- TODO: think about if this could resend requests with side effects and cause
     -- them to double execute in the remote server.
     if connection.reused then
-      return exports.request(method, url, headers, body)
+      return request(method, url, headers, body)
     end
     error("Connection closed")
   end
@@ -175,10 +174,18 @@ function exports.request(method, url, headers, body)
     for i = 1, #res do
       local key, location = unpack(res[i])
       if key:lower() == "location" then
-        return exports.request(method, location, headers)
+        return request(method, location, headers)
       end
     end
   end
 
   return res, table.concat(body)
 end
+
+return {
+  createServer = createServer,
+  parseUrl = parseUrl,
+  getConnection = getConnection,
+  saveConnection = saveConnection,
+  request = request,
+}

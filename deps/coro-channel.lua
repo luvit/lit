@@ -1,10 +1,12 @@
-exports.name = "creationix/coro-channel"
-exports.version = "1.3.0"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
-exports.description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
-exports.tags = {"coro", "adapter"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+  name = "creationix/coro-channel"
+  version = "1.3.0"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
+  description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
+  tags = {"coro", "adapter"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
+]]
 
 local function wrapRead(socket, decode)
   local paused = true
@@ -98,16 +100,14 @@ local function wrapWrite(socket, encode)
 
 end
 
-exports.wrapRead = wrapRead
-exports.wrapWrite = wrapWrite
 
 -- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
-function exports.wrapStream(socket, encode, decode)
+local function wrapStream(socket, encode, decode)
   return wrapRead(socket, encode), wrapWrite(socket, decode)
 end
 
 
-function exports.chain(...)
+local function chain(...)
   local args = {...}
   local nargs = select("#", ...)
   return function (read, write)
@@ -151,4 +151,12 @@ function exports.chain(...)
       assert(coroutine.resume(threads[i], r, w))
     end
   end
+  
 end
+
+return {
+  wrapRead = wrapRead,
+  wrapWrite = wrapWrite,
+  wrapStream = wrapStream,
+  chain = chain,
+}

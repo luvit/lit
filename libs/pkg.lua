@@ -68,7 +68,8 @@ local validKeys = {
   files = "table",
 }
 
-function exports.query(fs, path)
+
+local function query(fs, path)
   local packagePath = path
   local stat, data, err
   stat, err = fs.stat(path)
@@ -112,7 +113,7 @@ function exports.query(fs, path)
   return clean, packagePath
 end
 
-function exports.queryDb(db, hash)
+local function queryDb(db, hash)
   local kind, value = db.loadAny(hash)
   if kind == "tag" then
     hash = value.object
@@ -151,7 +152,14 @@ function exports.queryDb(db, hash)
   return meta, kind, hash
 end
 
-function exports.normalize(meta)
+local function normalize(meta)
   local author, tag = meta.name:match("^([^/]+)/(.*)$")
   return author, tag, semver.normalize(meta.version)
 end
+
+
+return {
+  query = query,
+  queryDb = queryDb,
+  normalize = normalize,
+}

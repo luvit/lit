@@ -1,14 +1,15 @@
-
-exports.name = "creationix/coro-spawn"
-exports.version = "0.2.1"
-exports.dependencies = {
+--[[lit-meta
+name = "creationix/coro-spawn"
+version = "0.2.1"
+dependencies = {
   "creationix/coro-channel@1.2.0"
 }
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-spawn.lua"
-exports.description = "An coro style interface to child processes."
-exports.tags = {"coro", "spawn", "child", "process"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+homepage = "https://github.com/luvit/lit/blob/master/deps/coro-spawn.lua"
+description = "An coro style interface to child processes."
+tags = {"coro", "spawn", "child", "process"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
 local uv = require('uv')
 local channel = require('coro-channel')

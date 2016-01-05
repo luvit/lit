@@ -1,10 +1,12 @@
-exports.name = "creationix/coro-tls"
-exports.version = "1.4.0"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
-exports.description = "A coro-stream wrapper implementing tls sessions."
-exports.tags = {"coro", "tls", "ssl"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+name = "creationix/coro-tls"
+version = "1.4.0"
+homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
+description = "A coro-stream wrapper implementing tls sessions."
+tags = {"coro", "tls", "ssl"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
 local openssl = require('openssl')
 local bit = require('bit')
@@ -22,7 +24,7 @@ do
 end
 
 -- Given a read/write pair, return a new read/write pair for plaintext
-exports.wrap = function (read, write, options)
+local function wrap(read, write, options)
   if not options then
     options = {}
   end
@@ -128,3 +130,7 @@ exports.wrap = function (read, write, options)
   return plainRead, plainWrite, ssl
 
 end
+
+return {
+  wrap = wrap,
+}

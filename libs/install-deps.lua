@@ -26,7 +26,7 @@ local log = require('log').log
 -- Given a db tree and a set of dependencies, create a new tree with the deps
 -- folder synthisized from the deps list.
 
-function exports.toDb(db, rootHash, deps, nativeOnly)
+local function toDb(db, rootHash, deps, nativeOnly)
   local tree = db.loadAs("tree", rootHash)
   local depsTree = {}
   for alias, meta in pairs(deps) do
@@ -60,7 +60,7 @@ function exports.toDb(db, rootHash, deps, nativeOnly)
   return db.saveAs("tree", tree)
 end
 
-function exports.toFs(db, fs, rootPath, deps, nativeOnly)
+local function toFs(db, fs, rootPath, deps, nativeOnly)
   for alias, meta in pairs(deps) do
     if meta.hash then
       local path = pathJoin(rootPath, "deps", alias)
@@ -75,3 +75,8 @@ function exports.toFs(db, fs, rootPath, deps, nativeOnly)
     end
   end
 end
+
+return {
+  toDb = toDb,
+  toFs = toFs,
+}

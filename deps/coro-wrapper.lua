@@ -1,12 +1,14 @@
-exports.name = "creationix/coro-wrapper"
-exports.version = "1.0.0-1"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
-exports.description = "An adapter for applying decoders to coro-streams."
-exports.tags = {"coro", "decoder", "adapter"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+name = "creationix/coro-wrapper"
+version = "1.0.0-1"
+homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
+description = "An adapter for applying decoders to coro-streams."
+tags = {"coro", "decoder", "adapter"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
-function exports.reader(read, decode)
+local function reader(read, decode)
   local buffer = ""
   return function ()
     while true do
@@ -25,7 +27,7 @@ function exports.reader(read, decode)
   end
 end
 
-function exports.writer(write, encode)
+local function writer(write, encode)
   return function (item)
     if not item then
       return write()
@@ -36,3 +38,8 @@ function exports.writer(write, encode)
     encode = newEncode
   end
 end
+
+return {
+  reader = reader,
+  writer = writer,
+}

@@ -1,14 +1,15 @@
-
-exports.name = "creationix/coro-net"
-exports.version = "1.2.0"
-exports.dependencies = {
+--[[lit-meta
+name = "creationix/coro-net"
+version = "1.2.0"
+dependencies = {
   "creationix/coro-channel@1.3.0"
 }
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
-exports.description = "An coro style client and server helper for tcp and pipes."
-exports.tags = {"coro", "tcp", "pipe", "net"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
+description = "An coro style client and server helper for tcp and pipes."
+tags = {"coro", "tcp", "pipe", "net"}
+license = "MIT"
+author = { name = "Tim Caswell" }
+]]
 
 local uv = require('uv')
 local wrapRead = require('coro-channel').wrapRead
@@ -36,7 +37,6 @@ local function makeCallback(timeout)
     return assert(coroutine.resume(thread, data or true))
   end
 end
-exports.makeCallback = makeCallback
 
 local function normalize(options)
   local t = type(options)
@@ -59,7 +59,7 @@ local function normalize(options)
   return options
 end
 
-function exports.connect(options)
+local function connect(options)
   local socket, success, err
   options = normalize(options)
   if options.isTcp then
@@ -83,7 +83,7 @@ function exports.connect(options)
   return read, write, socket, updateDecoder, updateEncoder
 end
 
-function exports.createServer(options, onConnect)
+local function createServer(options, onConnect)
   local server
   options = normalize(options)
   if options.isTcp then
@@ -113,3 +113,9 @@ function exports.createServer(options, onConnect)
   end))
   return server
 end
+
+return {
+  makeCallback = makeCallback,
+  connect = connect,
+  createServer = createServer,
+}
