@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/ssh-rsa"
-version = "1.0.1"
-homepage = "https://github.com/luvit/lit/blob/master/deps/ssh-rsa.lua"
-description = "Addons to lua-openssl for working with openssh rsa keys."
-tags = {"ssh", "rsa"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/ssh-rsa"
+  version = "1.0.1"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/ssh-rsa.lua"
+  description = "Addons to lua-openssl for working with openssh rsa keys."
+  tags = {"ssh", "rsa"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local openssl = require('openssl')

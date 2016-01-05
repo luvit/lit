@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/coro-tls"
-version = "1.4.0"
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
-description = "A coro-stream wrapper implementing tls sessions."
-tags = {"coro", "tls", "ssl"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-tls"
+  version = "1.4.0"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
+  description = "A coro-stream wrapper implementing tls sessions."
+  tags = {"coro", "tls", "ssl"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local openssl = require('openssl')

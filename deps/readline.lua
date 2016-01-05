@@ -16,13 +16,13 @@ limitations under the License.
 
 --]]
 --[[lit-meta
-name = "luvit/readline"
-version = "1.1.2"
-homepage = "https://github.com/luvit/luvit/blob/master/deps/readline.lua"
-description = "A readline interface for terminals in pure lua."
-tags = {"readline", "tty"}
-license = "Apache 2"
-author = { name = "Tim Caswell" }
+  name = "luvit/readline"
+  version = "1.1.2"
+  homepage = "https://github.com/luvit/luvit/blob/master/deps/readline.lua"
+  description = "A readline interface for terminals in pure lua."
+  tags = {"readline", "tty"}
+  license = "Apache 2"
+  author = { name = "Tim Caswell" }
 ]]
 
 -- Heavily inspired by ljlinenoise : <http://fperrad.github.io/ljlinenoise/>

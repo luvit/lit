@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/semver"
-version = "1.0.4"
-homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
-description = "Parser, comparer and matcher for semantic versions strings."
-tags = {"semver"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/semver"
+  version = "1.0.4"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
+  description = "Parser, comparer and matcher for semantic versions strings."
+  tags = {"semver"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local exports = {}

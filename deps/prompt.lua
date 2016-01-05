@@ -1,14 +1,14 @@
 --[[lit-meta
-name = "creationix/prompt"
-version = "1.0.3-2"
-dependencies = {
-  "luvit/readline@1.1.1"
-}
-homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
-description = "A simple wrapper around readline for quick terminal prompts."
-tags = {"tty", "prompt"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/prompt"
+  version = "1.0.3-2"
+  dependencies = {
+    "luvit/readline@1.1.1"
+  }
+  homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
+  description = "A simple wrapper around readline for quick terminal prompts."
+  tags = {"tty", "prompt"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local readLine = require('readline').readLine

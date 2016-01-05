@@ -1,14 +1,14 @@
 --[[lit-meta
-name = "creationix/coro-net"
-version = "1.2.0"
-dependencies = {
-  "creationix/coro-channel@1.3.0"
-}
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
-description = "An coro style client and server helper for tcp and pipes."
-tags = {"coro", "tcp", "pipe", "net"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-net"
+  version = "1.2.0"
+  dependencies = {
+    "creationix/coro-channel@1.3.0"
+  }
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
+  description = "An coro style client and server helper for tcp and pipes."
+  tags = {"coro", "tcp", "pipe", "net"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local uv = require('uv')

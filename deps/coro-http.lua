@@ -1,17 +1,17 @@
 --[[lit-meta
-name = "creationix/coro-http"
-version = "1.2.1-1"
-dependencies = {
-  "creationix/coro-net@1.1.1",
-  "creationix/coro-tls@1.2.1",
-  "creationix/coro-wrapper@1.0.0",
-  "luvit/http-codec@1.0.0"
-}
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
-description = "An coro style http(s) client and server helper."
-tags = {"coro", "http"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-http"
+  version = "1.2.1-1"
+  dependencies = {
+    "creationix/coro-net@1.1.1",
+    "creationix/coro-tls@1.2.1",
+    "creationix/coro-wrapper@1.0.0",
+    "luvit/http-codec@1.0.0"
+  }
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
+  description = "An coro style http(s) client and server helper."
+  tags = {"coro", "http"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local httpCodec = require('http-codec')

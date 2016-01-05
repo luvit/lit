@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/coro-fs"
-version = "1.3.0"
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
-description = "A coro style interface to the filesystem."
-tags = {"coro", "fs"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-fs"
+  version = "1.3.0"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
+  description = "A coro style interface to the filesystem."
+  tags = {"coro", "fs"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local uv = require('uv')

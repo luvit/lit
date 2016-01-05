@@ -11,7 +11,6 @@ return {
     flavor = "regular",
   },
   dependencies = {
-    "luvit/require@1.2.2",
     "luvit/pretty-print@1.0.7",
     "luvit/http-codec@1.0.0",
     "luvit/json@2.5.0",

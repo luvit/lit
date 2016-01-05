@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/websocket-codec"
-version = "1.0.8"
-homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
-description = "A codec implementing websocket framing and helpers for handshakeing"
-tags = {"http", "websocket", "codec"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/websocket-codec"
+  version = "1.0.8"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
+  description = "A codec implementing websocket framing and helpers for handshakeing"
+  tags = {"http", "websocket", "codec"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local digest = require('openssl').digest.digest

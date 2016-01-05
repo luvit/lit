@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/coro-split"
-version = "0.1.1"
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-split.lua"
-description = "An coro style helper for running tasks concurrently."
-tags = {"coro", "split"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-split"
+  version = "0.1.1"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-split.lua"
+  description = "An coro style helper for running tasks concurrently."
+  tags = {"coro", "split"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 -- Split takes several functions as input and runs them in concurrent coroutines.

@@ -1,14 +1,14 @@
 --[[lit-meta
-name = "creationix/coro-spawn"
-version = "0.2.1"
-dependencies = {
-  "creationix/coro-channel@1.2.0"
-}
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-spawn.lua"
-description = "An coro style interface to child processes."
-tags = {"coro", "spawn", "child", "process"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-spawn"
+  version = "0.2.1"
+  dependencies = {
+    "creationix/coro-channel@1.2.0"
+  }
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-spawn.lua"
+  description = "An coro style interface to child processes."
+  tags = {"coro", "spawn", "child", "process"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local uv = require('uv')

@@ -1,17 +1,17 @@
 --[[lit-meta
-name = "luvit/json"
-version = "2.5.1"
-homepage = "http://dkolf.de/src/dkjson-lua.fsl"
-description = "David Kolf's JSON library repackaged for lit."
-tags = {"json", "codec"}
-license = "MIT"
-author = {
-  name = "David Kolf",
-  homepage = "http://dkolf.de/",
-}
-contributors = {
-  "Tim Caswell",
-}
+  name = "luvit/json"
+  version = "2.5.1"
+  homepage = "http://dkolf.de/src/dkjson-lua.fsl"
+  description = "David Kolf's JSON library repackaged for lit."
+  tags = {"json", "codec"}
+  license = "MIT"
+  author = {
+    name = "David Kolf",
+    homepage = "http://dkolf.de/",
+  }
+  contributors = {
+    "Tim Caswell",
+  }
 ]]
 
 -- Module options:

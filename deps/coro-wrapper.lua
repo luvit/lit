@@ -1,11 +1,11 @@
 --[[lit-meta
-name = "creationix/coro-wrapper"
-version = "1.0.0-1"
-homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
-description = "An adapter for applying decoders to coro-streams."
-tags = {"coro", "decoder", "adapter"}
-license = "MIT"
-author = { name = "Tim Caswell" }
+  name = "creationix/coro-wrapper"
+  version = "1.0.0-1"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
+  description = "An adapter for applying decoders to coro-streams."
+  tags = {"coro", "decoder", "adapter"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
 ]]
 
 local function reader(read, decode)
