@@ -31,47 +31,49 @@ local configFile = env.get("LIT_CONFIG") or (prefix .. "litconfig")
 
 local loaded = false
 local config = {}
-local data = fs.readFile(configFile)
-if data then
-  loaded = true
-  log("load config", configFile)
-  for key, value in string.gmatch(data, "([^:\n]+): *([^\n]+)") do
-    config[key] = value
-  end
-end
-
-local function save()
-  if loaded then
-    log("update config", configFile)
-  else
-    log("create config", configFile)
+return function ()
+  local data = fs.readFile(configFile)
+  if data then
     loaded = true
+    log("load config", configFile)
+    for key, value in string.gmatch(data, "([^:\n]+): *([^\n]+)") do
+      config[key] = value
+    end
   end
-  local lines = {}
-  for key, value in pairs(config) do
-    lines[#lines + 1] = key .. ": " .. value
+
+  local function save()
+    if loaded then
+      log("update config", configFile)
+    else
+      log("create config", configFile)
+      loaded = true
+    end
+    local lines = {}
+    for key, value in pairs(config) do
+      lines[#lines + 1] = key .. ": " .. value
+    end
+    fs.writeFile(configFile, table.concat(lines, "\n") .. '\n')
   end
-  fs.writeFile(configFile, table.concat(lines, "\n") .. '\n')
-end
 
-local dirty = false
-if not config.defaultUpstream then
-  config.defaultUpstream = "wss://lit.luvit.io/"
-  if not loaded then
-    config.upstream = config.defaultUpstream
+  local dirty = false
+  if not config.defaultUpstream then
+    config.defaultUpstream = "wss://lit.luvit.io/"
+    if not loaded then
+      config.upstream = config.defaultUpstream
+    end
+    dirty = true
   end
-  dirty = true
+
+  if not config.database then
+    config.database = prefix .. "litdb.git"
+    dirty = true
+  end
+
+  if dirty then save() end
+
+  setmetatable(config, {
+    __index = {save = save}
+  })
+
+  return config
 end
-
-if not config.database then
-  config.database = prefix .. "litdb.git"
-  dirty = true
-end
-
-if dirty then save() end
-
-setmetatable(config, {
-  __index = {save = save}
-})
-
-return config

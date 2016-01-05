@@ -1,10 +1,12 @@
-exports.name = "creationix/ssh-rsa"
-exports.version = "1.0.1"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/ssh-rsa.lua"
-exports.description = "Addons to lua-openssl for working with openssh rsa keys."
-exports.tags = {"ssh", "rsa"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+  name = "creationix/ssh-rsa"
+  version = "1.0.1"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/ssh-rsa.lua"
+  description = "Addons to lua-openssl for working with openssh rsa keys."
+  tags = {"ssh", "rsa"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
+]]
 
 local openssl = require('openssl')
 local pkey = openssl.pkey
@@ -71,14 +73,14 @@ end
 
 
 -- Given two openssl.bn instances for e and n, return the ssh-rsa formatted string for public keys.
-function exports.encode(e, n)
-return encodePrefix("ssh-rsa")
+local function encode(e, n)
+  return encodePrefix("ssh-rsa")
     .. encodePrefix(e:totext())
     .. encodePrefix(n:totext())
 end
 
 -- Given a raw ssh-rsa key as a binary string, parse out e and n as openssl.bn instances
-function exports.decode(input)
+local function decode(input)
   local format, e, n
   format, input = decodePrefix(input)
   assert(format == "ssh-rsa")
@@ -89,7 +91,7 @@ function exports.decode(input)
 end
 
 -- Calculate an ssh style fingerprint from raw public data
-function exports.fingerprint(data)
+local function fingerprint(data)
   local parts = {}
   local hash = digest("md5", data, true)
   for i = 1, #hash do
@@ -99,31 +101,31 @@ function exports.fingerprint(data)
 end
 
 -- Calculate the public key data from an rsa private key file
-function exports.loadPrivate(data)
+local function loadPrivate(data)
   local key = pkey.read(data, true)
   local rsa = key:parse().rsa:parse()
-  return exports.encode(rsa.e, rsa.n)
+  return encode(rsa.e, rsa.n)
 end
 
 -- Extract the raw data from a public key file.
-function exports.loadPublic(data)
+local function loadPublic(data)
   data = data:match("^ssh%-rsa ([^ ]+)")
   data = data and data:gsub("%s", "")
   return data and dec(data)
 end
 
-function exports.writePublic(data)
+local function writePublic(data)
   return "ssh-rsa " .. enc(data)
 end
 
-function exports.sign(body, privateKey)
+local function sign(body, privateKey)
 
   -- Extract e and n from the private RSA key to build the ssh public key
   local rsa = privateKey:parse().rsa:parse()
   -- Encode in ssh-rsa format
-  local data = exports.encode(rsa.e, rsa.n)
+  local data = encode(rsa.e, rsa.n)
   -- And digest in ssh fingerprint format
-  local fingerprint = exports.fingerprint(data)
+  local fingerprint = fingerprint(data)
 
   -- Sign the message using a sha256 message digest
   local sig = privateKey:sign(body, "sha256")
@@ -135,10 +137,10 @@ function exports.sign(body, privateKey)
     "-----END RSA SIGNATURE-----\n"
 end
 
-function exports.toPublicKey(data)
+local function toPublicKey(data)
 
   -- Convert to openssl format
-  local e, n = exports.decode(data)
+  local e, n = decode(data)
   local key = pkey.new({
     alg = 'rsa',
     n = n,
@@ -154,7 +156,19 @@ end
 
 -- Given a raw body, a raw signature (PEM encoded with metadata), and a
 -- publicKey instance, verify a signature.
-function exports.verify(body, signature, data)
-  local key = exports.toPublicKey(data)
+local function verify(body, signature, data)
+  local key = toPublicKey(data)
   return key:verify(body, dec(signature), "sha256")
 end
+
+return {
+  encode = encode,
+  decode = decode,
+  fingerprint = fingerprint,
+  loadPrivate = loadPrivate,
+  loadPublic = loadPublic,
+  writePublic = writePublic,
+  sign = sign,
+  toPublicKey = toPublicKey,
+  verify = verify,
+}

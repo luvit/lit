@@ -1,10 +1,12 @@
-exports.name = "creationix/websocket-codec"
-exports.version = "1.0.8"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
-exports.description = "A codec implementing websocket framing and helpers for handshakeing"
-exports.tags = {"http", "websocket", "codec"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+  name = "creationix/websocket-codec"
+  version = "1.0.8"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
+  description = "A codec implementing websocket framing and helpers for handshakeing"
+  tags = {"http", "websocket", "codec"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
+]]
 
 local digest = require('openssl').digest.digest
 local base64 = require('openssl').base64
@@ -39,7 +41,7 @@ local function applyMask(data, mask)
   return concat(out)
 end
 
-function exports.decode(chunk)
+local function decode(chunk)
   if #chunk < 2 then return end
   local second = byte(chunk, 2)
   local len = band(second, 0x7f)
@@ -92,7 +94,7 @@ function exports.decode(chunk)
   }, extra
 end
 
-function exports.encode(item)
+local function encode(item)
   if type(item) == "string" then
     item = {
       opcode = 2,
@@ -145,13 +147,12 @@ end
 
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-function exports.acceptKey(key)
+local function acceptKey(key)
   return gsub(base64(digest("sha1", key .. websocketGuid, true)), "\n", "")
 end
-local acceptKey = exports.acceptKey
 
 -- Make a client handshake connection
-function exports.handshake(options, request)
+local function handshake(options, request)
   local key = gsub(base64(random(20)), "\n", "")
   local host = options.host
   local path = options.path or "/"
@@ -200,7 +201,7 @@ function exports.handshake(options, request)
   return true
 end
 
-function exports.handleHandshake(head, protocol)
+local function handleHandshake(head, protocol)
 
   -- WebSocket connections must be GET requests
   if not head.method == "GET" then return end
@@ -258,3 +259,11 @@ function exports.handleHandshake(head, protocol)
 
   return res
 end
+
+return {
+  decode = decode,
+  encode = encode,
+  acceptKey = acceptKey,
+  handshake = handshake,
+  handleHandshake = handleHandshake,
+}

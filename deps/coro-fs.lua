@@ -1,13 +1,15 @@
-exports.name = "creationix/coro-fs"
-exports.version = "1.3.0"
-exports.homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
-exports.description = "A coro style interface to the filesystem."
-exports.tags = {"coro", "fs"}
-exports.license = "MIT"
-exports.author = { name = "Tim Caswell" }
+--[[lit-meta
+  name = "creationix/coro-fs"
+  version = "1.3.0"
+  homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
+  description = "A coro style interface to the filesystem."
+  tags = {"coro", "fs"}
+  license = "MIT"
+  author = { name = "Tim Caswell" }
+]]
 
 local uv = require('uv')
-local fs = exports
+local fs = {}
 local pathJoin = require('luvi').path.join
 
 local function noop() end
@@ -217,3 +219,5 @@ function fs.chroot(base)
   end
   return chroot
 end
+
+return fs

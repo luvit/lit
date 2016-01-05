@@ -16,10 +16,10 @@ limitations under the License.
 
 --]]
 
-local uv = require('uv')
-require('luvi').bundle.register("luvit-require", "deps/require.lua")
 local bundle = require('luvi').bundle
-local require = require('luvit-require')("bundle:main.lua")
+loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
+
+local uv = require('uv')
 
 local aliases = {
   ["-v"] = "version",
@@ -49,7 +49,7 @@ coroutine.wrap(function ()
       command = "help"
       path = "./commands/" .. command .. ".lua"
     end
-    require(path)
+    require(path)()
   end, debug.traceback)
   if invalid then
     success = false

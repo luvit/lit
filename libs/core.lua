@@ -53,6 +53,7 @@ local installDepsFs = require('install-deps').toFs
 local exportZip = require('export-zip')
 local digest = require('openssl').digest.digest
 local request = require('coro-http').request
+local makeAutoConfig = require('autoconfig')
 
 local quotepattern = '(['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..'])'
 local function escape(str)
@@ -92,7 +93,7 @@ local autocore
 local function makeCore(config)
 
   if not config then
-    autocore = autocore or makeCore(require('autoconfig'))
+    autocore = autocore or makeCore(makeAutoConfig())
     return autocore
   end
 

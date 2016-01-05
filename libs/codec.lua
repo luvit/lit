@@ -33,7 +33,6 @@ local function decodeText(message)
   assert(name, "Invalid message")
   return name, #data > 0 and data or nil
 end
-exports.decodeText = decodeText
 
 -- WANTS - 0x00 len (20 bytes) * len
 -- SEND - raw deflated data
@@ -56,10 +55,8 @@ local function decodeBinary(message)
   end
   return "send", inflate(message, 1)
 end
-exports.decodeBinary = decodeBinary
 
 local encoders = {}
-exports.encoders = encoders
 
 -- WANTS -  0x00 len (20 bytes) * len
 function encoders.wants(hashes)
@@ -103,7 +100,7 @@ local function encode(name, data)
   }
 end
 
-function exports.makeRemote(webRead, webWrite, isClient)
+local function makeRemote(webRead, webWrite, isClient)
 
   -- read
   local function innerRead()
@@ -150,3 +147,10 @@ function exports.makeRemote(webRead, webWrite, isClient)
     writeAs = writeAs,
   }
 end
+
+return {
+  decodeText = decodeText,
+  decodeBinary = decodeBinary,
+  encoders = encoders,
+  makeRemote = makeRemote,
+}

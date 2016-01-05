@@ -33,7 +33,7 @@ local patterns = {
   native = {ffi.os, ffi.arch},
 }
 
-function exports.compileFilter(rootPath, rules, nativeOnly)
+local function compileFilter(rootPath, rules, nativeOnly)
   assert(#rules > 0, "Empty files rule list not allowed")
   local os, arch = unpack(patterns[nativeOnly and "native" or "all"])
   for i = 1, #rules do
@@ -85,9 +85,8 @@ function exports.compileFilter(rootPath, rules, nativeOnly)
     end
   }
 end
-local compileFilter = exports.compileFilter
 
-function exports.isAllowed(path, entry, filters)
+local function isAllowed(path, entry, filters)
 
   -- Ignore all hidden files and folders always.
   local allow, matchesFilter, default, relativePath
@@ -128,9 +127,8 @@ function exports.isAllowed(path, entry, filters)
 
   return allow, default, matchesFilter and relativePath
 end
-local isAllowed = exports.isAllowed
 
-function exports.filterTree(db, rootPath, rootHash, rules, nativeOnly) --> hash
+local function filterTree(db, rootPath, rootHash, rules, nativeOnly) --> hash
   local filters = {}
   if rules and #rules > 0 then
     filters[#filters + 1] = compileFilter(rootPath, rules, nativeOnly)
@@ -181,3 +179,9 @@ function exports.filterTree(db, rootPath, rootHash, rules, nativeOnly) --> hash
 
   return copyTree(rootPath, rootHash)
 end
+
+return {
+  compileFilter = compileFilter,
+  isAllowed = isAllowed,
+  filterTree = filterTree,
+}

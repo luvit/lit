@@ -21,10 +21,11 @@ local semver = require('semver')
 local jsonParse = require('json').parse
 local log = require('log').log
 local prompt = require('prompt')(require('pretty-print'))
-local core = require('core')()
+local makeCore = require('core')
 local uv = require('uv')
+local core
 
-function exports.matchVersions(name, version)
+local function matchVersions(name, version)
   local head, body = request("GET", "https://lit.luvit.io/packages/" .. name)
   assert(head.code == 200)
   local versions = assert(jsonParse(body), "Problem parsing JSON response from lit")
@@ -36,7 +37,8 @@ function exports.matchVersions(name, version)
 end
 
 -- Feed auto-updater your package.lua pre-parsed as a lua table
-function exports.check(meta, target)
+local function check(meta, target)
+  core = core or makeCore()
   local name = meta.name
   local basename = name:match("[^/]+$")
   local version = meta.version
@@ -44,7 +46,7 @@ function exports.check(meta, target)
   local new, old
   if version then
     version = semver.normalize(version)
-    toupdate = exports.matchVersions(name, version)
+    toupdate = matchVersions(name, version)
     if not target then
       return toupdate
     end
@@ -65,7 +67,7 @@ function exports.check(meta, target)
     new = target .. ".new"
     old = target .. ".old"
   else
-    toupdate = exports.matchVersions(name)
+    toupdate = matchVersions(name)
     action = {"installing", "installation"}
     new = target
     old = nil
@@ -81,3 +83,8 @@ function exports.check(meta, target)
   log(basename .. " " .. action[2] .. " complete", toupdate, "success")
 
 end
+
+return {
+  matchVersions = matchVersions,
+  check = check,
+}
