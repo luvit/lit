@@ -1,1 +1,3 @@
-print((require('luvi').bundle.readfile("commands/README")))
+return function ()
+  print((require('luvi').bundle.readfile("commands/README")))
+end

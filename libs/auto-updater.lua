@@ -21,8 +21,9 @@ local semver = require('semver')
 local jsonParse = require('json').parse
 local log = require('log').log
 local prompt = require('prompt')(require('pretty-print'))
-local core = require('core')()
+local makeCore = require('core')
 local uv = require('uv')
+local core
 
 local function matchVersions(name, version)
   local head, body = request("GET", "https://lit.luvit.io/packages/" .. name)
@@ -37,6 +38,7 @@ end
 
 -- Feed auto-updater your package.lua pre-parsed as a lua table
 local function check(meta, target)
+  core = core or makeCore()
   local name = meta.name
   local basename = name:match("[^/]+$")
   local version = meta.version

@@ -49,7 +49,7 @@ coroutine.wrap(function ()
       command = "help"
       path = "./commands/" .. command .. ".lua"
     end
-    require(path)
+    require(path)()
   end, debug.traceback)
   if invalid then
     success = false
