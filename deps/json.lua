@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "luvit/json"
-  version = "2.5.1"
+  version = "2.5.2"
   homepage = "http://dkolf.de/src/dkjson-lua.fsl"
   description = "David Kolf's JSON library repackaged for lit."
   tags = {"json", "codec"}

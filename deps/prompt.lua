@@ -1,8 +1,8 @@
 --[[lit-meta
   name = "creationix/prompt"
-  version = "1.0.3-2"
+  version = "2.0.0"
   dependencies = {
-    "luvit/readline@1.1.1"
+    "luvit/readline@2.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/prompt.lua"
   description = "A simple wrapper around readline for quick terminal prompts."

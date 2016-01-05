@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "1.3.0"
+  version = "2.0.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
   tags = {"coro", "adapter"}
@@ -151,7 +151,7 @@ local function chain(...)
       assert(coroutine.resume(threads[i], r, w))
     end
   end
-  
+
 end
 
 return {
