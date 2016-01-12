@@ -67,7 +67,8 @@ return function ()
     return tags .. " }"
   end
 
-  local projectName = prompt("Project Name", config["username"] .. "/project-name")
+  local userName = prompt("Username", config["username"])
+  local projectName = prompt("Project Name", userName .. "/project-name")
   local projectVersion = prompt("Version", "0.0.1")
   local projectDescription = prompt("Description", "A simple description of my little package.")
   local projectTags = makeTags(prompt("Tags (Comma Separated)", "lua, lit, luvit"))
