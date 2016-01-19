@@ -63,7 +63,9 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
+GET /packages/$AUTHOR/$TAG/latest -> tag json of the most recent version
 GET /packages/$AUTHOR/$TAG/$VERSION.zip -> zip bundle of app and dependencies
+GET /packages/$AUTHOR/$TAG/latest.zip -> zip bundle of the most recent version
 
 GET /search/$query -> list of matches
 
@@ -192,8 +194,12 @@ return function (db, prefix)
         search = prefix .. "/search/{query}",
       }
     end,
-    "^/packages/([^/]+)/(.+)/v([^/]+)%.zip$", function (author, name, version)
-
+    "^/packages/([^/]+)/(.+)/([^/]+)%.zip$", function (author, name, version)
+      if version == "latest" then
+        version = (db.offlineMatch or db.match)(author, name)
+      elseif version:sub(1,1) == "v" then
+        version = version:sub(2)
+      end
       local meta, kind, hash = queryDb(db, db.read(author, name, version))
 
       if kind ~= "tree" then
@@ -217,7 +223,12 @@ return function (db, prefix)
         {"Content-Disposition", "attachment; filename=" .. filename}
       }
     end,
-    "^/packages/([^/]+)/(.+)/v([^/]+)$", function (author, name, version)
+    "^/packages/([^/]+)/(.+)/([^/]+)$", function (author, name, version)
+      if version == "latest" then
+        version = nil
+      elseif version:sub(1,1) == "v" then
+        version = version:sub(2)
+      end
       local meta = assert(loadMeta(author, name, version))
       meta.score = nil
       return meta

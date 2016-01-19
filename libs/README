@@ -129,6 +129,11 @@ GET /packages/$AUTHOR/$TAG/$VERSION -> tag json {
   }
   message = "..."
 }
+GET /packages/$AUTHOR/$TAG/latest -> tag json of the most recent version
+GET /packages/$AUTHOR/$TAG/$VERSION.zip -> zip bundle of app and dependencies
+GET /packages/$AUTHOR/$TAG/latest.zip -> zip bundle of the most recent version
+
+GET /search/$query -> list of matches
 
 Server API Handlers
 ===================
