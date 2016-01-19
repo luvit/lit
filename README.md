@@ -66,7 +66,7 @@ If the pre-built luvi binaries don't work on your machine, you can always build
 Once you have luvi, building lit is simple:
 
 ```sh
-> curl -L https://github.com/luvit/lit/archive/master.zip > lit.zip
+> curl -L https://lit.luvit.io/packages/luvit/lit/latest.zip > lit.zip
 > luvi lit.zip -- make lit.zip
 ```
 
