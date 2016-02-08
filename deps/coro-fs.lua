@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-fs"
-  version = "2.0.0"
+  version = "2.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
   description = "A coro style interface to the filesystem."
   tags = {"coro", "fs"}
