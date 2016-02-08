@@ -85,23 +85,24 @@ return function (db, fs, rootpath, rules, nativeOnly)
       return nil, err or "Problem scanning directory: " .. path
     end
 
-    for entry in iter do
-      local fullPath = pathJoin(path, entry.name)
-      if not entry.type then
+    for name, type in iter do
+      local ent = { name = name, type = type }
+      local fullPath = pathJoin(path, name)
+      if not entrytype then
         local stat, e = fs.stat(fullPath)
         if not (stat and stat.type) then
           return nil, e or "Cannot determine entry type: " .. fullPath
         end
-        entry.type = stat.type
+        ent.type = stat.type
       end
-      if isAllowed(fullPath, entry, filters) then
-        local mode, hash = importEntry(fullPath, entry)
+      if isAllowed(fullPath, ent, filters) then
+        local mode, hash = importEntry(fullPath, ent)
         if not mode then
           return nil, hash or "Problem importing entry: " .. fullPath
         end
-        entry.mode, entry.hash = mode, hash
-        if entry.hash then
-          items[#items + 1] = entry
+        ent.mode, ent.hash = mode, hash
+        if ent.hash then
+          items[#items + 1] = ent
         end
       end
     end
