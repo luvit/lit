@@ -111,7 +111,13 @@ function fs.scandir(path)
   local req, err = coroutine.yield()
   if not req then return nil, err end
   return function ()
-    return uv.fs_scandir_next(req)
+    local name, typ = uv.fs_scandir_next(req)
+    if not name then return end
+    if type(name) == "table" then return name end
+    return {
+      name = name,
+      type = typ
+    }
   end
 end
 
