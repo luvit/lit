@@ -1,16 +1,20 @@
 --[[lit-meta
   name = "creationix/websocket-codec"
-  version = "2.0.0"
-  homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
   description = "A codec implementing websocket framing and helpers for handshakeing"
+  version = "2.1.0"
+  dependencies = {
+    "creationix/base64@1.0.0",
+    "creationix/sha1@0.5.0",
+  }
+  homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
   tags = {"http", "websocket", "codec"}
   license = "MIT"
   author = { name = "Tim Caswell" }
 ]]
 
-local digest = require('openssl').digest.digest
-local base64 = require('openssl').base64
-local random = require('openssl').random
+local base64 = require('base64')
+local sha1 = require('sha1')
+local bit = require('bit')
 
 local band = bit.band
 local bor = bit.bor
@@ -24,6 +28,18 @@ local gmatch = string.gmatch
 local lower = string.lower
 local gsub = string.gsub
 local concat = table.concat
+
+local function rand4()
+  -- Generate 32 bits of pseudo random data
+  local num = floor(random() * 0x100000000)
+  -- Return as a 4-byte string
+  return char(
+    rshift(num, 24),
+    band(rshift(num, 16), 0xff),
+    band(rshift(num, 8), 0xff),
+    band(num, 0xff)
+  )
+end
 
 local function applyMask(data, mask)
   local bytes = {
@@ -139,7 +155,7 @@ local function encode(item)
     chars[4] = char(band(len, 0xff))
   end
   if mask then
-    local key = random(4)
+    local key = rand4()
     return concat(chars) .. key .. applyMask(payload, key)
   end
   return concat(chars) .. payload
@@ -148,12 +164,14 @@ end
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 local function acceptKey(key)
-  return gsub(base64(digest("sha1", key .. websocketGuid, true)), "\n", "")
+  return gsub(base64(sha1(key .. websocketGuid, true)), "\n", "")
 end
 
 -- Make a client handshake connection
 local function handshake(options, request)
-  local key = gsub(base64(random(20)), "\n", "")
+  -- Generate 20 bytes of pseudo-random data
+  local key = concat(rand4(), rand4(), rand4(), rand4(), rand4())
+  key = base64(key)
   local host = options.host
   local path = options.path or "/"
   local protocol = options.protocol
