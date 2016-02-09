@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-tls"
-  version = "2.0.0"
+  version = "2.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-tls.lua"
   description = "A coro-stream wrapper implementing tls sessions."
   tags = {"coro", "tls", "ssl"}
@@ -8,7 +8,7 @@
   author = { name = "Tim Caswell" }
 ]]
 
-local openssl = require('openssl')
+local openssl -- Lazy loaded on first use
 local bit = require('bit')
 
 local DEFAULT_CIPHERS = 'ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:' .. -- TLS 1.2
@@ -25,6 +25,7 @@ end
 
 -- Given a read/write pair, return a new read/write pair for plaintext
 local function wrap(read, write, options)
+  openssl = openssl or require('openssl')
   if not options then
     options = {}
   end
