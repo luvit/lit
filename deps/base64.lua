@@ -2,7 +2,7 @@
   name = "creationix/base64"
   description = "A pure lua implemention of base64 using bitop"
   tags = {"crypto", "base64", "bitop"}
-  version = "1.0.0"
+  version = "1.0.1"
   license = "MIT"
   author = { name = "Tim Caswell" }
 ]]
@@ -18,7 +18,7 @@ local concat = table.concat
 local ceil = math.ceil
 local codes = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
 
-return function (str)
+local function base64(str)
   local parts = {}
   local l = ceil(#str / 3)
   for i = 1, l do
@@ -38,8 +38,18 @@ return function (str)
         c and rshift(c, 6) or 0
       ) + 1) or 61, -- 61 is '='
       -- Lower 4 bits of c
-      c and byte(band(c, 63) + 1) or 61 -- 61 is '='
+      c and byte(codes, band(c, 63) + 1) or 61 -- 61 is '='
     )
   end
   return concat(parts)
 end
+
+assert(base64("") == "")
+assert(base64("f") == "Zg==")
+assert(base64("fo") == "Zm8=")
+assert(base64("foo") == "Zm9v")
+assert(base64("foob") == "Zm9vYg==")
+assert(base64("fooba") == "Zm9vYmE=")
+assert(base64("foobar") == "Zm9vYmFy")
+
+return base64
