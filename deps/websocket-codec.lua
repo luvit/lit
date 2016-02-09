@@ -1,9 +1,9 @@
 --[[lit-meta
   name = "creationix/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
-  version = "2.1.0"
+  version = "2.1.1"
   dependencies = {
-    "creationix/base64@1.0.0",
+    "creationix/base64@1.0.1",
     "creationix/sha1@0.5.0",
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
@@ -28,6 +28,8 @@ local gmatch = string.gmatch
 local lower = string.lower
 local gsub = string.gsub
 local concat = table.concat
+local floor = math.floor
+local random = math.random
 
 local function rand4()
   -- Generate 32 bits of pseudo random data
@@ -164,13 +166,13 @@ end
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 local function acceptKey(key)
-  return gsub(base64(sha1(key .. websocketGuid, true)), "\n", "")
+  return gsub(base64(sha1.binary(key .. websocketGuid)), "\n", "")
 end
 
 -- Make a client handshake connection
 local function handshake(options, request)
   -- Generate 20 bytes of pseudo-random data
-  local key = concat(rand4(), rand4(), rand4(), rand4(), rand4())
+  local key = concat({rand4(), rand4(), rand4(), rand4(), rand4()})
   key = base64(key)
   local host = options.host
   local path = options.path or "/"
