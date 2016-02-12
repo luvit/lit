@@ -1,16 +1,19 @@
 --[[lit-meta
   name = "creationix/coro-fs"
-  version = "2.0.1"
+  version = "2.0.2"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
   description = "A coro style interface to the filesystem."
   tags = {"coro", "fs"}
   license = "MIT"
+  dependencies = {
+    "luvit/path@2.0.0"
+  }
   author = { name = "Tim Caswell" }
 ]]
 
 local uv = require('uv')
 local fs = {}
-local pathJoin = require('luvi').path.join
+local pathJoin = require('path').join
 
 local function noop() end
 
