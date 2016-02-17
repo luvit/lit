@@ -13,7 +13,15 @@
 
 local uv = require('uv')
 local fs = {}
-local pathJoin = require('path').join
+local pathJoin
+do
+  local success, luvi = pcall(require, 'luvi')
+  if success then
+    pathJoin = luvi.path.join
+  else
+    pathJoin = require('path').join
+  end
+end
 
 local function noop() end
 
