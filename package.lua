@@ -14,7 +14,7 @@ return {
     "luvit/pretty-print@2.0.0",
     "luvit/http-codec@2.0.0",
     "luvit/json@2.5.2",
-    "creationix/coro-fs@2.0.0",
+    "creationix/coro-fs@2.2.0",
     "creationix/coro-net@2.0.0",
     "creationix/coro-http@2.0.0",
     "creationix/coro-tls@2.0.0",

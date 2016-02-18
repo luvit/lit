@@ -1,27 +1,19 @@
 --[[lit-meta
   name = "creationix/coro-fs"
-  version = "2.1.0"
+  version = "2.2.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
   description = "A coro style interface to the filesystem."
   tags = {"coro", "fs"}
   license = "MIT"
   dependencies = {
-    "luvit/path@2.0.0"
+    "creationix/pathjoin@2.0.0"
   }
   author = { name = "Tim Caswell" }
 ]]
 
 local uv = require('uv')
 local fs = {}
-local pathJoin
-do
-  local success, luvi = pcall(require, 'luvi')
-  if success then
-    pathJoin = luvi.path.join
-  else
-    pathJoin = require('path').join
-  end
-end
+local pathJoin = require('pathjoin').pathJoin
 
 local function noop() end
 
