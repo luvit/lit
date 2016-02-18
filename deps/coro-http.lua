@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "2.0.0"
+  version = "2.0.1"
   dependencies = {
     "creationix/coro-net@2.0.0",
     "creationix/coro-tls@2.0.0",
@@ -17,12 +17,12 @@
 local httpCodec = require('http-codec')
 local net = require('coro-net')
 local connect = net.connect
-local createServer = net.createServer
+local netCreateServer = net.createServer
 local tlsWrap = require('coro-tls').wrap
 local wrapper = require('coro-wrapper')
 
 local function createServer(host, port, onConnect)
-  createServer({host=host,port=port}, function (rawRead, rawWrite, socket)
+  netCreateServer({host=host,port=port}, function (rawRead, rawWrite, socket)
     local read = wrapper.reader(rawRead, httpCodec.decoder())
     local write = wrapper.writer(rawWrite, httpCodec.encoder())
     for head in read do
