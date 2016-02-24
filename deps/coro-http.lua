@@ -1,10 +1,8 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "2.0.1"
+  version = "2.1.0"
   dependencies = {
-    "creationix/coro-net@2.0.0",
-    "creationix/coro-tls@2.0.0",
-    "creationix/coro-wrapper@2.0.0",
+    "creationix/coro-net@2.1.0",
     "luvit/http-codec@2.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
@@ -16,15 +14,14 @@
 
 local httpCodec = require('http-codec')
 local net = require('coro-net')
-local connect = net.connect
-local netCreateServer = net.createServer
-local tlsWrap = require('coro-tls').wrap
-local wrapper = require('coro-wrapper')
 
 local function createServer(host, port, onConnect)
-  netCreateServer({host=host,port=port}, function (rawRead, rawWrite, socket)
-    local read = wrapper.reader(rawRead, httpCodec.decoder())
-    local write = wrapper.writer(rawWrite, httpCodec.encoder())
+  net.createServer({
+    host = host,
+    port = port,
+    encode = httpCodec.encoder(),
+    decode = httpCodec.decoder(),
+  }, function (read, write, socket)
     for head in read do
       local parts = {}
       for part in read do
@@ -74,22 +71,26 @@ local function getConnection(host, port, tls)
       end
     end
   end
-  local read, write, socket = assert(connect({host=host,port=port}))
-  if tls then
-    read, write = tlsWrap(read, write)
-  end
-  local httpRead, updateRead = wrapper.reader(read, httpCodec.decoder())
+  local read, write, socket, updateDecoder, updateEncoder = assert(net.connect {
+    host = host,
+    port = port,
+    tls = tls,
+    encode = httpCodec.encoder(),
+    decode = httpCodec.decoder()
+  })
   return {
     socket = socket,
     host = host,
     port = port,
     tls = tls,
-    read = httpRead,
-    write = wrapper.writer(write, httpCodec.encoder()),
+    read = read,
+    write = write,
+    updateEncoder = updateEncoder,
+    updateDecoder = updateDecoder,
     reset = function ()
       -- This is called after parsing the response head from a HEAD request.
       -- If you forget, the codec might hang waiting for a body that doesn't exist.
-      updateRead(httpCodec.decoder())
+      updateDecoder(httpCodec.decoder())
     end
   }
 end
