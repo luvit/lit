@@ -44,7 +44,7 @@ return function (ctx, isServer, socket, handshakeComplete)
 
   local function handshake(callback)
     if ssl:handshake() then
-      return handshakeComplete(nil, ssocket)
+      handshakeComplete(nil, ssocket)
     end
     return flush(callback)
   end
