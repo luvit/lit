@@ -51,6 +51,13 @@ local function normalize(options)
   elseif t ~= "table" then
     assert("Net options must be table, string, or number")
   end
+  if options.tls == true then
+    options.tls = {}
+  end
+  if options.server and options.tls then
+    assert(options.tls.cert, "TLS servers require a certificate")
+    assert(options.tls.key, "TLS servers require a key")
+  end
   if options.port or options.host then
     options.isTcp = true
     options.host = options.host or "127.0.0.1"
@@ -67,10 +74,11 @@ local function connect(options)
   local socket, success, err
   options = normalize(options)
   if options.isTcp then
-    assert(uv.getaddrinfo(options.host, options.port, {
+    success, err = uv.getaddrinfo(options.host, options.port, {
       socktype = options.socktype or "stream",
       family = options.family or "inet",
-    }, makeCallback(options.timeout)))
+    }, makeCallback(options.timeout))
+    if not success then return nil, err end
     local res
     res, err = coroutine.yield()
     if not res then return nil, err end
@@ -86,7 +94,10 @@ local function connect(options)
   local dsocket
   if options.tls then
     if not secureSocket then secureSocket = require('secure-socket') end
-    dsocket = secureSocket(socket, options.tls)
+    dsocket, err = secureSocket(socket, options.tls)
+    if not dsocket then
+      return nil, err
+    end
   else
     dsocket = socket
   end
@@ -116,14 +127,14 @@ local function createServer(options, onConnect)
         if options.tls then
           if not secureSocket then secureSocket = require('secure-socket') end
           options.tls.server = true
-          dsocket = secureSocket(socket, options.tls)
+          dsocket = assert(secureSocket(socket, options.tls))
         else
           dsocket = socket
         end
 
-        local read, updateDecode = wrapRead(dsocket, options.decode)
-        local write, updateEncode = wrapWrite(dsocket, options.encode)
-        return onConnect(read, write, socket, updateEncode, updateDecode)
+        local read, updateDecoder = wrapRead(dsocket, options.decode)
+        local write, updateEncoder = wrapWrite(dsocket, options.encode)
+        return onConnect(read, write, socket, updateDecoder, updateEncoder)
       end, debug.traceback)
       if not success then
         print(failure)

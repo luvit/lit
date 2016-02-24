@@ -50,13 +50,17 @@ return function (ctx, isServer, socket, handshakeComplete)
   end
 
   local function onCipher(err, data)
+    if not onPlain then
+      if err or not data then
+        return handshakeComplete(err or "Server aborted the SSL handshake", data)
+      end
+      bin:write(data)
+      return handshake()
+    end
     if err or not data then
       return onPlain(err, data)
     end
     bin:write(data)
-    if not onPlain then
-      return handshake()
-    end
     while  true do
       local plain = ssl:read()
       if not plain then break end

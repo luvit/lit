@@ -9,6 +9,7 @@
 ]]
 
 local function wrapRead(socket, decode)
+  assert(socket)
   local paused = true
 
   local queue = {}
@@ -67,6 +68,7 @@ local function wrapRead(socket, decode)
 end
 
 local function wrapWrite(socket, encode)
+  assert(socket)
 
   local function wait()
     local thread = coroutine.running()
@@ -103,6 +105,7 @@ end
 
 -- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
 local function wrapStream(socket, encode, decode)
+  assert(socket)
   return wrapRead(socket, encode), wrapWrite(socket, decode)
 end
 
