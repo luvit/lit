@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "2.0.0"
+  version = "2.2.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
   tags = {"coro", "adapter"}
@@ -8,7 +8,43 @@
   author = { name = "Tim Caswell" }
 ]]
 
-local function wrapRead(socket, decode)
+-- local p = require('pretty-print').prettyPrint
+
+local function makeCloser(socket)
+  local closer = {
+    read = false,
+    written = false,
+    errored = false,
+  }
+
+  local closed = false
+
+  local function close()
+    if closed then return end
+    closed = true
+    if not closer.readClosed then
+      closer.readClosed = true
+      if closer.onClose() then
+        closer.onClose()
+      end
+    end
+    if not socket:is_closing() then
+      socket:close()
+    end
+  end
+
+  closer.close = close
+
+  function closer.check()
+    if closer.errored or (closer.read and closer.written) then
+      return close()
+    end
+  end
+
+  return closer
+end
+
+local function makeRead(socket, decode, closer)
   local paused = true
 
   local queue = {}
@@ -16,6 +52,9 @@ local function wrapRead(socket, decode)
   local dindex = 0
 
   local function dispatch(data)
+
+    -- p("<-", data[1])
+
     if tindex > dindex then
       local thread = queue[dindex]
       queue[dindex] = nil
@@ -31,21 +70,38 @@ local function wrapRead(socket, decode)
     end
   end
 
+  closer.onClose = function ()
+    if not closer.read then
+      closer.read = true
+      return dispatch {nil, closer.errored}
+    end
+  end
+
   local buffer = ""
   local function onRead(err, chunk)
-    if not decode or not chunk or err then
-      return dispatch(err and {nil, err} or {chunk})
+    if err then
+      closer.errored = err
+      return closer.check()
+    end
+    if not chunk then
+      if closer.read then return end
+      closer.read = true
+      dispatch {}
+      return closer.check()
+    end
+    if not decode then
+      return dispatch {chunk}
     end
     buffer = buffer .. chunk
     while true do
       local item, extra = decode(buffer)
       if not extra then return end
       buffer = extra
-      dispatch({item})
+      dispatch {item}
     end
   end
 
-  return function ()
+  local function read()
     if dindex > tindex then
       local data = queue[tindex]
       queue[tindex] = nil
@@ -59,14 +115,15 @@ local function wrapRead(socket, decode)
     queue[tindex] = coroutine.running()
     tindex = tindex + 1
     return coroutine.yield()
-  end,
-  function (newDecode)
-    decode = newDecode
   end
 
+  local function updateDecoder(newDecode)
+    decode = newDecode
+  end
+  return read, updateDecoder
 end
 
-local function wrapWrite(socket, encode)
+local function makeWrite(socket, encode, closer)
 
   local function wait()
     local thread = coroutine.running()
@@ -75,37 +132,70 @@ local function wrapWrite(socket, encode)
     end
   end
 
-  local function shutdown()
-    socket:shutdown(wait())
-    coroutine.yield()
-    if not socket:is_closing() then
-      socket:close()
+  local function write(chunk)
+    if closer.written then
+      return nil, "already shutdown"
     end
-  end
 
-  return function (chunk)
+    -- p("->", chunk)
+
     if chunk == nil then
-      return shutdown()
+      closer.written = true
+      closer.check()
+      socket:shutdown(wait())
+      return coroutine.yield()
     end
+
     if encode then
       chunk = encode(chunk)
     end
-    assert(socket:write(chunk, wait()))
-    local err = coroutine.yield()
+    local success, err = socket:write(chunk, wait())
+    if not success then
+      closer.errored = err
+      closer.check()
+      return nil, err
+    end
+    err = coroutine.yield()
     return not err, err
-  end,
-  function (newEncode)
+  end
+
+  local function updateEncoder(newEncode)
     encode = newEncode
   end
 
+  return write, updateEncoder
 end
 
-
--- Given a raw uv_stream_t userdata, return coro-friendly read/write functions.
-local function wrapStream(socket, encode, decode)
-  return wrapRead(socket, encode), wrapWrite(socket, decode)
+local function wrapRead(socket, decode)
+  local closer = makeCloser(socket)
+  closer.written = true
+  local read, updateDecoder = makeRead(socket, decode, closer)
+  return read, updateDecoder, closer.close
 end
 
+local function wrapWrite(socket, encode)
+  local closer = makeCloser(socket)
+  closer.read = true
+  local write, updateEncoder = makeWrite(socket, encode, closer)
+  return write, updateEncoder, closer.close
+end
+
+local function wrapStream(socket, decode, encode)
+  assert(socket
+    and socket.write
+    and socket.shutdown
+    and socket.read_start
+    and socket.read_stop
+    and socket.is_closing
+    and socket.close)
+
+  local closer = makeCloser(socket)
+  local read, updateDecoder = makeRead(socket, decode, closer)
+  local write, updateEncoder = makeWrite(socket, encode, closer)
+
+  return read, write, updateDecoder, updateEncoder, closer.close
+
+end
 
 local function chain(...)
   local args = {...}
@@ -151,7 +241,6 @@ local function chain(...)
       assert(coroutine.resume(threads[i], r, w))
     end
   end
-
 end
 
 return {

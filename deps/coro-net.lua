@@ -1,8 +1,11 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "2.0.0"
+  version = "2.2.0"
   dependencies = {
-    "creationix/coro-channel@2.0.0"
+    "creationix/coro-channel@2.2.0"
+  }
+  optionalDependencies = {
+    "luvit/secure-socket@1.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-net.lua"
   description = "An coro style client and server helper for tcp and pipes."
@@ -12,8 +15,8 @@
 ]]
 
 local uv = require('uv')
-local wrapRead = require('coro-channel').wrapRead
-local wrapWrite = require('coro-channel').wrapWrite
+local wrapStream = require('coro-channel').wrapStream
+local secureSocket -- Lazy required from "secure-socket" on first use.
 
 local function makeCallback(timeout)
   local thread = coroutine.running()
@@ -38,7 +41,7 @@ local function makeCallback(timeout)
   end
 end
 
-local function normalize(options)
+local function normalize(options, server)
   local t = type(options)
   if t == "string" then
     options = {path=options}
@@ -47,12 +50,20 @@ local function normalize(options)
   elseif t ~= "table" then
     assert("Net options must be table, string, or number")
   end
+  if options.tls == true then
+    options.tls = {}
+  end
+  if server and options.tls then
+    options.tls.server = true
+    assert(options.tls.cert, "TLS servers require a certificate")
+    assert(options.tls.key, "TLS servers require a key")
+  end
   if options.port or options.host then
     options.isTcp = true
     options.host = options.host or "127.0.0.1"
     assert(options.port, "options.port is required for tcp connections")
   elseif options.path then
-    options.isTcp = true
+    options.isTcp = false
   else
     error("Must set either options.path or options.port")
   end
@@ -63,10 +74,11 @@ local function connect(options)
   local socket, success, err
   options = normalize(options)
   if options.isTcp then
-    assert(uv.getaddrinfo(options.host, options.port, {
+    success, err = uv.getaddrinfo(options.host, options.port, {
       socktype = options.socktype or "stream",
       family = options.family or "inet",
-    }, makeCallback(options.timeout)))
+    }, makeCallback(options.timeout))
+    if not success then return nil, err end
     local res
     res, err = coroutine.yield()
     if not res then return nil, err end
@@ -78,14 +90,27 @@ local function connect(options)
   end
   success, err = coroutine.yield()
   if not success then return nil, err end
-  local read, updateDecoder = wrapRead(socket, options.decode)
-  local write, updateEncoder = wrapWrite(socket, options.encode)
-  return read, write, socket, updateDecoder, updateEncoder
+
+  local dsocket
+  if options.tls then
+    if not secureSocket then secureSocket = require('secure-socket') end
+    dsocket, err = secureSocket(socket, options.tls)
+    if not dsocket then
+      return nil, err
+    end
+  else
+    dsocket = socket
+  end
+
+  local read, write, updateDecoder, updateEncoder, close =
+    wrapStream(dsocket, options.decode, options.encode)
+
+  return read, write, socket, updateDecoder, updateEncoder, close
 end
 
 local function createServer(options, onConnect)
   local server
-  options = normalize(options)
+  options = normalize(options, true)
   if options.isTcp then
     server = uv.new_tcp()
     assert(server:bind(options.host, options.port))
@@ -99,15 +124,20 @@ local function createServer(options, onConnect)
     server:accept(socket)
     coroutine.wrap(function ()
       local success, failure = xpcall(function ()
-        local read, updateDecode = wrapRead(socket, options.decode)
-        local write, updateEncode = wrapWrite(socket, options.encode)
-        return onConnect(read, write, socket, updateEncode, updateDecode)
+        local dsocket
+        if options.tls then
+          if not secureSocket then secureSocket = require('secure-socket') end
+          dsocket = assert(secureSocket(socket, options.tls))
+        else
+          dsocket = socket
+        end
+
+        local read, write, updateDecoder, updateEncoder =
+          wrapStream(dsocket, options.decode, options.encode)
+        return onConnect(read, write, socket, updateDecoder, updateEncoder)
       end, debug.traceback)
       if not success then
         print(failure)
-      end
-      if not socket:is_closing() then
-        socket:close()
       end
     end)()
   end))

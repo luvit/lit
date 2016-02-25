@@ -1,12 +1,12 @@
+local args = {...}
 return function ()
   local createServer = require('coro-net').createServer
   local uv = require('uv')
   local httpCodec = require('http-codec')
   local websocketCodec = require('websocket-codec')
+  local wrapIo = require('coro-websocket').wrapIo
 
   local log = require('log').log
-  local wrapper = require('coro-wrapper')
-  local readWrap, writeWrap = wrapper.reader, wrapper.writer
   local makeRemote = require('codec').makeRemote
   local core = require('core')()
 
@@ -18,11 +18,12 @@ return function ()
     uv.new_signal():start("sigpipe")
   end
 
-  createServer(4822, function (rawRead, rawWrite, socket)
-
-    -- Handle the websocket handshake at the HTTP level
-    local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
-    local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
+  createServer({
+    host = "0.0.0.0",
+    port = 4822,
+    decode = httpCodec.decoder(),
+    encode = httpCodec.encoder(),
+  }, function (read, write, socket, updateDecoder, updateEncoder, close)
 
     local function upgrade(res)
       write(res)
@@ -30,6 +31,7 @@ return function ()
       -- Upgrade the protocol to websocket
       updateDecoder(websocketCodec.decode)
       updateEncoder(websocketCodec.encode)
+      read, write = wrapIo(read, write, { mask = false })
 
       -- Log the client connection
       local peerName = socket:getpeername()
@@ -58,16 +60,13 @@ return function ()
     end
 
     for req in read do
-      local res, err = websocketCodec.handleHandshake(req, "lit")
-      if res then return upgrade(res) end
       local body = {}
       for chunk in read do
-        if #chunk > 0 then
-          body[#body + 1] = chunk
-        else
-          break
-        end
+        if #chunk == 0 then break end
+        body[#body + 1] = chunk
       end
+      local res, err = websocketCodec.handleHandshake(req, "lit")
+      if res then return upgrade(res) end
       body = table.concat(body)
       if req.method == "GET" or req.method == "HEAD" then
         req.body = #body > 0 and body or nil

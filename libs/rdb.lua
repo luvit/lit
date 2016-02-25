@@ -1,6 +1,6 @@
 --[[
 
-Copyright 2014-2015 The Luvit Authors. All Rights Reserved.
+Copyright 2014-2016 The Luvit Authors. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -23,9 +23,6 @@ local netConnect = require('coro-net').connect
 local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('codec').makeRemote
-local wrapper = require('coro-wrapper')
-local readWrap, writeWrap = wrapper.reader, wrapper.writer
-local tlsWrap = require('coro-tls').wrap
 local deframe = require('git').deframe
 local decodeTag = require('git').decoders.tag
 local verifySignature = require('verify-signature')
@@ -44,12 +41,13 @@ local function connectRemote(url, timeout)
   end
   if #path == 0 then path = "/" end
 
-  local rawRead, rawWrite, socket = assert(netConnect({host=host, port=port}, timeout))
-  if tls then
-    rawRead, rawWrite = tlsWrap(rawRead, rawWrite)
-  end
-  local read, updateDecoder = readWrap(rawRead, httpCodec.decoder())
-  local write, updateEncoder = writeWrap(rawWrite, httpCodec.encoder())
+  local read, write, socket, updateDecoder, updateEncoder = assert(netConnect({
+    host = host,
+    port = port,
+    tls = tls,
+    encode = httpCodec.encoder(),
+    decode = httpCodec.decoder(),
+  }, timeout))
 
   -- Perform the websocket handshake
   assert(websocketCodec.handshake({
