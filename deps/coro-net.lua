@@ -1,8 +1,8 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "2.1.0"
+  version = "2.2.0"
   dependencies = {
-    "creationix/coro-channel@2.0.0"
+    "creationix/coro-channel@2.2.0"
   }
   optionalDependencies = {
     "luvit/secure-socket@1.0.0"
@@ -15,8 +15,7 @@
 ]]
 
 local uv = require('uv')
-local wrapRead = require('coro-channel').wrapRead
-local wrapWrite = require('coro-channel').wrapWrite
+local wrapStream = require('coro-channel').wrapStream
 local secureSocket -- Lazy required from "secure-socket" on first use.
 
 local function makeCallback(timeout)
@@ -42,7 +41,7 @@ local function makeCallback(timeout)
   end
 end
 
-local function normalize(options)
+local function normalize(options, server)
   local t = type(options)
   if t == "string" then
     options = {path=options}
@@ -54,7 +53,8 @@ local function normalize(options)
   if options.tls == true then
     options.tls = {}
   end
-  if options.server and options.tls then
+  if server and options.tls then
+    options.tls.server = true
     assert(options.tls.cert, "TLS servers require a certificate")
     assert(options.tls.key, "TLS servers require a key")
   end
@@ -102,14 +102,15 @@ local function connect(options)
     dsocket = socket
   end
 
-  local read, updateDecoder = wrapRead(dsocket, options.decode)
-  local write, updateEncoder = wrapWrite(dsocket, options.encode)
-  return read, write, socket, updateDecoder, updateEncoder
+  local read, write, updateDecoder, updateEncoder, close =
+    wrapStream(dsocket, options.decode, options.encode)
+
+  return read, write, socket, updateDecoder, updateEncoder, close
 end
 
 local function createServer(options, onConnect)
   local server
-  options = normalize(options)
+  options = normalize(options, true)
   if options.isTcp then
     server = uv.new_tcp()
     assert(server:bind(options.host, options.port))
@@ -126,21 +127,17 @@ local function createServer(options, onConnect)
         local dsocket
         if options.tls then
           if not secureSocket then secureSocket = require('secure-socket') end
-          options.tls.server = true
           dsocket = assert(secureSocket(socket, options.tls))
         else
           dsocket = socket
         end
 
-        local read, updateDecoder = wrapRead(dsocket, options.decode)
-        local write, updateEncoder = wrapWrite(dsocket, options.encode)
+        local read, write, updateDecoder, updateEncoder =
+          wrapStream(dsocket, options.decode, options.encode)
         return onConnect(read, write, socket, updateDecoder, updateEncoder)
       end, debug.traceback)
       if not success then
         print(failure)
-      end
-      if not socket:is_closing() then
-        socket:close()
       end
     end)()
   end))
