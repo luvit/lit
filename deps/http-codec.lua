@@ -165,9 +165,6 @@ local function decoder()
   -- This state is for decoding the status line and headers.
   function decodeHead(chunk)
     if not chunk then return end
-    if type(chunk) ~= "string" then
-      print(debug.traceback())
-    end
 
     local _, length = find(chunk, "\r?\n\r?\n", 1)
     -- First make sure we have all the head before continuing
