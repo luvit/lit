@@ -79,11 +79,16 @@ return function ()
       if not res then
         write({code=400})
         write(err or "lit websocket request required")
-        return write()
+        write()
+        if not socket:is_closing() then
+          socket:close()
+        end
+        return
       end
       write(res)
       write(res.body)
     end
+    write()
 
   end)
 
