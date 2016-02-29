@@ -1,10 +1,10 @@
 --[[lit-meta
   name = "creationix/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
-  version = "2.1.1"
+  version = "2.2.0"
   dependencies = {
     "creationix/base64@1.0.1",
-    "creationix/sha1@0.5.0",
+    "creationix/sha1@1.0.0",
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
   tags = {"http", "websocket", "codec"}
@@ -165,8 +165,18 @@ end
 
 local websocketGuid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+-- Given two hex characters, return a single character
+local function hexToBin(cc)
+  return string.char(tonumber(cc, 16))
+end
+
+local function decodeHex(hex)
+  local bin = string.gsub(hex, "..", hexToBin)
+  return bin
+end
+
 local function acceptKey(key)
-  return gsub(base64(sha1.binary(key .. websocketGuid)), "\n", "")
+  return gsub(base64(decodeHex(sha1(key .. websocketGuid))), "\n", "")
 end
 
 -- Make a client handshake connection

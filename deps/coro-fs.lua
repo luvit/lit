@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-fs"
-  version = "2.2.0"
+  version = "2.2.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
   description = "A coro style interface to the filesystem."
   tags = {"coro", "fs"}
@@ -115,7 +115,7 @@ function fs.scandir(path)
   if not req then return nil, err end
   return function ()
     local name, typ = uv.fs_scandir_next(req)
-    if not name then return end
+    if not name then return name, typ end
     if type(name) == "table" then return name end
     return {
       name = name,
