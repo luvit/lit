@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/sha1"
-  version = "1.0.0"
+  version = "1.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/sha1.lua"
   description = "Pure Lua implementation of SHA1 using bitop"
   authors = {
@@ -24,10 +24,15 @@ local byte = string.byte
 local concat = table.concat
 local floor = table.floor
 
-local ffi = require('ffi')
-local function newBlock()
--- TODO: add table fallback for when ffi isn't available
+local ffi = pcall(require, "ffi")
+local newBlock = ffi and function ()
   return ffi.new("uint32_t[80]")
+end or function ()
+  local t = {}
+  for i = 0, 79 do
+    t[i] = 0
+  end
+  return t
 end
 
 local shared = newBlock()
