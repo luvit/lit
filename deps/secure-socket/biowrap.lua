@@ -44,6 +44,10 @@ return function (ctx, isServer, socket, handshakeComplete)
 
   local function handshake(callback)
     if ssl:handshake() then
+      local success, result = ssl:getpeerverification()
+      if not success and result then
+        handshakeComplete("Error verifying peer: " .. result[1].error_string)
+      end
       handshakeComplete(nil, ssocket)
     end
     return flush(callback)
@@ -52,7 +56,7 @@ return function (ctx, isServer, socket, handshakeComplete)
   local function onCipher(err, data)
     if not onPlain then
       if err or not data then
-        return handshakeComplete(err or "Server aborted the SSL handshake", data)
+        return handshakeComplete(err or "Peer aborted the SSL handshake", data)
       end
       bin:write(data)
       return handshake()

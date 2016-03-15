@@ -45,6 +45,10 @@ do
   end
 end
 
+local function returnOne()
+  return 1
+end
+
 return function (options)
   local ctx = openssl.ssl.ctx_new(
     options.protocol or 'TLSv1_2',
@@ -80,8 +84,9 @@ return function (options)
     ctx:cert_store(store)
   elseif DEFAULT_CA_STORE then
     ctx:cert_store(DEFAULT_CA_STORE)
-  else
-    ctx:verify_mode(openssl.ssl.none)
+  end
+  if not (options.insecure or options.key) then
+    ctx:verify_mode(openssl.ssl.peer, returnOne)
   end
 
   ctx:options(bit.bor(
