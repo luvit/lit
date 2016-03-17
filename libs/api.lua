@@ -81,6 +81,7 @@ local exportZip = require('export-zip')
 local calculateDeps = require('calculate-deps')
 local queryDb = require('pkg').queryDb
 local installDeps = require('install-deps').toDb
+local ffi = require('ffi')
 
 local litVersion = "Lit " .. require('../package').version
 
@@ -130,6 +131,44 @@ end
 
 local metaCache = {}
 
+-- Collect statistics about this server's running instance.
+-- Return these metrics in a table.  The intended consumer of this
+-- information should render it in JSON format for transmission to
+-- a time-series database and/or visualization tools.
+local function collectStats()
+  local entry, fdsUsed = 0, 0
+  local memoryUsed = 1024 * collectgarbage("count")
+
+  local function countFDs(path)
+    local entries = 0
+
+    -- You might think this leaks a filehandle, but it actually doesn't.
+    -- You can confirm this yourself by hitting /metrics several times in a row,
+    -- and observing that lua.fds.total does not increase with each GET request.
+
+    for entry in io.popen([[ls -1 "]]..path..[["]]):lines() do
+      entries = entries + 1
+    end
+    return entries
+  end
+
+  local howToDetermineFDs = {
+    Linux = function() return countFDs("/proc/self/fd") end,
+    OSX = function() return countFDs("/dev/fd") end,
+    Other = function() return -1 end
+  }
+
+  local os = ffi.os
+  if howToDetermineFDs[os] == nil then
+    os = "Other"
+  end
+
+  return {
+    ["lua.mem.used"] = memoryUsed,
+    ["lua.fds.used"] = howToDetermineFDs[os]()
+  }
+end
+
 return function (db, prefix)
 
   local function makeUrl(kind, hash, filename)
@@ -169,21 +208,7 @@ return function (db, prefix)
 
   local routes = {
     "^/metrics$", function (hash, path)
-      local entry, fdsUsed = 0, 0
-      local memoryUsed = 1024 * collectgarbage("count")
-
-      -- You might think this leaks a filehandle, but it actually doesn't.
-      -- You can confirm this yourself by hitting /metrics several times in a row,
-      -- and observing that lua.fds.total does not increase with each GET request.
-
-      for entry in io.popen([[ls -1 "/dev/fd"]]):lines() do
-        fdsUsed = fdsUsed + 1
-      end
-
-      return {
-        ["lua.mem.used"] = memoryUsed,
-        ["lua.fds.used"] = fdsUsed
-      }
+      return collectStats()
     end,
     "^/blobs/([0-9a-f]+)/(.*)", function (hash, path)
       local body = db.loadAs("blob", hash)
