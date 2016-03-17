@@ -82,6 +82,7 @@ local calculateDeps = require('calculate-deps')
 local queryDb = require('pkg').queryDb
 local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
+local fs = require('coro-fs')
 
 local litVersion = "Lit " .. require('../package').version
 
@@ -146,7 +147,9 @@ local function collectStats()
     -- You can confirm this yourself by hitting /metrics several times in a row,
     -- and observing that lua.fds.total does not increase with each GET request.
 
-    for entry in io.popen([[ls -1 "]]..path..[["]]):lines() do
+    local iter = fs.scandir(path)
+    for entry in iter do
+      print(entry.name)
       entries = entries + 1
     end
     return entries
