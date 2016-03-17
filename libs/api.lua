@@ -149,7 +149,6 @@ local function collectStats()
 
     local iter = fs.scandir(path)
     for entry in iter do
-      print(entry.name)
       entries = entries + 1
     end
     return entries
