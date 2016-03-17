@@ -137,7 +137,7 @@ local metaCache = {}
 -- information should render it in JSON format for transmission to
 -- a time-series database and/or visualization tools.
 local function collectStats()
-  local entry, fdsUsed = 0, 0
+
   local memoryUsed = 1024 * collectgarbage("count")
 
   local function countFDs(path)
@@ -209,9 +209,7 @@ return function (db, prefix)
   end
 
   local routes = {
-    "^/metrics$", function (hash, path)
-      return collectStats()
-    end,
+    "^/metrics$", collectStats,
     "^/blobs/([0-9a-f]+)/(.*)", function (hash, path)
       local body = db.loadAs("blob", hash)
       local filename = path:match("[^/]+$")
@@ -236,6 +234,7 @@ return function (db, prefix)
         versions = prefix .. "/packages/{author}/{name}",
         package = prefix .. "/packages/{author}/{name}/{version}",
         search = prefix .. "/search/{query}",
+        metrics = prefix .. "/metrics",
       }
     end,
     "^/packages/([^/]+)/(.+)/([^/]+)%.zip$", function (author, name, version)
