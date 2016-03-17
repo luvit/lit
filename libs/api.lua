@@ -169,20 +169,20 @@ return function (db, prefix)
 
   local routes = {
     "^/metrics$", function (hash, path)
-      local entry, fds = 0, 0
-      local memoryUsed = "lua.mem.total = " .. tostring(1024 * collectgarbage("count")) .. "\n"
+      local entry, fdsUsed = 0, 0
+      local memoryUsed = 1024 * collectgarbage("count")
 
       -- You might think this leaks a filehandle, but it actually doesn't.
       -- You can confirm this yourself by hitting /metrics several times in a row,
       -- and observing that lua.fds.total does not increase with each GET request.
 
       for entry in io.popen([[ls -1 "/dev/fd"]]):lines() do
-        fds = fds + 1
+        fdsUsed = fdsUsed + 1
       end
 
-      local fdsUsed = "lua.fds.total = " .. tostring(fds) .. "\n"
-      return memoryUsed .. fdsUsed, {
-        {"Content-Type", "text/plain"}
+      return {
+        ["lua.mem.used"] = memoryUsed,
+        ["lua.fds.used"] = fdsUsed
       }
     end,
     "^/blobs/([0-9a-f]+)/(.*)", function (hash, path)
