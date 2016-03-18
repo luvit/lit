@@ -138,6 +138,15 @@ local metaCache = {}
 metrics.define("lua.mem.used")
 metrics.define("lua.fds.used")
 
+-- Define other metrics here.
+metrics.define("lit.url._slash") -- just /
+mettab = {"blobs", "trees", "packages.zip", "packages", "search"}
+for i = 1, #mettab do
+  metrics.define("lit.url."..mettab[i])
+end
+
+metrics.define("lit.totals.url")
+
 -- Collect statistics about this server's running instance.
 -- Return these metrics in a table.  The intended consumer of this
 -- information should render it in JSON format for transmission to
@@ -220,6 +229,8 @@ return function (db, prefix)
   local routes = {
     "^/metrics$", collectStats,
     "^/blobs/([0-9a-f]+)/(.*)", function (hash, path)
+      metrics.increment("lit.url.blobs")
+      metrics.increment("lit.totals.url")
       local body = db.loadAs("blob", hash)
       local filename = path:match("[^/]+$")
       return body, {
@@ -227,6 +238,8 @@ return function (db, prefix)
       }
     end,
     "^/trees/([0-9a-f]+)/(.*)", function (hash, filename)
+      metrics.increment("lit.url.trees")
+      metrics.increment("lit.totals.url")
       local tree = db.loadAs("tree", hash)
       for i = 1, #tree do
         local entry = tree[i]
@@ -235,6 +248,8 @@ return function (db, prefix)
       return tree
     end,
     "^/$", function ()
+      metrics.increment("lit.url._slash")
+      metrics.increment("lit.totals.url")
       return  {
         blobs = prefix .. "/blobs/{hash}",
         trees = prefix .. "/trees/{hash}",
@@ -247,6 +262,8 @@ return function (db, prefix)
       }
     end,
     "^/packages/([^/]+)/(.+)/([^/]+)%.zip$", function (author, name, version)
+      metrics.increment("lit.url.packages.zip")
+      metrics.increment("lit.totals.url")
       if version == "latest" then
         version = (db.offlineMatch or db.match)(author, name)
       elseif version:sub(1,1) == "v" then
@@ -276,6 +293,8 @@ return function (db, prefix)
       }
     end,
     "^/packages/([^/]+)/(.+)/([^/]+)$", function (author, name, version)
+      metrics.increment("lit.url.packages")
+      metrics.increment("lit.totals.url")
       if version == "latest" then
         version = nil
       elseif version:sub(1,1) == "v" then
@@ -286,6 +305,8 @@ return function (db, prefix)
       return meta
     end,
     "^/packages/([^/]+)/(.+)$", function (author, name)
+      metrics.increment("lit.url.packages")
+      metrics.increment("lit.totals.url")
       local versions = {}
       for version in db.versions(author, name) do
         versions[version] = prefix .. "/packages/" .. author .. "/" .. name .. "/v" .. version
@@ -293,6 +314,8 @@ return function (db, prefix)
       return next(versions) and versions
     end,
     "^/packages/([^/]+)$", function (author)
+      metrics.increment("lit.url.packages")
+      metrics.increment("lit.totals.url")
       local names = {}
       for name in db.names(author) do
         names[name] = prefix .. "/packages/" .. author .. "/" .. name
@@ -300,6 +323,8 @@ return function (db, prefix)
       return next(names) and names
     end,
     "^/packages$", function ()
+      metrics.increment("lit.url.packages")
+      metrics.increment("lit.totals.url")
       local authors = {}
       for author in db.authors() do
         authors[author] =  prefix .. "/packages/" .. author
@@ -307,6 +332,8 @@ return function (db, prefix)
       return next(authors) and authors
     end,
     "^/search/(.*)$", function (raw)
+      metrics.increment("lit.url.search")
+      metrics.increment("lit.totals.url")
       local query = { raw = raw }
       local keys = {"author", "tag", "name", "depends"}
       for i = 1, #keys do
