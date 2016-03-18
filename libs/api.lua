@@ -69,6 +69,7 @@ GET /packages/$AUTHOR/$TAG/latest.zip -> zip bundle of the most recent version
 
 GET /search/$query -> list of matches
 
+GET /metrics -> json of currently exposed metrics
 ]]
 
 local pathJoin = require('luvi').path.join
@@ -83,6 +84,7 @@ local queryDb = require('pkg').queryDb
 local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
 local fs = require('coro-fs')
+local metrics = require('metrics')
 
 local litVersion = "Lit " .. require('../package').version
 
@@ -132,11 +134,19 @@ end
 
 local metaCache = {}
 
+-- Define the required metrics that must exist for collectMetrics() to work.
+metrics.define("lua.mem.used")
+metrics.define("lua.fds.used")
+
 -- Collect statistics about this server's running instance.
 -- Return these metrics in a table.  The intended consumer of this
 -- information should render it in JSON format for transmission to
 -- a time-series database and/or visualization tools.
 local function collectStats()
+  -- Strategy: we always calculate memory consumption and FD resource
+  -- consumption synchronously with this function.  However, other
+  -- parts of the system may update and maintain their own metrics
+  -- asynchronously.  If they exist at all, we just return them as-is.
 
   local memoryUsed = 1024 * collectgarbage("count")
 
@@ -165,10 +175,9 @@ local function collectStats()
     os = "Other"
   end
 
-  return {
-    ["lua.mem.used"] = memoryUsed,
-    ["lua.fds.used"] = howToDetermineFDs[os]()
-  }
+  metrics.set("lua.mem.used", memoryUsed)
+  metrics.set("lua.fds.used", howToDetermineFDs[os]())
+  return metrics.all()
 end
 
 return function (db, prefix)
