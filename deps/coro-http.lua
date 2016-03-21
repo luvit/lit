@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "2.1.0"
+  version = "2.1.1"
   dependencies = {
     "creationix/coro-net@2.1.0",
     "luvit/http-codec@2.0.0"
@@ -137,7 +137,9 @@ local function request(method, url, headers, body)
   if body then write(body) end
   local res = read()
   if not res then
-    write()
+    if not connection.socket:is_closing() then
+      connection.socket:close()
+    end
     -- If we get an immediate close on a reused socket, try again with a new socket.
     -- TODO: think about if this could resend requests with side effects and cause
     -- them to double execute in the remote server.
