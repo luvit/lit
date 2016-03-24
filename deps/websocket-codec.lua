@@ -1,9 +1,9 @@
 --[[lit-meta
   name = "creationix/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
-  version = "2.2.0"
+  version = "2.2.1"
   dependencies = {
-    "creationix/base64@1.0.1",
+    "creationix/base64@2.0.0",
     "creationix/sha1@1.0.0",
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
@@ -12,7 +12,7 @@
   author = { name = "Tim Caswell" }
 ]]
 
-local base64 = require('base64')
+local base64 = require('base64').encode
 local sha1 = require('sha1')
 local bit = require('bit')
 
