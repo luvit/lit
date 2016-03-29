@@ -45,6 +45,7 @@ return function (ctx, isServer, socket, handshakeComplete)
   local function handshake(callback)
     if ssl:handshake() then
       local success, result = ssl:getpeerverification()
+      socket:read_stop()
       if not success and result then
         handshakeComplete("Error verifying peer: " .. result[1].error_string)
       end
