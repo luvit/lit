@@ -28,7 +28,7 @@ end
 local bit = require('bit')
 
 local DEFAULT_CIPHERS = 'ECDHE-RSA-AES128-SHA256:AES128-GCM-SHA256:' .. -- TLS 1.2
-                        'RC4:HIGH:!MD5:!aNULL:!EDH'                     -- TLS 1.0
+                        '!RC4:HIGH:!MD5:!aNULL:!EDH'                     -- TLS 1.0
 
 local DEFAULT_CA_STORE
 do
@@ -59,7 +59,10 @@ return function (options)
     key = assert(openssl.pkey.read(options.key, true, 'pem'))
   end
   if options.cert then
-    cert = assert(openssl.x509.read(options.cert))
+    cert = {}
+    for chunk in options.cert:gmatch("%-+BEGIN[^-]+%-+[^-]+%-+END[^-]+%-+") do
+      cert[#cert + 1] = assert(openssl.x509.read(chunk))
+    end
   end
   if options.ca then
     if type(options.ca) == "string" then
@@ -74,7 +77,13 @@ return function (options)
     end
   end
   if key and cert then
-    assert(ctx:use(key, cert))
+    local first = table.remove(cert, 1)
+    assert(ctx:use(key, first))
+    if #cert > 0 then
+      -- TODO: find out if there is a way to not need to duplicate the last cert here
+      -- as a dummy fill for the root CA cert
+      assert(ctx:add(cert[#cert], cert))
+    end
   end
   if ca then
     local store = openssl.x509.store:new()
