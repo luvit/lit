@@ -207,7 +207,7 @@ local function loader(dir, path, bundleOnly)
     if package.loaded[fullPath] then
       return package.loaded[fullPath]
     end
-    local module = loadfile(fullPath)()
+    local module = assert(loadfile(fullPath))()
     package.loaded[fullPath] = module
     return module
   end
