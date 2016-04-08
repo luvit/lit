@@ -199,6 +199,9 @@ local function makeCore(config)
     if template == defaultTemplate and flavor == "regular" and version == semver.normalize(luvi.version) then
       local exe = uv.exepath()
       local stdout = exec(exe, "-v")
+      if jit.os == "Windows" then
+        stdout = stdout:gsub('.exe','')
+      end      
       local iversion = stdout:match("luvi version: v(%d+%.%d+%.%d+)")
                     or stdout:match("luvi v(%d+%.%d+%.%d+)")
       if iversion == version then
