@@ -130,7 +130,10 @@ return function ()
     local toupdate = require('luvi').version
     if uv.fs_stat(target) then
       local stdout = exec(target, "-v")
-      local version = stdout:match("luvi (v[^ \n]+)")
+      if jit.os == "Windows" then
+        stdout = stdout:gsub("luvi.exe ","luvi ")
+      end
+      local version = stdout:match("luvi (v[^ \r\n]+)")
       if version and version == toupdate then
         log("luvi is up to date", version, "highlight")
         return
