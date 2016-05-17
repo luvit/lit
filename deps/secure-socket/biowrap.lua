@@ -25,7 +25,7 @@ return function (ctx, isServer, socket, handshakeComplete)
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
   local ssl = ctx:ssl(bin, bout, isServer)
 
-  local ssocket = {}
+  local ssocket = {tls=true}
   local onPlain
 
   local function flush(callback)
