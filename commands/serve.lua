@@ -50,6 +50,7 @@ return function ()
             remote.writeAs("error", "no such command " .. command)
           end
         end
+        remote.close()
       end, debug.traceback)
       if not success then
         log("client error", err, "err")

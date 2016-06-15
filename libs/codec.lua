@@ -141,10 +141,15 @@ local function makeRemote(webRead, webWrite, isClient)
     return webWrite(frame)
   end
 
+  local function close()
+    return webWrite()
+  end
+
   return {
     read = read,
     readAs = readAs,
     writeAs = writeAs,
+    close = close,
   }
 end
 
