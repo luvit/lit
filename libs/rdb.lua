@@ -26,6 +26,13 @@ local makeRemote = require('codec').makeRemote
 local deframe = require('git').deframe
 local decodeTag = require('git').decoders.tag
 local verifySignature = require('verify-signature')
+local metrics = require('metrics')
+
+metrics.define("db.fetch")
+metrics.define("db.push")
+metrics.define("db.match")
+metrics.define("db.readRemote")
+
 
 local function connectRemote(url, timeout)
   local protocol, host, port, path = string.match(url, "^(wss?)://([^:/]+):?(%d*)(/?[^#]*)")
@@ -103,6 +110,7 @@ return function(db, url, timeout)
   end
 
   function db.readRemote(author, name, version)
+    metrics.increment("db.readRemote", 1)
     local tag = author .. "/" .. name
     connect()
     local query = version and (tag .. " " .. version) or tag
@@ -116,6 +124,7 @@ return function(db, url, timeout)
 
   db.offlineMatch = db.match
   function db.match(author, name, version)
+    metrics.increment("db.match", 1)
     local match, hash = db.offlineMatch(author, name, version)
     local tag = author .. "/" .. name
     connect()
@@ -142,6 +151,7 @@ return function(db, url, timeout)
   end
 
   function db.fetch(list)
+    metrics.increment("db.fetch", list.length)
     local refs = {}
     repeat
       local hashes = list
@@ -215,6 +225,7 @@ return function(db, url, timeout)
   end
 
   function db.push(hash)
+    metrics.increment("db.push", 1)
     connect()
     remote.writeAs("send", db.load(hash))
     while true do
