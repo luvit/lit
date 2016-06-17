@@ -157,6 +157,8 @@ local function collectStats()
   -- parts of the system may update and maintain their own metrics
   -- asynchronously.  If they exist at all, we just return them as-is.
 
+  collectgarbage()
+  collectgarbage()
   local memoryUsed = 1024 * collectgarbage("count")
 
   local function countFDs(path)
