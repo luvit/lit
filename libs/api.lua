@@ -73,8 +73,6 @@ GET /metrics -> json of currently exposed metrics
 ]]
 
 local pathJoin = require('luvi').path.join
-local digest = require('openssl').digest.digest
-local date = require('os').date
 local jsonStringify = require('json').stringify
 local jsonParse = require('json').parse
 local modes = require('git').modes
@@ -85,8 +83,6 @@ local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
 local fs = require('coro-fs')
 local metrics = require('metrics')
-
-local litVersion = "Lit " .. require('../package').version
 
 local function hex_to_char(x)
   return string.char(tonumber(x, 16))
@@ -140,7 +136,7 @@ metrics.define("lua.fds.used")
 
 -- Define other metrics here.
 metrics.define("lit.url._slash") -- just /
-mettab = {"blobs", "trees", "packages.zip", "packages", "search"}
+local mettab = {"blobs", "trees", "packages.zip", "packages", "search"}
 for i = 1, #mettab do
   metrics.define("lit.url."..mettab[i])
 end
@@ -444,46 +440,23 @@ return function (db, prefix)
     end
   }
 
-  return function (req)
-
-    if req.method == "OPTIONS" then
-      -- Wide open CORS headers
-      return {
-        code = 204,
-        {"Access-Control-Allow-Origin", "*"},
-        {'Access-Control-Allow-Credentials', 'true'},
-        {'Access-Control-Allow-Methods', 'GET, OPTIONS'},
-        -- Custom headers and headers various browsers *should* be OK with but aren't
-        {'Access-Control-Allow-Headers', 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'},
-        -- Tell client that this pre-flight info is valid for 20 days
-        {'Access-Control-Max-Age', 1728000},
-        {'Content-Type', 'text/plain charset=UTF-8'},
-        {'Content-Length', 0},
-      }
-    end
+  return function (req, res)
 
     if not (req.method == "GET" or req.method == "HEAD") then
-      return nil, "Must be GET or HEAD"
+      res.body = "Must be GET or HEAD\n"
+      return
     end
-
 
     local path = pathJoin(req.path)
-    local headers = {}
-    for i = 1, #req do
-      local key, value = unpack(req[i])
-      headers[key:lower()] = value
-    end
-    if not prefix then
-      local host = headers.host
-      if host then
-        if host:match("localhost") then
-          prefix = "http://" .. host
-        else
-          prefix = "https://" .. host
-        end
+    local host = req.headers.Host
+    if host then
+      if host:match("localhost") then
+        prefix = "http://" .. host
       else
-        prefix = ""
+        prefix = "https://" .. host
       end
+    elseif not prefix then
+      prefix = ""
     end
     local body, extra
     for i = 1, #routes, 2 do
@@ -501,40 +474,22 @@ return function (db, prefix)
     end
 
     if not body then
-      return {code = 404}
+      res.code = 404
+      return
     end
-    local res = {
-      code = 200,
-      {"Date", date("!%a, %d %b %Y %H:%M:%S GMT")},
-      {"Server", litVersion},
-    }
+    res.code = 200
+
     if extra then
       for i = 1, #extra do
-        res[#res + 1] = extra[i]
+        local k, v = unpack(extra[i])
+        res.headers[k] = v
       end
     end
     if type(body) == "table" then
       body = jsonStringify(body) .. "\n"
-      res[#res + 1] = {"Content-Type", "application/json"}
+      res.headers["Content-Type"] = "application/json"
     end
     res.body = body
-
-    local etag = string.format('"%s"', digest("sha1", body))
-    res[#res + 1] = {"ETag", etag}
-    res[#res + 1] = {"Content-Length", #body}
-
-    -- Add CORS headers
-    res[#res + 1] = {'Access-Control-Allow-Origin', '*'}
-    res[#res + 1] = {'Access-Control-Allow-Methods', 'GET, OPTIONS'}
-    res[#res + 1] = {'Access-Control-Allow-Headers', 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'}
-
-    if headers["if-none-match"] == etag then
-      res.code = 304
-      res.body = ""
-    end
-    if req.method == "HEAD" then
-      res.body = ""
-    end
 
     return res
   end

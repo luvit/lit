@@ -1,11 +1,7 @@
 local args = {...}
 return function ()
-  local createServer = require('coro-net').createServer
-  local uv = require('uv')
-  local httpCodec = require('http-codec')
-  local websocketCodec = require('websocket-codec')
-  local wrapIo = require('coro-websocket').wrapIo
 
+  local uv = require 'uv'
   local log = require('log').log
   local makeRemote = require('codec').makeRemote
   local core = require('core')()
@@ -13,86 +9,97 @@ return function ()
   local handlers = require('handlers')(core)
   local handleRequest = require('api')(core.db, args[2])
 
-  -- Ignore SIGPIPE if it exists on platform
-  if uv.constants.SIGPIPE then
-    uv.new_signal():start("sigpipe")
-  end
+  local app = require('weblit-app')
+  require 'weblit-websocket'
 
-  createServer({
+  -- Listen on port 4822
+  app.bind({
     host = "0.0.0.0",
     port = 4822,
-    decode = httpCodec.decoder(),
-    encode = httpCodec.encoder(),
-  }, function (read, write, socket, updateDecoder, updateEncoder, close)
+  })
 
-    local function upgrade(res)
-      write(res)
+  -- Log requests
+  app.use(function (req, res, go)
+    -- Record start time
+    local now = uv.now()
 
-      -- Upgrade the protocol to websocket
-      updateDecoder(websocketCodec.decode)
-      updateEncoder(websocketCodec.encode)
-      read, write = wrapIo(read, write, { mask = false })
+    -- Process the request
+    go()
 
-      -- Log the client connection
-      local peerName = socket:getpeername()
-      peerName = peerName.ip .. ':' .. peerName.port
-      log("client connected", peerName)
+    -- And then log after everything is done, inserting a header for the delay
+    local delay = (uv.now() - now) .. "ms"
+    res.headers["X-Request-Time"] = delay
+    local useragent = req.headers["user-agent"]
+    if useragent then
+      log("http", string.format("%s %s %s %s %s", req.method, req.path, useragent,
+        res.code,
+        delay
+      ))
+    end
+  end)
 
-      -- Proces the client using server handles
-      local remote = makeRemote(read, write)
-      local success, err = xpcall(function ()
-        for command, data in remote.read do
-          log("client command", peerName .. " - " .. command)
-          local handler = handlers[command]
-          if handler then
-            handler(remote, data)
-          else
-            remote.writeAs("error", "no such command " .. command)
-          end
+  app.use(require('weblit-auto-headers'))
+
+  -- Handle websocket clients
+  app.websocket({
+    protocol = "lit"
+  }, function (req, read, write)
+    -- Log the client connection
+    local peerName = req.socket:getpeername()
+    peerName = peerName.ip .. ':' .. peerName.port
+    log("client connected", peerName)
+
+    -- Process the client using server handles
+    local remote = makeRemote(read, write)
+    local success, err = xpcall(function ()
+      for command, data in remote.read do
+        log("client command", peerName .. " - " .. command)
+        local handler = handlers[command]
+        if handler then
+          handler(remote, data)
+        else
+          remote.writeAs("error", "no such command " .. command)
         end
-        remote.close()
-      end, debug.traceback)
-      if not success then
-        log("client error", err, "err")
-        remote.writeAs("error", string.match(err, ":%d+: *([^\n]*)"))
-        remote.close()
       end
-      log("client disconnected", peerName)
+      remote.close()
+    end, debug.traceback)
+    if not success then
+      log("client error", err, "err")
+      remote.writeAs("error", string.match(err, ":%d+: *([^\n]*)"))
+      remote.close()
+    end
+    log("client disconnected", peerName)
+  end)
+
+  app.use(function (req, res, go)
+    if req.method == "OPTIONS" then
+      -- Wide open CORS headers
+      return {
+        code = 204,
+        {"Access-Control-Allow-Origin", "*"},
+        {'Access-Control-Allow-Credentials', 'true'},
+        {'Access-Control-Allow-Methods', 'GET, OPTIONS'},
+        -- Custom headers and headers various browsers *should* be OK with but aren't
+        {'Access-Control-Allow-Headers', 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'},
+        -- Tell client that this pre-flight info is valid for 20 days
+        {'Access-Control-Max-Age', 1728000},
+        {'Content-Type', 'text/plain charset=UTF-8'},
+        {'Content-Length', 0},
+      }
     end
 
-    for req in read do
-      local body = {}
-      for chunk in read do
-        if #chunk == 0 then break end
-        body[#body + 1] = chunk
-      end
-      local res, err = websocketCodec.handleHandshake(req, "lit")
-      if res then return upgrade(res) end
-      body = table.concat(body)
-      if req.method == "GET" or req.method == "HEAD" then
-        req.body = #body > 0 and body or nil
-        local now = uv.now()
-        res, err = handleRequest(req)
-        local delay = (uv.now() - now) .. "ms"
-        res[#res + 1] = {"X-Request-Time", delay}
-        print(req.method .. " " .. req.path .. " " .. res.code .. " " .. delay)
-      end
-      if not res then
-        write({code=400})
-        write(err or "lit websocket request required")
-        write()
-        if not socket:is_closing() then
-          socket:close()
-        end
-        return
-      end
-      write(res)
-      write(res.body)
-    end
-    write()
+    go()
+    -- Add CORS headers
+    res.headers['Access-Control-Allow-Origin'] = '*'
+    res.headers['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+    res.headers['Access-Control-Allow-Headers'] = 'DNT,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control'
 
   end)
 
+  -- Handle HTTP clients
+  .use(handleRequest)
+
+  .start()
   -- Never return so that the command keeps running.
   coroutine.yield()
 end
