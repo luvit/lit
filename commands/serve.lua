@@ -40,6 +40,9 @@ return function ()
 
   app.use(require('weblit-auto-headers'))
 
+  .route({ method = "GET", path = "/snapshots"}, require('snapshots'))
+  .route({ method = "GET", path = "/stats"}, require('stats'))
+
   -- Handle websocket clients
   app.websocket({
     protocol = "lit"
