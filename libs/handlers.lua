@@ -30,12 +30,15 @@ local function split(line)
   end
   return unpack(args)
 end
+local metrics = require('metrics')
 
 return function (core)
   local db = core.db
   local handlers = {}
 
+  metrics.define("handlers.read")
   function handlers.read(remote, data)
+    metrics.increment("handlers.read")
     local name, version = split(data)
     local author
     author, name = name:match("([^/]+)/(.*)")
@@ -44,7 +47,9 @@ return function (core)
     remote.writeAs("reply", hash)
   end
 
+  metrics.define("handlers.match")
   function handlers.match(remote, data)
+    metrics.increment("handlers.match")
     local name, version = split(data)
     local author
     author, name = name:match("([^/]+)/(.*)")
@@ -58,7 +63,9 @@ return function (core)
     remote.writeAs("reply", match and (match .. ' ' .. hash))
   end
 
+  metrics.define("handlers.wants")
   function handlers.wants(remote, hashes)
+    metrics.increment("handlers.wants")
     for i = 1, #hashes do
       local hash = hashes[i]
       local data, err = db.load(hash)
@@ -76,11 +83,15 @@ return function (core)
     end
   end
 
+  metrics.define("handlers.want")
   function handlers.want(remote, hash)
+    metrics.increment("handlers.want")
     return handlers.wants(remote, {hash})
   end
 
+  metrics.define("handlers.send")
   function handlers.send(remote, data)
+    metrics.increment("handlers.send")
     local authorized = remote.authorized or {}
     local kind, raw = git.deframe(data)
     local hashes = {}
@@ -150,7 +161,9 @@ return function (core)
     return data
   end
 
+  metrics.define("handlers.claim")
   function handlers.claim(remote, raw)
+    metrics.increment("handlers.claim")
     -- The request is RSA signed by the .username field.
     -- This will verify the signature and return the data table
     local data = verifyRequest(raw)
@@ -179,7 +192,9 @@ return function (core)
     remote.writeAs("reply", "claimed")
   end
 
+  metrics.define("handlers.share")
   function handlers.share(remote, raw)
+    metrics.increment("handlers.share")
     local data = verifyRequest(raw)
     local username, org, friend = data.username, data.org, data.friend
     if not db.isOwner(org, username) then
@@ -193,7 +208,9 @@ return function (core)
     remote.writeAs("reply", "shared")
   end
 
+  metrics.define("handlers.unclaim")
   function handlers.unclaim(remote, raw)
+    metrics.increment("handlers.unclaim")
     local data = verifyRequest(raw)
     local username, org = data.username, data.org
 
