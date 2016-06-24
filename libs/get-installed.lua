@@ -26,6 +26,10 @@ return function (fs, rootPath)
     if not iter then return end
     for entry in iter do
       local baseName
+      if not entry.type then
+        local stat, err = fs.stat(pathJoin(dir, entry.name))
+        entry.type = stat and stat.type
+      end
       if entry.type == "file" then
         baseName = entry.name:match("^(.*)%.lua$")
       elseif entry.type == "directory" then
