@@ -34,10 +34,10 @@ local listToMap = require('git').listToMap
 local jsonParse = require('json').parse
 
 local function evalModule(data, name)
-  -- Match multiline lua comments that start with `lit-meta\n`
-  local a, b = data:find("%-%-%[(=*)%[lit%-meta\n")
+  -- Match multiline lua comments that start with `lit-meta`
+  local a, b = data:find("%-%-%[(=*)%[lit%-meta")
   if a then
-    local term = "]" .. data:sub(a + 3, b - 10) .."]"
+    local term = "]" .. data:sub(a + 3, b - 9) .."]"
     local c = data:find(term, b + 1, true)
     if c then
       local fn, err = loadstring(data:sub(b + 1, c - 1), name)
