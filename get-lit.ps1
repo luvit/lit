@@ -1,6 +1,6 @@
 
 $LUVI_VERSION = "2.7.3"
-$LIT_VERSION = "3.4.1"
+$LIT_VERSION = "3.4.2"
 
 if (test-path env:LUVI_ARCH) {
   $LUVI_ARCH = $env:LUVI_ARCH
