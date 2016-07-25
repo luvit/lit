@@ -14,6 +14,8 @@ $LIT auth creationix
 $LIT up ws://localhost:4822
 $LIT claim luvit
 
+$LIT publish deps/websocket-codec.lua
+$LIT publish deps/weblit-*.lua
 for file in deps/*
 do
   $LIT publish $file

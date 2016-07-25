@@ -13,6 +13,8 @@ export LUVI_APP=`pwd`
 $LIT auth creationix
 $LIT down
 
+$LIT add deps/websocket-codec.lua
+$LIT add deps/weblit-*.lua
 for file in deps/*
 do
   $LIT add $file
