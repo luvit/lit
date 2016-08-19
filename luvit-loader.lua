@@ -197,7 +197,7 @@ local function loader(dir, path, bundleOnly)
         return package.loaded[key]
       end
       local code = bundle.readfile(fullPath)
-      local module = loadstring(code, key)()
+      local module = loadstring(code, key)(key)
       package.loaded[key] = module
       return module
     end, key
@@ -207,7 +207,7 @@ local function loader(dir, path, bundleOnly)
     if package.loaded[fullPath] then
       return package.loaded[fullPath]
     end
-    local module = assert(loadfile(fullPath))()
+    local module = assert(loadfile(fullPath))(fullPath)
     package.loaded[fullPath] = module
     return module
   end
