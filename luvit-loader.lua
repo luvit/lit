@@ -183,7 +183,7 @@ local function loader(dir, path, bundleOnly)
          try(pathJoin(dir, "libs", path)) then
         break
       end
-      if #dir < 2 then
+      if dir == pathJoin(dir, "..") then
         return table.concat(errors)
       end
       dir = pathJoin(dir, "..")
