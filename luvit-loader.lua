@@ -222,7 +222,13 @@ table.insert(package.loaders, 1, function (path)
     return
   end
 
-  local caller = debug.getinfo(3, "S").source
+  local level, caller = 3
+  -- Loop past any C functions to get to the real caller
+  -- This avoids pcall(require, "path") getting "=C" as the source
+  repeat
+    caller = debug.getinfo(level, "S").source
+    level = level + 1
+  until caller ~= "=[C]"
   if string.sub(caller, 1, 1) == "@" then
     return loader(pathJoin(cwd, caller:sub(2), ".."), path)
   elseif string.sub(caller, 1, 7) == "bundle:" then
