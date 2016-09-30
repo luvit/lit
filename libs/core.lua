@@ -523,12 +523,8 @@ local function makeCore(config)
   end
 
   function core.installDeps(path)
-    local meta, err = pkg.query(gfs, path)
-    -- meta will be `nil` if package is malformed
-    if not meta then
-      error(err)
-      return
-    end
+    -- bubble up errors in package
+    local meta = assert(pkg.query(gfs, path))
     if not meta.dependencies then
       log("no dependencies", path)
       return
