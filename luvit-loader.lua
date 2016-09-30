@@ -183,7 +183,7 @@ local function loader(dir, path, bundleOnly)
          try(pathJoin(dir, "libs", path)) then
         break
       end
-      if #dir < 2 then
+      if dir == pathJoin(dir, "..") then
         return table.concat(errors)
       end
       dir = pathJoin(dir, "..")
@@ -197,7 +197,7 @@ local function loader(dir, path, bundleOnly)
         return package.loaded[key]
       end
       local code = bundle.readfile(fullPath)
-      local module = loadstring(code, key)()
+      local module = loadstring(code, key)(key)
       package.loaded[key] = module
       return module
     end, key
@@ -207,7 +207,7 @@ local function loader(dir, path, bundleOnly)
     if package.loaded[fullPath] then
       return package.loaded[fullPath]
     end
-    local module = assert(loadfile(fullPath))()
+    local module = assert(loadfile(fullPath))(fullPath)
     package.loaded[fullPath] = module
     return module
   end
@@ -222,7 +222,13 @@ table.insert(package.loaders, 1, function (path)
     return
   end
 
-  local caller = debug.getinfo(3, "S").source
+  local level, caller = 3
+  -- Loop past any C functions to get to the real caller
+  -- This avoids pcall(require, "path") getting "=C" as the source
+  repeat
+    caller = debug.getinfo(level, "S").source
+    level = level + 1
+  until caller ~= "=[C]"
   if string.sub(caller, 1, 1) == "@" then
     return loader(pathJoin(cwd, caller:sub(2), ".."), path)
   elseif string.sub(caller, 1, 7) == "bundle:" then
