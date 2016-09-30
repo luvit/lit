@@ -204,7 +204,7 @@ local function makeCore(config)
       local stdout = exec(exe, "-v")
       if jit.os == "Windows" then
         stdout = stdout:gsub('.exe','')
-      end      
+      end
       local iversion = stdout:match("luvi version: v(%d+%.%d+%.%d+)")
                     or stdout:match("luvi v(%d+%.%d+%.%d+)")
       if iversion == version then
@@ -523,7 +523,8 @@ local function makeCore(config)
   end
 
   function core.installDeps(path)
-    local meta = pkg.query(gfs, path)
+    -- bubble up errors in package
+    local meta = assert(pkg.query(gfs, path))
     if not meta.dependencies then
       log("no dependencies", path)
       return
