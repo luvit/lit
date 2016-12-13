@@ -367,6 +367,10 @@ local function makeCore(config)
   end
 
   local function makeZip(rootHash, target, luvi_source)
+    if jit.os == "Windows" and (not target:match('%.exe$')) then
+      target = target..'.exe'
+    end
+
     log("creating binary", target, "highlight")
     if luvi_source then
       log("using luvi from", luvi_source, "highlight")
