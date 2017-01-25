@@ -1,12 +1,16 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "2.2.1"
+  version = "3.0.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
   tags = {"coro", "adapter"}
   license = "MIT"
   author = { name = "Tim Caswell" }
 ]]
+
+local wrapper = require('coro-wrapper')
+local decoder = wrapper.decoder
+local encoder = wrapper.encoder
 
 -- local p = require('pretty-print').prettyPrint
 
@@ -77,7 +81,6 @@ local function makeRead(socket, decode, closer)
     end
   end
 
-  local buffer = ""
   local function onRead(err, chunk)
     if err then
       closer.errored = err
@@ -89,20 +92,7 @@ local function makeRead(socket, decode, closer)
       dispatch {}
       return closer.check()
     end
-    if not decode then
-      return dispatch {chunk}
-    end
-    buffer = buffer .. chunk
-    while true do
-      local success, item, extra = pcall(decode, buffer)
-      if not success then
-        dispatch {nil, item}
-        return
-      end
-      if not extra then return end
-      buffer = extra
-      dispatch {item}
-    end
+    return dispatch {chunk}
   end
 
   local function read()
@@ -121,8 +111,10 @@ local function makeRead(socket, decode, closer)
     return coroutine.yield()
   end
 
-  local function updateDecoder(newDecode)
-    decode = newDecode
+  -- Auto use wrapper library for backwards compat
+  local updateDecoder
+  if decode then
+    read, updateDecoder = decoder(read, decode)
   end
   return read, updateDecoder
 end
@@ -150,9 +142,6 @@ local function makeWrite(socket, encode, closer)
       return coroutine.yield()
     end
 
-    if encode then
-      chunk = encode(chunk)
-    end
     local success, err = socket:write(chunk, wait())
     if not success then
       closer.errored = err
@@ -163,10 +152,11 @@ local function makeWrite(socket, encode, closer)
     return not err, err
   end
 
-  local function updateEncoder(newEncode)
-    encode = newEncode
+  -- Auto-call encoder from coro-wrapper for backwards compat
+  local updateEncoder
+  if encode then
+    write, updateEncoder = encoder(write, encode)
   end
-
   return write, updateEncoder
 end
 
@@ -201,55 +191,8 @@ local function wrapStream(socket, decode, encode)
 
 end
 
-local function chain(...)
-  local args = {...}
-  local nargs = select("#", ...)
-  return function (read, write)
-    local threads = {} -- coroutine thread for each item
-    local waiting = {} -- flag when waiting to pull from upstream
-    local boxes = {}   -- storage when waiting to write to downstream
-    for i = 1, nargs do
-      threads[i] = coroutine.create(args[i])
-      waiting[i] = false
-      local r, w
-      if i == 1 then
-        r = read
-      else
-        function r()
-          local j = i - 1
-          if boxes[j] then
-            local data = boxes[j]
-            boxes[j] = nil
-            assert(coroutine.resume(threads[j]))
-            return unpack(data)
-          else
-            waiting[i] = true
-            return coroutine.yield()
-          end
-        end
-      end
-      if i == nargs then
-        w = write
-      else
-        function w(...)
-          local j = i + 1
-          if waiting[j] then
-            waiting[j] = false
-            assert(coroutine.resume(threads[j], ...))
-          else
-            boxes[i] = {...}
-            coroutine.yield()
-          end
-        end
-      end
-      assert(coroutine.resume(threads[i], r, w))
-    end
-  end
-end
-
 return {
   wrapRead = wrapRead,
   wrapWrite = wrapWrite,
   wrapStream = wrapStream,
-  chain = chain,
 }
