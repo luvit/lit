@@ -1,9 +1,9 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "2.1.1"
+  version = "2.2.0"
   dependencies = {
-    "creationix/coro-net@2.1.0",
-    "luvit/http-codec@2.0.0"
+    "creationix/coro-net@3.0.0",
+    "luvit/http-codec@3.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
   description = "An coro style http(s) client and server helper."
