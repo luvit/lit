@@ -1,9 +1,9 @@
 --[[lit-meta
   name = "creationix/weblit-websocket"
-  version = "2.1.0"
+  version = "2.2.0"
   dependencies = {
-    "creationix/websocket-codec@2.1.1",
-    "creationix/coro-websocket@1.0.0",
+    "creationix/websocket-codec@3.0.0",
+    "creationix/coro-websocket@1.1.0",
   }
   description = "The websocket middleware for Weblit enables handling websocket clients."
   tags = {"weblit", "middleware", "websocket"}

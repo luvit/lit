@@ -1,8 +1,9 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "2.2.0"
+  version = "3.0.0"
   dependencies = {
-    "creationix/coro-channel@2.2.0"
+    "creationix/coro-channel@3.0.0",
+    "creationix/coro-wrapper@3.0.0",
   }
   optionalDependencies = {
     "luvit/secure-socket@1.0.0"
@@ -16,6 +17,10 @@
 
 local uv = require('uv')
 local wrapStream = require('coro-channel').wrapStream
+local wrapper = require('coro-wrapper')
+local merger = wrapper.merger
+local decoder = wrapper.decoder
+local encoder = wrapper.encoder
 local secureSocket -- Lazy required from "secure-socket" on first use.
 
 local function makeCallback(timeout)
@@ -102,8 +107,18 @@ local function connect(options)
     dsocket = socket
   end
 
-  local read, write, updateDecoder, updateEncoder, close =
-    wrapStream(dsocket, options.decode, options.encode)
+  local read, write, close = wrapStream(dsocket)
+  local updateDecoder, updateEncoder
+  if options.scan then
+    -- TODO: Should we expose updateScan somehow?
+    read = merger(read, options.scan)
+  end
+  if options.decode then
+    read, updateDecoder = decoder(read, options.decode)
+  end
+  if options.encode then
+    write, updateEncoder = encoder(write, options.encode)
+  end
 
   return read, write, socket, updateDecoder, updateEncoder, close
 end
@@ -132,8 +147,19 @@ local function createServer(options, onConnect)
           dsocket = socket
         end
 
-        local read, write, updateDecoder, updateEncoder =
-          wrapStream(dsocket, options.decode, options.encode)
+        local read, write = wrapStream(dsocket)
+        local updateDecoder, updateEncoder
+        if options.scan then
+          -- TODO: should we expose updateScan somehow?
+          read = merger(read, options.scan)
+        end
+        if options.decode then
+          read, updateDecoder = decoder(read, options.decode)
+        end
+        if options.encode then
+          write, updateEncoder = encoder(write, options.encode)
+        end
+
         return onConnect(read, write, socket, updateDecoder, updateEncoder)
       end, debug.traceback)
       if not success then

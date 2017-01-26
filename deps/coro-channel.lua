@@ -2,15 +2,11 @@
   name = "creationix/coro-channel"
   version = "3.0.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
-  description = "An adapter for wrapping uv streams as coro-streams and chaining filters."
+  description = "An adapter for wrapping uv streams as coro-streams."
   tags = {"coro", "adapter"}
   license = "MIT"
   author = { name = "Tim Caswell" }
 ]]
-
-local wrapper = require('coro-wrapper')
-local decoder = wrapper.decoder
-local encoder = wrapper.encoder
 
 -- local p = require('pretty-print').prettyPrint
 
@@ -48,7 +44,7 @@ local function makeCloser(socket)
   return closer
 end
 
-local function makeRead(socket, decode, closer)
+local function makeRead(socket, closer)
   local paused = true
 
   local queue = {}
@@ -112,14 +108,10 @@ local function makeRead(socket, decode, closer)
   end
 
   -- Auto use wrapper library for backwards compat
-  local updateDecoder
-  if decode then
-    read, updateDecoder = decoder(read, decode)
-  end
-  return read, updateDecoder
+  return read
 end
 
-local function makeWrite(socket, encode, closer)
+local function makeWrite(socket, closer)
 
   local function wait()
     local thread = coroutine.running()
@@ -152,43 +144,32 @@ local function makeWrite(socket, encode, closer)
     return not err, err
   end
 
-  -- Auto-call encoder from coro-wrapper for backwards compat
-  local updateEncoder
-  if encode then
-    write, updateEncoder = encoder(write, encode)
-  end
-  return write, updateEncoder
+  return write
 end
 
-local function wrapRead(socket, decode)
+local function wrapRead(socket)
   local closer = makeCloser(socket)
   closer.written = true
-  local read, updateDecoder = makeRead(socket, decode, closer)
-  return read, updateDecoder, closer.close
+  return makeRead(socket, closer), closer.close
 end
 
-local function wrapWrite(socket, encode)
+local function wrapWrite(socket)
   local closer = makeCloser(socket)
   closer.read = true
-  local write, updateEncoder = makeWrite(socket, encode, closer)
-  return write, updateEncoder, closer.close
+  return makeWrite(socket, closer), closer.close
 end
 
-local function wrapStream(socket, decode, encode)
+local function wrapStream(socket)
   assert(socket
     and socket.write
     and socket.shutdown
     and socket.read_start
     and socket.read_stop
     and socket.is_closing
-    and socket.close)
+    and socket.close, "socket does not appear to be a socket/uv_stream_t")
 
   local closer = makeCloser(socket)
-  local read, updateDecoder = makeRead(socket, decode, closer)
-  local write, updateEncoder = makeWrite(socket, encode, closer)
-
-  return read, write, updateDecoder, updateEncoder, closer.close
-
+  return makeRead(socket, closer), makeWrite(socket, closer), closer.close
 end
 
 return {

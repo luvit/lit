@@ -1,7 +1,7 @@
 --[[lit-meta
   name = "creationix/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
-  version = "2.2.1"
+  version = "3.0.0"
   dependencies = {
     "creationix/base64@2.0.0",
     "creationix/sha1@1.0.0",
@@ -59,29 +59,31 @@ local function applyMask(data, mask)
   return concat(out)
 end
 
-local function decode(chunk)
-  if #chunk < 2 then return end
-  local second = byte(chunk, 2)
+local function decode(chunk, index)
+  local start = index - 1
+  local length = #chunk - start
+  if length < 2 then return end
+  local second = byte(chunk, start + 2)
   local len = band(second, 0x7f)
   local offset
   if len == 126 then
     if #chunk < 4 then return end
     len = bor(
-      lshift(byte(chunk, 3), 8),
-      byte(chunk, 4))
+      lshift(byte(chunk, start + 3), 8),
+      byte(chunk, start + 4))
     offset = 4
   elseif len == 127 then
     if #chunk < 10 then return end
     len = bor(
-      lshift(byte(chunk, 3), 24),
-      lshift(byte(chunk, 4), 16),
-      lshift(byte(chunk, 5), 8),
-      byte(chunk, 6)
+      lshift(byte(chunk, start + 3), 24),
+      lshift(byte(chunk, start + 4), 16),
+      lshift(byte(chunk, start + 5), 8),
+      byte(chunk, start + 6)
     ) * 0x100000000 + bor(
-      lshift(byte(chunk, 7), 24),
-      lshift(byte(chunk, 8), 16),
-      lshift(byte(chunk, 9), 8),
-      byte(chunk, 10)
+      lshift(byte(chunk, start + 7), 24),
+      lshift(byte(chunk, start + 8), 16),
+      lshift(byte(chunk, start + 9), 8),
+      byte(chunk, start + 10)
     )
     offset = 10
   else
@@ -91,15 +93,15 @@ local function decode(chunk)
   if mask then
     offset = offset + 4
   end
+  offset = offset + start
   if #chunk < offset + len then return end
 
-  local first = byte(chunk, 1)
+  local first = byte(chunk, start + 1)
   local payload = sub(chunk, offset + 1, offset + len)
   assert(#payload == len, "Length mismatch")
   if mask then
     payload = applyMask(payload, sub(chunk, offset - 3, offset))
   end
-  local extra = sub(chunk, offset + len + 1)
   return {
     fin = band(first, 0x80) > 0,
     rsv1 = band(first, 0x40) > 0,
@@ -109,7 +111,7 @@ local function decode(chunk)
     mask = mask,
     len = len,
     payload = payload
-  }, extra
+  }, offset + len + 1
 end
 
 local function encode(item)

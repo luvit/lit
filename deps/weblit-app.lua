@@ -1,9 +1,9 @@
 --[[lit-meta
   name = "creationix/weblit-app"
-  version = "2.1.1"
+  version = "2.2.0"
   dependencies = {
-    'creationix/coro-net@2.2.0',
-    'luvit/http-codec@2.0.0',
+    'creationix/coro-net@3.0.0',
+    'luvit/http-codec@3.0.0',
     'luvit/querystring@2.0.0',
   }
   description = "Weblit is a webapp framework designed around routes and middleware layers."

@@ -70,42 +70,55 @@ end
 --     updateDecode(Decode)
 local function decoder(read, decode)
   local buffer, index
+  local want = true
   return function ()
 
     while true do
+      -- If there isn't enough data to decode then get more data.
+      if want then
+        local chunk = read()
+        if buffer then
+          -- If we had leftover data in the old buffer, trim it down.
+          if index > 1 then
+            buffer = sub(buffer, index)
+            index = 1
+          end
+          if chunk then
+            -- Concatenate the chunk with the old data
+            buffer = buffer .. chunk
+          end
+        else
+          -- If there was no leftover data, set new data in the buffer
+          if chunk then
+            buffer = chunk
+            index = 1
+          else
+            buffer = nil
+            index = nil
+          end
+        end
+      end
 
       -- If we have data, lets try to decode it
-      if buffer then
-        local item, newIndex = decode(buffer, index)
+      local item, newIndex = decode(buffer, index)
+
+      want = not newIndex
+      if item then
         -- There was enough data to emit an event!
-        if item then
-          if newIndex then
-            -- There was leftover data
-            index = newIndex
-          else
-            -- There was no leftover data
-            buffer = nil
-          end
-          -- Emit the event
-          return item
+        if newIndex then
+          assert(type(newIndex) == "number", "index must be a number if set")
+          -- There was leftover data
+          index = newIndex
+        else
+          want = true
+          -- There was no leftover data
+          buffer = nil
+          index = nil
         end
+        -- Emit the event
+        return item
       end
 
-      -- There wasn't enough data to decode, lets get more data.
-      local chunk = read()
-      if buffer then
-        -- If we had leftover data in the old buffer, trim it down.
-        if index > 1 then
-          buffer = sub(buffer, index)
-          index = 1
-        end
-        -- Concatenate the chunk with the old data
-        buffer = buffer .. chunk
-      else
-        -- If there was no leftover data, set new data in the buffer
-        buffer = chunk
-        index = 1
-      end
 
     end
   end,
