@@ -17,7 +17,10 @@ limitations under the License.
 --]]
 --[[lit-meta
   name = "luvit/readline"
-  version = "2.0.0"
+  version = "2.2.0"
+  dependencies = {
+    "luvit/ustring@2.0.0",
+  }
   homepage = "https://github.com/luvit/luvit/blob/master/deps/readline.lua"
   description = "A readline interface for terminals in pure lua."
   tags = {"readline", "tty"}
@@ -27,11 +30,16 @@ limitations under the License.
 
 -- Heavily inspired by ljlinenoise : <http://fperrad.github.io/ljlinenoise/>
 
-local sub = string.sub
-local gmatch = string.gmatch
+local ustring = require "ustring"
+local emptyline = ustring.new()
+local sub = ustring.sub
+local chlen = ustring.chlen
+local gmatch = ustring.gmatch
+local find = ustring.find
 local remove = table.remove
 local insert = table.insert
 local concat = table.concat
+local tostring = tostring
 
 local History = {}
 function History:add(line)
@@ -78,16 +86,23 @@ end
 local Editor = {}
 function Editor:refreshLine()
   local line = self.line
+  if self.cover then
+    line = string.rep(self.cover, #line)
+  end
+
   local position = self.position
+  if self.cover then
+    position = (#self.cover * (position - 1)) + 1
+  end
 
   -- Cursor to left edge
   local command = "\x1b[0G"
-  -- Write the prompt and the current buffer content
-               .. self.prompt .. line
-  -- Erase to right
-               .. "\x1b[0K"
+  -- Write the prompt and the data before cursor in buffer content.
+               .. self.prompt .. tostring(line:sub(1,self.position - 1))
+  -- Save the position,erase to right and write data left.
+               .. "\x1b7\x1b[0K" .. tostring(line:sub(self.position,-1))
   -- Move cursor to original position.
-               .. "\x1b[0G\x1b[" .. tostring(position + self.promptLength - 1) .. "C"
+               .. "\x1b8"
   self.stdout:write(command)
 end
 function Editor:insertAbove(line)
@@ -101,23 +116,21 @@ function Editor:insertAbove(line)
   end)
 end
 function Editor:insert(character)
+  local display = self.cover and string.rep(self.cover, #character) or character
   local line = self.line
   local position = self.position
+  character = ustring.new(character)
   if #line == position - 1 then
     self.line = line .. character
     self.position = position + #character
-    if self.promptLength + #self.line < self.columns then
-      self.stdout:write(character)
-    else
-      self:refreshLine()
-    end
+    self.stdout:write(display)
   else
     -- Insert the letter in the middle of the line
-    self.line = sub(line, 1, position - 1) .. character .. sub(line, position)
-    self.position = position + 1
+    self.line = sub(line, 1, position - 1) .. ustring.new(character) .. sub(line, position)
+    self.position = position + #character
     self:refreshLine()
   end
-  self.history:updateLastLine(self.line)
+  self.history:updateLastLine(tostring(self.line))
 end
 function Editor:moveLeft()
   if self.position > 1 then
@@ -143,7 +156,7 @@ function Editor:getHistory(delta)
       index = length
     end
     if index == self.historyIndex then return end
-    local line = self.history[index]
+    local line = ustring.new(self.history[index])
     self.line = line
     self.historyIndex = index
     self.position = #line + 1
@@ -156,7 +169,7 @@ function Editor:backspace()
   if position > 1 and #line > 0 then
     self.line = sub(line, 1, position - 2) .. sub(line, position)
     self.position = position - 1
-    self.history:updateLastLine(self.line)
+    self.history:updateLastLine(tostring(self.line))
     self:refreshLine()
   end
 end
@@ -165,7 +178,7 @@ function Editor:delete()
   local position = self.position
   if position > 0 and #line > 0 then
     self.line = sub(line, 1, position - 1) .. sub(line, position + 1)
-    self.history:updateLastLine(self.line)
+    self.history:updateLastLine(tostring(self.line))
     self:refreshLine()
   end
 end
@@ -180,19 +193,19 @@ function Editor:swap()
     if position ~= #line then
       self.position = position + 1
     end
-    self.history:updateLastLine(self.line)
+    self.history:updateLastLine(tostring(self.line))
     self:refreshLine()
   end
 end
 function Editor:deleteLine()
-  self.line = ''
+  self.line = emptyline
   self.position = 1
-  self.history:updateLastLine(self.line)
+  self.history:updateLastLine(tostring(self.line))
   self:refreshLine()
 end
 function Editor:deleteEnd()
   self.line = sub(self.line, 1, self.position - 1)
-  self.history:updateLastLine(self.line)
+  self.history:updateLastLine(tostring(self.line))
   self:refreshLine()
 end
 function Editor:moveHome()
@@ -210,7 +223,7 @@ local function findLeft(line, position, wordPattern)
   local s
   repeat
     local start = sub(line, 1, position - 1)
-    s = string.find(start, pattern)
+    s = find(start, pattern)
     if not s then
       position = position - 1
     end
@@ -231,7 +244,7 @@ function Editor:jumpLeft()
   self:refreshLine()
 end
 function Editor:jumpRight()
-  local _, e = string.find(self.line, self.wordPattern, self.position)
+  local _, e = find(self.line, self.wordPattern, self.position)
   self.position = e and e + 1 or #self.line + 1
   self:refreshLine()
 end
@@ -248,15 +261,16 @@ function Editor:complete()
   end
   local line = self.line
   local position = self.position
-  local res = self.completionCallback(sub(line, 1, position))
+  local res = self.completionCallback(tostring(sub(line, 1, position)))
   if not res then
     return self:beep()
   end
   local typ = type(res)
   if typ == "string" then
+    res = ustring.new(res)
     self.line = res .. sub(line, position + 1)
     self.position = #res + 1
-    self.history:updateLastLine(self.line)
+    self.history:updateLastLine(tostring(self.line))
   elseif typ == "table" then
     print()
     print(unpack(res))
@@ -291,11 +305,11 @@ local keyHandlers =
     local line = self.line
     -- Only record new history if it's non-empty and new
     if #line > 0 and history[#history - 1] ~= line then
-      history[#history] = line
+      history[#history] = tostring(line)
     else
       history[#history] = nil
     end
-    return self.line
+    return tostring(self.line)
   end},
   -- Tab
   {{9}, function(self)
@@ -388,7 +402,7 @@ local keyHandlers =
     self:getHistory(10)
   end},
   -- Printable characters
-  {{function(key, char) return char > 31 and key:sub(1,1) or nil end}, function(self, consumedKeys)
+  {{function(key, char) return char > 31 and key:sub(1,chlen(key:byte())) or nil end}, function(self, consumedKeys)
     self:insert(consumedKeys)
   end},
 }
@@ -462,10 +476,10 @@ function Editor:readLine(prompt, callback)
     return callback(...)
   end
 
-  self.line = ""
+  self.line = emptyline
   self.position = 1
   self.stdout:write(self.prompt)
-  self.history:add(self.line)
+  self.history:add(tostring(self.line))
   self.historyIndex = #self.history
 
   self.stdin:set_mode(1)
@@ -476,23 +490,27 @@ Editor.__index = Editor
 function Editor.new(options)
   options = options or {}
   local history = options.history or History.new()
-  assert(options.stdin, "stdin is required")
-  assert(options.stdout, "stdout is required")
+
+  if not (options.stdin and options.stdout) then
+    local prettyPrint = require('pretty-print')
+    options.stdin = options.stdin or prettyPrint.stdin
+    options.stdout = options.stdout or prettyPrint.stdout
+  end
+
   local editor = {
     wordPattern = options.wordPattern or "%w+",
     history = history,
     completionCallback = options.completionCallback,
     stdin = options.stdin,
     stdout = options.stdout,
+    cover = options.cover,
   }
   return setmetatable(editor, Editor)
 end
 
 local function readLine(prompt, options, callback)
-  local prettyPrint = require('pretty-print')
   if type(options) == "function" and callback == nil then
-    callback, options =
-      options, {stdin = prettyPrint.stdin, stdout = prettyPrint.stdout}
+    callback, options = options, nil
   end
   local editor = Editor.new(options)
   editor:readLine(prompt, callback)
