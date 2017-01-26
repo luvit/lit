@@ -18,7 +18,7 @@ limitations under the License.
 
 --[[lit-meta
   name = "luvit/http-codec"
-  version = "3.0.0"
+  version = "3.0.1"
   homepage = "https://github.com/luvit/luvit/blob/master/deps/http-codec.lua"
   description = "A simple pair of functions for converting between hex and raw strings."
   tags = {"codec", "http"}
@@ -242,19 +242,20 @@ local function decoder()
   end
 
   function decodeChunked(chunk, index)
-    local offset = index - 1
     local len, term
     len, term = match(chunk, "^(%x+)(..)", index)
     if not len then return end
     assert(term == "\r\n")
+    index = index + #len + 2
+    local offset = index - 1
     local length = tonumber(len, 16)
-    if #chunk - offset < length + 4 + #len then return end
+    if #chunk < offset + length + 2 then return end
     if length == 0 then
       mode = decodeHead
     end
-    chunk = sub(chunk, #len + 3)
-    assert(sub(chunk, index + length + 1, index + length + 2) == "\r\n")
-    return sub(chunk, index, index + length), index + length + 3
+    assert(sub(chunk, index + length, index + length + 1) == "\r\n")
+    local piece = sub(chunk, index, index + length - 1)
+    return piece, index + length + 2
   end
 
   function decodeCounted(chunk, index)
