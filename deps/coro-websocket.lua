@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-websocket"
-  version = "1.1.0"
+  version = "3.0.0"
   dependencies = {
     "luvit/http-codec@3.0.0",
     "creationix/websocket-codec@3.0.0",

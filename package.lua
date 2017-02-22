@@ -22,7 +22,7 @@ return {
     "creationix/coro-wrapper@3.0.0",
     "creationix/coro-spawn@3.0.0",
     "creationix/coro-split@2.0.0",
-    "creationix/coro-websocket@1.1.0",
+    "creationix/coro-websocket@3.0.0",
     "creationix/md5@1.0.2",
     "creationix/semver@2.0.0",
     "creationix/git@2.0.7",
