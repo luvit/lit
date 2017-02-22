@@ -18,7 +18,7 @@ return {
     "luvit/secure-socket@1.1.4",
     "creationix/coro-fs@2.2.1",
     "creationix/coro-net@3.0.0",
-    "creationix/coro-http@2.1.0",
+    "creationix/coro-http@3",
     "creationix/coro-wrapper@3.0.0",
     "creationix/coro-spawn@3.0.0",
     "creationix/coro-split@2.0.0",
