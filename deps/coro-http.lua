@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "2.2.0"
+  version = "3.0.0"
   dependencies = {
     "creationix/coro-net@3.0.0",
     "luvit/http-codec@3.0.0"
