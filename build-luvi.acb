@@ -1,0 +1,41 @@
+#!/usr/bin/acbuild script
+
+# Start the build with an empty ACI
+begin
+
+# Name the ACI
+set-name luvit.io/lit-dev
+
+# Based on alpine
+dep add quay.io/coreos/alpine-sh
+
+# Install build tools
+run apk update
+run apk add cmake git build-base curl perl
+
+# Clone luvi
+run -- \
+  git clone --recursive https://github.com/luvit/luvi.git /luvi
+
+# Build luvi
+run -- \
+  make -C /luvi regular test
+
+# Build lit
+run -- \
+  curl https://lit.luvit.io/packages/luvit/lit/latest.zip -O
+run -- \
+  /luvi/build/luvi latest.zip -- make latest.zip lit /luvi/build/luvi
+
+# Test lit
+run -- /lit -v
+
+# # Extract luvi and lit
+# cp ./.acbuild/currentaci/rootfs/luvi/build/luvi \
+#    ./.acbuild/currentaci/rootfs/lit ./
+
+# Save the aci
+write --overwrite luvi-dev.aci
+
+# We're done with the build container
+end
