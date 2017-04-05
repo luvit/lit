@@ -98,6 +98,12 @@ return function (ctx, isServer, socket, handshakeComplete)
   function ssocket.close(_, ...)
     return socket:close(...)
   end
+  function ssocket.unref(_, ...)
+    return socket:unref(...)
+  end
+  function ssocket.ref(_, ...)
+    return socket:ref(...)
+  end
 
   handshake()
   socket:read_start(onCipher)

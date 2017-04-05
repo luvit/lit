@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "3.0.0"
+  version = "3.1.0"
   dependencies = {
     "creationix/coro-channel@3.0.0",
     "creationix/coro-wrapper@3.0.0",
@@ -95,7 +95,6 @@ local function connect(options)
   end
   success, err = coroutine.yield()
   if not success then return nil, err end
-
   local dsocket
   if options.tls then
     if not secureSocket then secureSocket = require('secure-socket') end
@@ -119,8 +118,7 @@ local function connect(options)
   if options.encode then
     write, updateEncoder = encoder(write, options.encode)
   end
-
-  return read, write, socket, updateDecoder, updateEncoder, close
+  return read, write, dsocket, updateDecoder, updateEncoder, close
 end
 
 local function createServer(options, onConnect)
@@ -143,6 +141,7 @@ local function createServer(options, onConnect)
         if options.tls then
           if not secureSocket then secureSocket = require('secure-socket') end
           dsocket = assert(secureSocket(socket, options.tls))
+          dsocket.socket = socket
         else
           dsocket = socket
         end
@@ -160,7 +159,7 @@ local function createServer(options, onConnect)
           write, updateEncoder = encoder(write, options.encode)
         end
 
-        return onConnect(read, write, socket, updateDecoder, updateEncoder)
+        return onConnect(read, write, dsocket, updateDecoder, updateEncoder)
       end, debug.traceback)
       if not success then
         print(failure)

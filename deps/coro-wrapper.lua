@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-wrapper"
-  version = "3.0.0"
+  version = "3.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
   description = "An adapter for applying decoders to coro-streams."
   tags = {"coro", "decoder", "adapter"}
@@ -103,7 +103,7 @@ local function decoder(read, decode)
       local item, newIndex = decode(buffer, index)
 
       want = not newIndex
-      if item then
+      if item or newIndex then
         -- There was enough data to emit an event!
         if newIndex then
           assert(type(newIndex) == "number", "index must be a number if set")
