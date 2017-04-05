@@ -1,6 +1,6 @@
 return {
   name = "luvit/lit",
-  version = "3.5.2",
+  version = "3.5.3",
   homepage = "https://github.com/luvit/lit",
   description = "The Luvit Invention Toolkit is a luvi app that handles dependencies and luvi builds.",
   tags = {"lit", "meta"},
