@@ -18,7 +18,7 @@ limitations under the License.
 
 --[[lit-meta
   name = "luvit/http-codec"
-  version = "3.0.1"
+  version = "3.0.2"
   homepage = "https://github.com/luvit/luvit/blob/master/deps/http-codec.lua"
   description = "A simple pair of functions for converting between hex and raw strings."
   tags = {"codec", "http"}
@@ -164,12 +164,12 @@ local function decoder()
 
   -- This state is for decoding the status line and headers.
   function decodeHead(chunk, index)
-    if not chunk then return end
+    if not chunk or index > #chunk then return end
 
     local _, last = find(chunk, "\r?\n\r?\n", index)
     -- First make sure we have all the head before continuing
     if not last then
-      if #chunk < 8 * 1024 then return end
+      if (#chunk - index) <= 8 * 1024 then return end
       -- But protect against evil clients by refusing heads over 8K long.
       error("entity too large")
     end
