@@ -99,6 +99,11 @@ local function decoder(read, decode)
         end
       end
 
+      -- Return nil if the buffer is empty
+      if buffer == '' or buffer == nil then
+          return nil
+      end
+
       -- If we have data, lets try to decode it
       local item, newIndex = decode(buffer, index)
 
