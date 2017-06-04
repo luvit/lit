@@ -67,13 +67,13 @@ local function decode(chunk, index)
   local len = band(second, 0x7f)
   local offset
   if len == 126 then
-    if #chunk < 4 then return end
+    if length < 4 then return end
     len = bor(
       lshift(byte(chunk, start + 3), 8),
       byte(chunk, start + 4))
     offset = 4
   elseif len == 127 then
-    if #chunk < 10 then return end
+    if length < 10 then return end
     len = bor(
       lshift(byte(chunk, start + 3), 24),
       lshift(byte(chunk, start + 4), 16),
@@ -94,7 +94,7 @@ local function decode(chunk, index)
     offset = offset + 4
   end
   offset = offset + start
-  if #chunk < offset + len then return end
+  if length < offset + len then return end
 
   local first = byte(chunk, start + 1)
   local payload = sub(chunk, offset + 1, offset + len)
