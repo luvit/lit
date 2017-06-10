@@ -20,10 +20,14 @@ local openssl = require('openssl')
 -- writeCipher is called when ssl needs something written on the socket
 -- handshakeComplete is called when the handhake is complete and it's safe
 -- onPlain is called when plaintext comes out.
-return function (ctx, isServer, socket, handshakeComplete)
+return function (ctx, options, socket, handshakeComplete)
 
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
-  local ssl = ctx:ssl(bin, bout, isServer)
+  local ssl = ctx:ssl(bin, bout, options.server)
+
+  if not options.server then
+    ssl:set('hostname', options.servername)
+  end
 
   local ssocket = {tls=true}
   local onPlain
