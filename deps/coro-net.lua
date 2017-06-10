@@ -66,6 +66,8 @@ local function normalize(options, server)
   end
   if options.tls == true then
     options.tls = {}
+  end
+  if options.tls then
     if server then
       options.tls.server = true
       assert(options.tls.cert, "TLS servers require a certificate")
