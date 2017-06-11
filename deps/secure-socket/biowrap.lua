@@ -23,9 +23,9 @@ local openssl = require('openssl')
 return function (ctx, options, socket, handshakeComplete)
 
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
-  local ssl = ctx:ssl(bin, bout, options.server)
+  local ssl = ctx:ssl(bin, bout, options.isServer)
 
-  if not options.server then
+  if not options.isServer then
     ssl:set('hostname', options.servername)
   end
 
