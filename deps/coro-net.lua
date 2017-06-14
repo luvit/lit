@@ -69,11 +69,11 @@ local function normalize(options, server)
   end
   if options.tls then
     if server then
-      options.tls.isServer = true
+      options.tls.server = true
       assert(options.tls.cert, "TLS servers require a certificate")
       assert(options.tls.key, "TLS servers require a key")
     else
-      options.tls.isServer = false
+      options.tls.server = false
       options.tls.servername = options.host
     end
   end
