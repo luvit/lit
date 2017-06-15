@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 --[[lit-meta
   name = "luvit/ustring"
-  version = "2.0.0"
+  version = "2.0.2"
   homepage = "https://github.com/luvit/luvit/blob/master/deps/ustring.lua"
   description = "A light-weight UTF-8 module in pure lua(jit)."
   tags = {"ustring", "utf8", "utf-8", "unicode"}
@@ -30,7 +30,6 @@ local _meta = {}
 
 local strsub = string.sub
 local strbyte = string.byte
-local band = bit.band
 local rshift = bit.rshift
 
 local function chlen(byte)
@@ -51,7 +50,7 @@ end
 ustring.chlen = chlen
 
 function ustring.new(str,allowInvaild)
-    local str = str and tostring(str) or ""
+    str = str and tostring(str) or ""
     local ustr = {}
     local index = 1;
     local append = 0;
@@ -93,20 +92,54 @@ function ustring.copy(ustr)
     return u
 end
 
-function ustring.uindex(ustr,rawindex,initrawindex,initindex)
-    -- get the index of the UTF-8 character from a raw string index
-    -- return `nil` when rawindex is invaild
-    -- the last 2 arguments is used for speed up
-    local index = (initindex or 1)
-    rawindex = rawindex - (initrawindex or 1) + 1
-    repeat
-        local byte = ustr[index]
-        if byte == nil then return nil end
-        local len = #byte
-        index = index + 1
-        rawindex = rawindex - len
-    until rawindex <= 0
-    return index - 1
+function ustring.index2uindex(ustr,rawindex,initrawindex,initindex)
+    -- convert a raw index into the index of a UTF-8
+    -- return `nil` if uindex is invaild
+    -- the last 2 arguments are optional and used for better performance (only if rawindex isn't negative)
+    if rawindex < 0 then
+        local index = 1
+        repeat
+            local uchar = ustr[index]
+            if uchar == nil then return nil end
+            local len = #uchar
+            index = index + 1
+            rawindex = rawindex + len
+        until rawindex >= 0
+        return -(index - 1)
+    else
+        rawindex = rawindex - (initrawindex or 1) + 1
+        local index = (initindex or 1)
+        repeat
+            local uchar = ustr[index]
+            if uchar == nil then return nil end
+            local len = #uchar
+            index = index + 1
+            rawindex = rawindex - len
+        until rawindex <= 0
+        return index - 1
+    end
+end
+
+function ustring.uindex2index(ustr,uindex,initrawindex,inituindex)
+    -- convert the index of a UIF-8 char into a raw index
+    -- return `nil` if rawindex is invaild
+    -- the last 2 arguments are optional and used for better performance (only if uindex isn't negative)
+    uindex = uindex or 1
+    local ulen = #ustr
+    if uindex < 0 then
+        local index = 0
+        for i = ulen,ulen + uindex + 1,-1 do
+            index = index + #ustr[i]
+        end
+        return -index
+    else
+        local index = (inituindex or 1)
+        inituindex = inituindex or 1
+        for i = inituindex,uindex - 1 do
+            index = index + #ustr[i]
+        end
+        return index
+    end
 end
 
 local gsub = string.gsub
@@ -135,10 +168,10 @@ function ustring.sub(ustr,i,j)
 end
 
 function ustring.find(ustr,pattern,init,plain)
-    local first,last = find(tostring(ustr),tostring(pattern),init,plain)
+    local first,last = find(tostring(ustr),tostring(pattern),ustring.uindex2index(ustr,init),plain)
     if first == nil then return nil end
-    local ufirst = ustring.uindex(ustr,first)
-    local ulast = ustring.uindex(ustr,last,first,ufirst)
+    local ufirst = ustring.index2uindex(ustr,first)
+    local ulast = ustring.index2uindex(ustr,last,first,ufirst)
     return ufirst,ulast
 end
 
@@ -151,7 +184,7 @@ function ustring.gmatch(ustr,pattern)
 end
 
 function ustring.match(ustr,pattern,init)
-    return match(tostring(ustr),tostring(pattern),init)
+    return match(tostring(ustr),tostring(pattern),ustring.uindex2index(ustr,init))
 end
 
 function ustring.lower(ustr)
