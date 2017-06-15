@@ -95,6 +95,7 @@ local function wrapIo(rawRead, rawWrite, options)
             payload = message.payload
           }
         end
+        return message
       end
     end
   end
