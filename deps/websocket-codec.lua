@@ -94,7 +94,7 @@ local function decode(chunk, index)
     offset = offset + 4
   end
   offset = offset + start
-  if length < offset + len then return end
+  if #chunk < offset + len then return end
 
   local first = byte(chunk, start + 1)
   local payload = sub(chunk, offset + 1, offset + len)
