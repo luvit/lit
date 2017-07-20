@@ -20,13 +20,17 @@ local spawn = require('coro-spawn')
 local split = require('coro-split')
 
 return function (command, ...)
-  local child = spawn(command, {
+  local child, err = spawn(command, {
     args = {...},
     -- Tell spawn to create coroutine pipes for stdout and stderr only
     stdio = {nil, true, true}
   })
-  local stdout, stderr, code, signal
 
+  if err then
+    return nil, err
+  end
+  
+  local stdout, stderr, code, signal
 
   -- Split the coroutine into three sub-coroutines and wait for all three.
   split(function ()
