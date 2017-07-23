@@ -54,6 +54,10 @@ return function (path, options)
 
   local handle, pid = uv.spawn(path, options, onExit)
 
+  if not handle then
+    return nil, pid
+  end
+
   -- If the process has exited already, return the cached result.
   -- Otherwise, wait for it to exit and return the result.
   local function waitExit()
