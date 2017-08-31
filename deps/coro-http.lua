@@ -75,7 +75,7 @@ local function getConnection(host, port, tls, timeout)
     host = host,
     port = port,
     tls = tls,
-	timeout = timeout,
+    timeout = timeout,
     encode = httpCodec.encoder(),
     decode = httpCodec.decoder()
   })
