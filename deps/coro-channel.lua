@@ -130,8 +130,12 @@ local function makeWrite(socket, closer)
     if chunk == nil then
       closer.written = true
       closer.check()
-      socket:shutdown(wait())
-      return coroutine.yield()
+      local success, err = socket:shutdown(wait())
+      if not success then
+        return nil, err
+      end
+      err = coroutine.yield()
+      return not err, err
     end
 
     local success, err = socket:write(chunk, wait())
