@@ -102,9 +102,9 @@ local function saveConnection(connection)
   connection.socket:unref()
 end
 
-local function request(method, url, headers, body, timeout)
+local function request(method, url, headers, body, options)
   local uri = parseUrl(url)
-  local connection = getConnection(uri.hostname, uri.port, uri.tls, timeout)
+  local connection = getConnection(uri.hostname, uri.port, uri.tls, options.timeout)
   local read = connection.read
   local write = connection.write
 
@@ -174,7 +174,7 @@ local function request(method, url, headers, body, timeout)
   end
 
   -- Follow redirects
-  if method == "GET" and (res.code == 302 or res.code == 307) then
+  if method == "GET" and (res.code == 302 or res.code == 307) and not options.noredirect then
     for i = 1, #res do
       local key, location = unpack(res[i])
       if key:lower() == "location" then
