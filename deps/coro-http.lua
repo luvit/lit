@@ -178,10 +178,16 @@ local function request(method, url, headers, body, timeout)
     for i = 1, #res do
       local key, location = unpack(res[i])
       if key:lower() == "location" then
+        headers = headers or {}
+        headers.redirects = headers.redirects or {}
+        table.insert(headers.redirects, location)
         return request(method, location, headers)
       end
     end
   end
+
+  res.redirects = headers and headers.redirects or {}
+  res.url = url
 
   return res, table.concat(body)
 end
