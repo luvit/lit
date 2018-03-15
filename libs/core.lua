@@ -375,7 +375,7 @@ local function makeCore(config)
     if luvi_source then
       log("using luvi from", luvi_source, "highlight")
     end
-    local meta = pkg.queryDb(db, rootHash)
+    local meta = assert(pkg.queryDb(db, rootHash))
 
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
