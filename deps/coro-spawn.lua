@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-spawn"
-  version = "3.0.0"
+  version = "3.0.1"
   dependencies = {
     "creationix/coro-channel@3.0.0"
   }
