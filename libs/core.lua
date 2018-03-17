@@ -379,14 +379,20 @@ local function makeCore(config)
 
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
-
-    local source = luvi_source or core.getLuvi(meta.luvi)
-    local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
-    local binSize = assert(uv.fs_fstat(fd2)).size
-    log("inserting luvi", source)
-    assert(uv.fs_sendfile(fd, fd2, 0, binSize))
-    uv.fs_close(fd2)
-
+    local binSize
+    local inline = meta.luvi.inline
+    if inline then
+      log("using inline luvi from meta", #inline)
+      uv.fs_write(fd, inline, 0)
+      binSize = #inline
+    else
+      local source = luvi_source or core.getLuvi(meta.luvi)
+      local fd2 = assert(uv.fs_open(source, "r", 384)) -- 0600
+      binSize = assert(uv.fs_fstat(fd2)).size
+      log("inserting luvi", source)
+      assert(uv.fs_sendfile(fd, fd2, 0, binSize))
+      uv.fs_close(fd2)
+    end
     assert(uv.fs_write(fd, exportZip(db, rootHash, true), binSize))
     uv.fs_close(fd)
     assert(uv.fs_rename(tempFile, target))
