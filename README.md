@@ -42,12 +42,13 @@ the [powershell script](./get-lit.ps1).
 In `cmd.exe` run:
 
 ```batch
-PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
+PowerShell -NoProfile -ExecutionPolicy unrestricted -Command "[Net.ServicePointManager]::SecurityProtocol = 'Tls12'; iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))"
 ```
 
 Or directly in powershell, run:
 
 ```powershell
+[Net.ServicePointManager]::SecurityProtocol = 'Tls12'
 iex ((new-object net.webclient).DownloadString('https://github.com/luvit/lit/raw/master/get-lit.ps1'))
 ```
 
