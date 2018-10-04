@@ -26,6 +26,23 @@ local aliases = {
   ["-h"] = "help",
 }
 
+local function exit(status)
+  uv.walk(function(handle)
+    if handle then
+      local function close()
+        if not handle:is_closing() then handle:close() end
+      end
+      if handle.shutdown then
+        handle:shutdown(close)
+      else
+        close()
+      end
+    end
+  end)
+  uv.run()
+  os.exit(status)
+end
+
 _G.p = require('pretty-print').prettyPrint
 local version = require('./package').version
 coroutine.wrap(function ()
@@ -39,7 +56,7 @@ coroutine.wrap(function ()
   local success, err = xpcall(function ()
     log("lit version", version)
     log("luvi version", require('luvi').version)
-    if command == "version" then os.exit(0) end
+    if command == "version" then exit(0) end
     local path = "./commands/" .. command .. ".lua"
     if bundle.stat(path:sub(3)) then
       log("command", table.concat(args, " "), "highlight")
@@ -58,11 +75,11 @@ coroutine.wrap(function ()
   if success then
     log("done", "success", "success")
     print()
-    os.exit(0)
+    exit(0)
   else
     log("fail", err, "failure")
     print()
-    os.exit(-1)
+    exit(-1)
   end
 end)()
 uv.run()
