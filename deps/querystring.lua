@@ -18,7 +18,7 @@ limitations under the License.
 
 --[[lit-meta
   name = "luvit/querystring"
-  version = "2.0.0"
+  version = "2.0.1"
   license = "Apache 2"
   homepage = "https://github.com/luvit/luvit/blob/master/deps/querystring.lua"
   description = "Node-style query-string codec for luvit"
@@ -45,7 +45,7 @@ end
 local function urlencode(str)
   if str then
     str = gsub(str, '\n', '\r\n')
-    str = gsub(str, '([^%w])', function(c)
+    str = gsub(str, '([^%w-_.~])', function(c)
       return format('%%%02X', byte(c))
     end)
   end
