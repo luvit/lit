@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-fs"
-  version = "2.2.1"
+  version = "2.2.2"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-fs.lua"
   description = "A coro style interface to the filesystem."
   tags = {"coro", "fs"}
@@ -175,7 +175,7 @@ function fs.chroot(base)
   }
   local function resolve(path)
     assert(path, "path missing")
-    return pathJoin(base, pathJoin(path))
+    return pathJoin(base, pathJoin("./".. path))
   end
   function chroot.mkdir(path, mode)
     return fs.mkdir(resolve(path), mode)
