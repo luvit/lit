@@ -380,7 +380,7 @@ local function makeCore(config)
     local tempFile = target:gsub("[^/\\]+$", ".%1.temp")
     local fd = assert(uv.fs_open(tempFile, "w", 511)) -- 0777
     local binSize
-    local inline = meta.luvi.inline
+    local inline = meta.luvi and meta.luvi.inline or false
     if inline then
       log("using inline luvi from meta", #inline)
       uv.fs_write(fd, inline, 0)
