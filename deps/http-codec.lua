@@ -250,8 +250,9 @@ local function decoder()
     len, term = match(chunk, "^(%x+)(..)", index)
     if not len then return end
     if term ~= "\r\n" then
-      if #chunk < 34 then return end
-      -- But protect against evil clients by refusing chunk-sizes longer than 32 hex digits.
+      -- Wait for full chunk-size\r\n header
+      if #chunk < 18 then return end
+      -- But protect against evil clients by refusing chunk-sizes longer than 16 hex digits.
       error("chunk-size field too large")
     end
     index = index + #len + 2
