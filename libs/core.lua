@@ -481,7 +481,13 @@ local function makeCore(config)
     -- Use snapshot if there is one
     if meta.snapshot then
       log("using snapshot", meta.snapshot, "highlight")
-      return makeZip(meta.snapshot, target, luvi_source)
+      -- but fall back to resolving deps if we can't get the snapshot
+      local ok, err = pcall(makeZip, meta.snapshot, target, luvi_source)
+      if not ok then
+        log('failed to get snapshot', err, "failure")
+      else
+        return
+      end
     end
 
     local deps = {}
