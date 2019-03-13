@@ -156,7 +156,7 @@ local function makeCore(config)
     local encoded = encoders.tag({
       object = hash,
       type = kind,
-      tag = author .. '/' .. name .. "/v" .. version,
+      tag = fullTag,
       tagger = {
         name = config.name,
         email = config.email,
@@ -170,6 +170,27 @@ local function makeCore(config)
     local tagHash = db.saveAs("tag", encoded)
     db.write(author, name, version, tagHash)
     log("new tag", fullTag, "success")
+
+    if meta.snapshot then
+      local snapshotEncoded = encoders.tag({
+        object = meta.snapshot,
+        type = kind,
+        tag = "snapshots/" .. fullTag,
+        tagger = {
+          name = config.name,
+          email = config.email,
+          date = getdate()
+        },
+        message = ""
+      })
+      if key then
+        snapshotEncoded = sshRsa.sign(snapshotEncoded, key)
+      end
+      local snapshotTagHash = db.saveAs("tag", snapshotEncoded)
+      db.write(author, name, version, snapshotTagHash, true)
+      log("new snapshot", 'snapshots/' .. fullTag, "success")
+    end
+
     return author, name, version, tagHash
   end
 
@@ -330,7 +351,7 @@ local function makeCore(config)
         if fingerprints[fingerprint] then
           fingerprints[fingerprint]= nil
         else
-          log("revoking key", username .. ' ' .. fingerprint, "error")
+          log("revoking key", username .. ' ' .. fingerprint, "failure")
           db.revokeKey(username, fingerprint)
         end
       end
