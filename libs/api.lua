@@ -274,12 +274,23 @@ return function (db, prefix)
       end
 
       -- Use snapshot if there is one
+      local snapshotExists = false
       if meta.snapshot then
-        hash = meta.snapshot
-      else
+        snapshotExists = pcall(function() db.loadAny(meta.snapshot) end)
+        if snapshotExists then
+          hash = meta.snapshot
+        end
+      end
+
+      if not snapshotExists then
         local deps = {}
         calculateDeps(db, deps, meta.dependencies)
         hash = installDeps(db, hash, deps)
+      end
+
+      -- Make sure the resolved snapshot hash matches
+      if not snapshotExists then
+        assert(hash == meta.snapshot, "Snapshot missing and resolved snapshot hash differs from existing hash (hash="..meta.snapshot..", resolved="..hash..")")
       end
 
       local zip = exportZip(db, hash)
