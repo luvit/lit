@@ -77,7 +77,7 @@ local jsonStringify = require('json').stringify
 local jsonParse = require('json').parse
 local modes = require('git').modes
 local exportZip = require('export-zip')
-local calculateDeps = require('calculate-deps')
+local calculateHistoricDeps = require('calculate-historic-deps')
 local queryDb = require('pkg').queryDb
 local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
@@ -284,7 +284,7 @@ return function (db, prefix)
 
       if not snapshotExists then
         local deps = {}
-        calculateDeps(db, deps, meta.dependencies)
+        calculateHistoricDeps(db, deps, meta.dependencies)
         hash = installDeps(db, hash, deps)
       end
 
