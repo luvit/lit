@@ -86,7 +86,7 @@ return function (db, deps, newDeps, date)
       -- TODO: fetch versions from remote in this case and try again
       -- since the suitable version might just not exist in the local db but
       -- does exist in the remote
-      assert(bestVersion, "No suitable version found for "..name..": all versions in the db are newer than the given date.\n\nAvailable versions:\n" .. table.concat(availableVersions, '\n') .. '\n')
+      assert(bestVersion, "No suitable version found for "..name..": all versions in the db are newer than the given date.\n\nVersion specified in dependencies: "..version.."\n\nAvailable versions:\n" .. table.concat(availableVersions, '\n') .. '\n')
 
       local kind
       meta, kind, hash = assert(queryDb(db, bestVersion.hash))

@@ -267,7 +267,8 @@ return function (db, prefix)
       elseif version:sub(1,1) == "v" then
         version = version:sub(2)
       end
-      local meta, kind, hash = queryDb(db, db.read(author, name, version))
+      local tagHash = db.read(author, name, version)
+      local meta, kind, hash = queryDb(db, tagHash)
 
       if kind ~= "tree" then
         error("Can only create zips from trees")
@@ -283,8 +284,10 @@ return function (db, prefix)
       end
 
       if not snapshotExists then
+        local tag = db.loadAs('tag', tagHash)
+        local tagDate = tag.tagger.date.seconds
         local deps = {}
-        calculateHistoricDeps(db, deps, meta.dependencies)
+        calculateHistoricDeps(db, deps, meta.dependencies, tagDate)
         hash = installDeps(db, hash, deps)
       end
 
