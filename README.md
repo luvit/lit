@@ -414,3 +414,17 @@ README](./libs/README) to get you started.
 
 [luvit]: https://github.com/luvit/luvit/
 [luvi]:https://github.com/luvit/luvi/
+
+## Running Tests
+
+Tests for the Lit libraries can be run via luvi:
+
+```
+luvi tests -- tests/run.lua
+```
+
+or to run a specific test file (in this case the `coro-http` tests):
+
+```
+luvi tests -- tests/test-coro-http.lua
+```
