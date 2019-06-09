@@ -140,9 +140,12 @@ function fs.readFile(path)
       local size = 1024 * 48
       repeat
         data, err = fs.read(fd, size, offs)
-        table.insert(buffs, data or "")
+        table.insert(buffs, data)
+        offs = offs + (data and #data or 0)
       until err or #data < size
-      return table.concat(buffs), err
+      if not err then
+        data = table.concat(buffs)
+      end
     else
       -- normal case for normal files.
       data, err = fs.read(fd, stat.size)
