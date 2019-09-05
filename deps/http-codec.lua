@@ -183,7 +183,7 @@ local function decoder()
     local _, offset
     local version
     _, offset, version, head.code, head.reason =
-      find(chunk, "^HTTP/(%d%.%d) (%d+) ([^\r\n]+)\r?\n", index)
+      find(chunk, "^HTTP/(%d%.%d) (%d+) ([^\r\n]*)\r?\n", index)
     if offset then
       head.code = tonumber(head.code)
     else
