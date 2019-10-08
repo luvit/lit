@@ -38,20 +38,12 @@ return function (db, rootHash, compileLua)
         importEntry(entry.hash, newPath, entry.mode)
       end
     elseif modes.isFile(mode) then
-      if compileLua then
-        local base = path:match("^(.*)%.lua$")
-        if base then
-          local fn = assert(loadstring(value, "bundle:" .. path))
-          local newValue = string.dump(fn)
-          local saved = #value - #newValue
-          if saved > 0 then
-            local percent = 100 - math.floor(1000 * #newValue / #value) / 10
-            log("compiling", string.format("%s (%s%% reduction)", path, percent))
-            value = newValue
-          else
-            log("storing", path)
-          end
-        end
+      if compileLua and path:find("%.lua$") then
+        local fn = assert(loadstring(value, "bundle:" .. path))
+        value = assert(string.dump(fn))
+        log("compiling", path)
+      else
+        log("storing", path)
       end
       writer:add(path, value, 9)
     else
