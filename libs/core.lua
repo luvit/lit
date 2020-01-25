@@ -393,7 +393,7 @@ local function makeCore(config)
       assert(uv.fs_sendfile(fd, fd2, 0, binSize))
       uv.fs_close(fd2)
     end
-    assert(uv.fs_write(fd, exportZip(db, rootHash, true), binSize))
+    assert(uv.fs_write(fd, exportZip(db, rootHash, false), binSize))
     uv.fs_close(fd)
     assert(uv.fs_rename(tempFile, target))
     log("done building", target)
