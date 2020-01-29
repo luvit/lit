@@ -1,6 +1,6 @@
 return {
   name = "luvit/lit",
-  version = "3.7.3",
+  version = "3.8.0",
   homepage = "https://github.com/luvit/lit",
   description = "The Luvit Invention Toolkit is a luvi app that handles dependencies and luvi builds.",
   tags = {"lit", "meta"},
@@ -12,7 +12,7 @@ return {
   },
   dependencies = {
     "luvit/pretty-print@2.0.1",
-    "luvit/http-codec@3.0.4",
+    "luvit/http-codec@3.0.5",
     "luvit/json@2.5.2",
     "luvit/resource@2.1.0",
     "luvit/secure-socket@1.2.2",
