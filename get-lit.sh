@@ -1,6 +1,6 @@
 #!/bin/sh
 set -eu
-LUVI_VERSION=${LUVI_VERSION:-2.9.3}
+LUVI_VERSION=${LUVI_VERSION:-2.10.1}
 LIT_VERSION=${LIT_VERSION:-3.7.3}
 
 LUVI_ARCH=`uname -s`_`uname -m`
