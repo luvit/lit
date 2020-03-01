@@ -468,6 +468,10 @@ return function (db, prefix)
           end
         end
       end
+      -- update all urls to use the current prefix
+      for match, meta in pairs(matches) do
+        meta.url = (prefix or '') .. urlCache[meta]
+      end
       local res = {
         query = query,
         matches = matches,
@@ -523,10 +527,6 @@ return function (db, prefix)
       end
     end
     if type(body) == "table" then
-      -- update all urls to use the current prefix
-      for match, meta in pairs(body.matches) do
-        meta.url = (prefix or '') .. urlCache[meta]
-      end
       body = jsonStringify(body) .. "\n"
       res.headers["Content-Type"] = "application/json"
     end
