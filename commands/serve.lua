@@ -5,9 +5,12 @@ return function ()
   local log = require('log').log
   local makeRemote = require('codec').makeRemote
   local core = require('core')()
+  local cachedDb = require('db-cached')
 
   local handlers = require('handlers')(core)
-  local handleRequest = require('api')(core.db, args[2])
+  -- use cached db
+  local db = cachedDb(core.db)
+  local handleRequest = require('api')(db, args[2])
 
   local app = require('weblit-app')
   require 'weblit-websocket'

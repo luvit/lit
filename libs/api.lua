@@ -83,7 +83,6 @@ local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
 local fs = require('coro-fs')
 local metrics = require('metrics')
-local cachedDb = require('db-cached')
 local uv = require('uv')
 
 local function hex_to_char(x)
@@ -235,9 +234,6 @@ return function (db, prefix)
     return meta
   end
 
-  -- use cached db
-  db = cachedDb(db)
-
   local timeStart, memStart = uv.now(), collectgarbage("count")
   -- warm up db cache and meta cache
   for author in db.authors() do
@@ -245,7 +241,7 @@ return function (db, prefix)
       local _ = loadMeta(author, name)
     end
   end
-  print('cache warmed in ' .. (uv.now() - timeStart) .. 'ms, using ' .. string.format("%0.2f", (collectgarbage("count") - memStart) / 1024) .. ' MB memory')
+  print('api cache warmed in ' .. (uv.now() - timeStart) .. 'ms, using ' .. string.format("%0.2f", (collectgarbage("count") - memStart) / 1024) .. ' MB memory')
 
   local routes = {
     "^/metrics$", collectStats,
