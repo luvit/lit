@@ -83,6 +83,7 @@ local installDeps = require('install-deps').toDb
 local ffi = require('ffi')
 local fs = require('coro-fs')
 local metrics = require('metrics')
+local uv = require('uv')
 
 local function hex_to_char(x)
   return string.char(tonumber(x, 16))
@@ -129,6 +130,7 @@ local function compileGlob(glob)
 end
 
 local metaCache = {}
+local urlCache = {}
 
 -- Define the required metrics that must exist for collectMetrics() to work.
 metrics.define("lua.mem.used")
@@ -189,8 +191,12 @@ end
 
 return function (db, prefix)
 
+  local function makeUrlPath(kind, hash, filename)
+    return "/" .. kind .. "s/" .. hash .. '/' .. filename
+  end
+
   local function makeUrl(kind, hash, filename)
-    return prefix .. "/" .. kind .. "s/" .. hash .. '/' .. filename
+    return prefix .. makeUrlPath(kind, hash, filename)
   end
 
   local function loadMeta(author, name, version)
@@ -219,10 +225,23 @@ return function (db, prefix)
     if meta.type == "blob" then
       filename = filename .. ".lua"
     end
-    meta.url = makeUrl(meta.type, meta.object, filename)
+    -- because prefix can change per-request, cache the path
+    -- separately and prefix it at response-time
+    local urlPath = makeUrlPath(meta.type, meta.object, filename)
+    urlCache[meta] = urlPath
+    meta.url = urlPath
     metaCache[hash] = meta
     return meta
   end
+
+  local timeStart, memStart = uv.now(), collectgarbage("count")
+  -- warm up db cache and meta cache
+  for author in db.authors() do
+    for name in db.names(author) do
+      local _ = loadMeta(author, name)
+    end
+  end
+  print('api cache warmed in ' .. (uv.now() - timeStart) .. 'ms, using ' .. string.format("%0.2f", (collectgarbage("count") - memStart) / 1024) .. ' MB memory')
 
   local routes = {
     "^/metrics$", collectStats,
@@ -444,6 +463,10 @@ return function (db, prefix)
             end
           end
         end
+      end
+      -- update all urls to use the current prefix
+      for match, meta in pairs(matches) do
+        meta.url = (prefix or '') .. urlCache[meta]
       end
       local res = {
         query = query,
