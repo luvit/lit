@@ -105,8 +105,11 @@ end
 local function request(method, url, headers, body, timeout)
   local uri = parseUrl(url)
   local connection = getConnection(uri.hostname, uri.port, uri.tls, timeout)
-  local read = connection.read
   local write = connection.write
+  if write == "timeout" then
+    return nil, write
+  end
+  local read = connection.read
 
   local req = {
     method = method,
