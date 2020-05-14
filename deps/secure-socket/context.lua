@@ -33,7 +33,7 @@ do
   local isLibreSSL = V:find('^LibreSSL')
 
   _, _, V = openssl.version(true)
-  local isTLSv1_3 = not isLibreSSL and V > 0x10100000
+  local isTLSv1_3 = not isLibreSSL and V > 0x10101000
 
   if isTLSv1_3 then
     DEFAULT_SECUREPROTOCOL = 'TLS'
