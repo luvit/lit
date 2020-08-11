@@ -113,7 +113,7 @@ local function makeCore(config)
     if not config.privateKey then return end
     if privateKey then return privateKey end
     local keyData = assert(gfs.readFile(config.privateKey))
-    privateKey = require('openssl').pkey.read(keyData, true)
+    privateKey = assert(require('openssl').pkey.read(keyData, true))
     return privateKey
   end
 
