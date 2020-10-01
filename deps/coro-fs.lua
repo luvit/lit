@@ -16,15 +16,22 @@ local uv = require('uv')
 local fs = {}
 local pathJoin = require('pathjoin').pathJoin
 
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
+
 local function noop() end
 
 local function makeCallback()
   local thread = coroutine.running()
   return function (err, value, ...)
     if err then
-      assert(coroutine.resume(thread, nil, err))
+      assertResume(thread, nil, err)
     else
-      assert(coroutine.resume(thread, value == nil and true or value, ...))
+      assertResume(thread, value == nil and true or value, ...)
     end
   end
 end

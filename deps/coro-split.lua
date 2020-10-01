@@ -12,6 +12,13 @@
 -- The split function will itself block and wait for all three to finish.
 -- The results of the functions will be returned from split.
 
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
+
 return function (...)
   local tasks = {...}
   for i = 1, #tasks do
@@ -23,7 +30,7 @@ return function (...)
   local function check()
     left = left - 1
     if left == 0 then
-      assert(coroutine.resume(thread, unpack(results)))
+      assertResume(thread, unpack(results))
     end
   end
   for i = 1, #tasks do

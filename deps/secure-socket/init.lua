@@ -18,6 +18,13 @@ limitations under the License.
 local getContext = require('./context')
 local bioWrap = require('./biowrap')
 
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
+
 return function (socket, options, callback)
   if options == true then options = {} end
   local ctx = getContext(options)
@@ -26,7 +33,7 @@ return function (socket, options, callback)
     thread = coroutine.running()
   end
   bioWrap(ctx, options.server, socket, callback or function (err, ssocket)
-    return assert(coroutine.resume(thread, ssocket, err))
+    return assertResume(thread, ssocket, err)
 end, options.servername)
   if not callback then
     return coroutine.yield()

@@ -16,6 +16,13 @@ local channel = require('coro-channel')
 local wrapRead = channel.wrapRead
 local wrapWrite = channel.wrapWrite
 
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
+
 return function (path, options)
   local stdin, stdout, stderr
   local stdio = options.stdio
@@ -49,7 +56,7 @@ return function (path, options)
     if not exitThread then return end
     local thread = exitThread
     exitThread = nil
-    return assert(coroutine.resume(thread, code, signal))
+    return assertResume(thread, code, signal)
   end
 
   local handle, pid = uv.spawn(path, options, onExit)
