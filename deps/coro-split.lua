@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-split"
-  version = "2.0.0"
+  version = "2.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-split.lua"
   description = "An coro style helper for running tasks concurrently."
   tags = {"coro", "split"}
