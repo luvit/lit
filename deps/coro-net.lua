@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "3.2.0"
+  version = "3.2.1"
   dependencies = {
     "creationix/coro-channel@3.0.0",
     "creationix/coro-wrapper@3.0.0",
@@ -23,6 +23,13 @@ local decoder = wrapper.decoder
 local encoder = wrapper.encoder
 local secureSocket -- Lazy required from "secure-socket" on first use.
 
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
+
 local function makeCallback(timeout)
   local thread = coroutine.running()
   local timer, done
@@ -32,7 +39,7 @@ local function makeCallback(timeout)
       if done then return end
       done = true
       timer:close()
-      return assert(coroutine.resume(thread, nil, "timeout"))
+      return assertResume(thread, nil, "timeout")
     end)
   end
   return function (err, data)
@@ -40,9 +47,9 @@ local function makeCallback(timeout)
     done = true
     if timer then timer:close() end
     if err then
-      return assert(coroutine.resume(thread, nil, err))
+      return assertResume(thread, nil, err)
     end
-    return assert(coroutine.resume(thread, data or true))
+    return assertResume(thread, data or true)
   end
 end
 

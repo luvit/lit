@@ -1,6 +1,6 @@
 return {
   name = "luvit/secure-socket",
-  version = "1.2.2",
+  version = "1.2.3",
   homepage = "https://github.com/luvit/luvit/blob/master/deps/secure-socket",
   description = "Wrapper for luv streams to apply ssl/tls",
   dependencies = {

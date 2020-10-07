@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "3.0.1"
+  version = "3.0.2"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams."
   tags = {"coro", "adapter"}
@@ -9,6 +9,13 @@
 ]]
 
 -- local p = require('pretty-print').prettyPrint
+
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
 
 local function makeCloser(socket)
   local closer = {
@@ -59,7 +66,7 @@ local function makeRead(socket, closer)
       local thread = queue[dindex]
       queue[dindex] = nil
       dindex = dindex + 1
-      assert(coroutine.resume(thread, unpack(data)))
+      assertResume(thread, unpack(data))
     else
       queue[dindex] = data
       dindex = dindex + 1
@@ -116,7 +123,7 @@ local function makeWrite(socket, closer)
   local function wait()
     local thread = coroutine.running()
     return function (err)
-      assert(coroutine.resume(thread, err))
+      assertResume(thread, err)
     end
   end
 

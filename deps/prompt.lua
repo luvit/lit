@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/prompt"
-  version = "2.0.0"
+  version = "2.0.1"
   dependencies = {
     "luvit/readline@2.0.0"
   }
@@ -12,6 +12,13 @@
 ]]
 
 local readLine = require('readline').readLine
+
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
 
 return function (options)
   -- Wrapper around readline to provide a nice blocking version for coroutines
@@ -27,9 +34,9 @@ return function (options)
     repeat
       readLine(message, options, function (err, line, reason)
         if err then
-          return assert(coroutine.resume(thread, nil, err))
+          return assertResume(thread, nil, err)
         end
-        return assert(coroutine.resume(thread, line, reason))
+        return assertResume(thread, line, reason)
       end)
       value = assert(coroutine.yield())
       if default and #value == 0 then

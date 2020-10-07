@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-split"
-  version = "2.0.0"
+  version = "2.0.1"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-split.lua"
   description = "An coro style helper for running tasks concurrently."
   tags = {"coro", "split"}
@@ -11,6 +11,13 @@
 -- Split takes several functions as input and runs them in concurrent coroutines.
 -- The split function will itself block and wait for all three to finish.
 -- The results of the functions will be returned from split.
+
+local function assertResume(thread, ...)
+  local success, err = coroutine.resume(thread, ...)
+  if not success then
+    error(debug.traceback(thread, err), 0)
+  end
+end
 
 return function (...)
   local tasks = {...}
@@ -23,7 +30,7 @@ return function (...)
   local function check()
     left = left - 1
     if left == 0 then
-      assert(coroutine.resume(thread, unpack(results)))
+      assertResume(thread, unpack(results))
     end
   end
   for i = 1, #tasks do
