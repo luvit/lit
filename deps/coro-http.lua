@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "3.1.0"
+  version = "3.2.0"
   dependencies = {
     "creationix/coro-net@3.0.0",
     "luvit/http-codec@3.0.0"
@@ -102,9 +102,19 @@ local function saveConnection(connection)
   connection.socket:unref()
 end
 
-local function request(method, url, headers, body, timeout)
+local function request(method, url, headers, body, customOptions)
+  -- customOptions = { timeout = number, followRedirects = boolean }
+  local options = {}
+  if type(customOptions) == "number" then
+    -- Ensure backwards compatibility, where customOptions used to just be timeout
+    options.timeout = customOptions
+  else
+    options = customOptions or {}
+  end
+  options.followRedirects = options.followRedirects == nil and true or options.followRedirects -- Follow any redirects, Default: true
+
   local uri = parseUrl(url)
-  local connection = getConnection(uri.hostname, uri.port, uri.tls, timeout)
+  local connection = getConnection(uri.hostname, uri.port, uri.tls, options.timeout)
   local read = connection.read
   local write = connection.write
 
@@ -174,7 +184,7 @@ local function request(method, url, headers, body, timeout)
   end
 
   -- Follow redirects
-  if method == "GET" and (res.code == 302 or res.code == 307) then
+  if method == "GET" and (res.code == 302 or res.code == 307) and options.followRedirects then
     for i = 1, #res do
       local key, location = unpack(res[i])
       if key:lower() == "location" then
