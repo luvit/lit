@@ -68,8 +68,8 @@ function fs.fstat(fd)
   uv.fs_fstat(fd, makeCallback())
   return coroutine.yield()
 end
-function fs.chmod(fd, path)
-  uv.fs_chmod(fd, path, makeCallback())
+function fs.chmod(path, mode)
+  uv.fs_chmod(path, mode, makeCallback())
   return coroutine.yield()
 end
 function fs.fchmod(fd, mode)
