@@ -56,8 +56,8 @@ function fs.lstat(path)
   uv.fs_lstat(path, makeCallback())
   return coroutine.yield()
 end
-function fs.symlink(target, path)
-  uv.fs_symlink(target, path, makeCallback())
+function fs.symlink(target, path, flags)
+  uv.fs_symlink(target, path, flags, makeCallback())
   return coroutine.yield()
 end
 function fs.readlink(path)
@@ -221,9 +221,9 @@ function fs.chroot(base)
   function chroot.lstat(path)
     return fs.lstat(resolve(path))
   end
-  function chroot.symlink(target, path)
+  function chroot.symlink(target, path, flags)
     -- TODO: should we resolve absolute target paths or treat it as opaque data?
-    return fs.symlink(target, resolve(path))
+    return fs.symlink(target, resolve(path), flags)
   end
   function chroot.readlink(path)
     return fs.readlink(resolve(path))
