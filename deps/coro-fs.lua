@@ -88,8 +88,8 @@ function fs.close(fd)
   uv.fs_close(fd, makeCallback())
   return coroutine.yield()
 end
-function fs.access(path, flags)
-  uv.fs_access(path, flags or "", makeCallback())
+function fs.access(path, mode)
+  uv.fs_access(path, mode or "", makeCallback())
   return coroutine.yield()
 end
 function fs.rename(path, newPath)
@@ -231,8 +231,8 @@ function fs.chroot(base)
   function chroot.chmod(path, mode)
     return fs.chmod(resolve(path), mode)
   end
-  function chroot.access(path, flags)
-    return fs.access(resolve(path), flags)
+  function chroot.access(path, mode)
+    return fs.access(resolve(path), mode)
   end
   function chroot.rename(path, newPath)
     return fs.rename(resolve(path), resolve(newPath))
