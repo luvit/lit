@@ -1,6 +1,6 @@
 
-$LUVI_VERSION = "2.10.1"
-$LIT_VERSION = "3.8.1"
+$LUVI_VERSION = "2.12.0"
+$LIT_VERSION = "3.8.5"
 # Environment variables take precedence
 if (test-path env:LUVI_VERSION) { $LUVI_VERSION = $env:LUVI_VERSION }
 if (test-path env:LIT_VERSION) { $LIT_VERSION = $env:LIT_VERSION }
@@ -18,14 +18,14 @@ $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi
 $LIT_URL = "https://lit.luvit.io/packages/luvit/lit/v$LIT_VERSION.zip"
 
 function Download-File {
-param (
-  [string]$url,
-  [string]$file
- )
+  param (
+    [string]$url,
+    [string]$file
+  )
   [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls12;
   Write-Host "Downloading $url to $file"
   $downloader = new-object System.Net.WebClient
-  $downloader.Proxy.Credentials=[System.Net.CredentialCache]::DefaultNetworkCredentials;
+  $downloader.Proxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials;
   $downloader.DownloadFile($url, $file)
 }
 
