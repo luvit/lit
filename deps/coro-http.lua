@@ -16,7 +16,7 @@ local httpCodec = require('http-codec')
 local net = require('coro-net')
 
 local function createServer(host, port, onConnect)
-  net.createServer({
+  return net.createServer({
     host = host,
     port = port,
     encode = httpCodec.encoder(),
