@@ -40,7 +40,7 @@ return function ()
     ini = ini or fs.readFile(pathJoin(home, ".gitconfig"))
     if not ini then return end
     local section
-    for line in ini:gmatch("[^\n]+") do
+    for line in ini:gmatch("[^\n\r]+") do
       local s = line:match("^%[([^%]]+)%]$")
       if s then
         section = s
