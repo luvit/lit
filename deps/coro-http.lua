@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "3.2.0"
+  version = "3.2.1"
   dependencies = {
     "creationix/coro-net@3.0.0",
     "luvit/http-codec@3.0.0"
@@ -36,7 +36,10 @@ local function createServer(host, port, onConnect)
       write(head)
       if body then write(body) end
       write("")
-      if not head.keepAlive then break end
+      if not head.keepAlive then
+        socket:close()
+        break
+      end
     end
   end)
 end
