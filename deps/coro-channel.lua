@@ -139,6 +139,8 @@ local function makeWrite(socket, closer)
       closer.check()
       local success, err = socket:shutdown(wait())
       if not success then
+        closer.errored = err
+        closer.check()
         return nil, err
       end
       err = coroutine.yield()
