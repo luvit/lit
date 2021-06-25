@@ -35,9 +35,8 @@ local function createServer(host, port, onConnect)
       head, body = onConnect(head, body, socket)
       write(head)
       if body then write(body) end
-      write("")
+      write()
       if not head.keepAlive then
-        socket:close()
         break
       end
     end
