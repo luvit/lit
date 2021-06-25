@@ -1,8 +1,8 @@
 --[[lit-meta
   name = "creationix/weblit-server"
-  version = "3.1.2"
+  version = "3.1.3"
   dependencies = {
-    'creationix/coro-net@3.0.0',
+    'creationix/coro-net@3.3.0',
     'luvit/http-codec@3.0.0'
   }
   description = "Weblit is a webapp framework designed around routes and middleware layers."
@@ -189,8 +189,8 @@ local function newServer(run)
     for addr, options in pairs(ips) do
       local host, port = addr:match("(.*) (.*)")
       port = tonumber(port)
-      options.decode = httpCodec.decoder()
-      options.encode = httpCodec.encoder()
+      options.decoder = httpCodec.decoder
+      options.encoder = httpCodec.encoder
       options.host = host
       options.port = port
       createServer(options, handleConnection)
