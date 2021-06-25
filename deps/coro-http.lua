@@ -1,8 +1,8 @@
 --[[lit-meta
   name = "creationix/coro-http"
-  version = "3.2.0"
+  version = "3.2.1"
   dependencies = {
-    "creationix/coro-net@3.0.0",
+    "creationix/coro-net@3.3.0",
     "luvit/http-codec@3.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
@@ -19,8 +19,8 @@ local function createServer(host, port, onConnect)
   return net.createServer({
     host = host,
     port = port,
-    encode = httpCodec.encoder(),
-    decode = httpCodec.decoder(),
+    encoder = httpCodec.encoder,
+    decoder = httpCodec.decoder,
   }, function (read, write, socket)
     for head in read do
       local parts = {}
@@ -76,8 +76,8 @@ local function getConnection(host, port, tls, timeout)
     port = port,
     tls = tls,
     timeout = timeout,
-    encode = httpCodec.encoder(),
-    decode = httpCodec.decoder()
+    encoder = httpCodec.encoder,
+    decoder = httpCodec.decoder
   })
   return {
     socket = socket,

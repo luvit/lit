@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "3.2.1"
+  version = "3.3.0"
   dependencies = {
     "creationix/coro-channel@3.0.0",
     "creationix/coro-wrapper@3.0.0",
@@ -124,10 +124,14 @@ local function connect(options)
     -- TODO: Should we expose updateScan somehow?
     read = merger(read, options.scan)
   end
-  if options.decode then
+  if options.decoder then
+    read, updateDecoder = decoder(read, options.decoder())
+  elseif options.decode then
     read, updateDecoder = decoder(read, options.decode)
   end
-  if options.encode then
+  if options.encoder then
+    write, updateEncoder = encoder(write, options.encoder())
+  elseif options.encode then
     write, updateEncoder = encoder(write, options.encode)
   end
   return read, write, dsocket, updateDecoder, updateEncoder, close
@@ -164,10 +168,14 @@ local function createServer(options, onConnect)
           -- TODO: should we expose updateScan somehow?
           read = merger(read, options.scan)
         end
-        if options.decode then
+        if options.decoder then
+          read, updateDecoder = decoder(read, options.decoder())
+        elseif options.decode then
           read, updateDecoder = decoder(read, options.decode)
         end
-        if options.encode then
+        if options.encoder then
+          write, updateEncoder = encoder(write, options.encoder())
+        elseif options.encode then
           write, updateEncoder = encoder(write, options.encode)
         end
 

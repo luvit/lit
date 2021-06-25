@@ -45,8 +45,8 @@ local function connectRemote(url, timeout)
     host = host,
     port = port,
     tls = tls,
-    encode = httpCodec.encoder(),
-    decode = httpCodec.decoder(),
+    encoder = httpCodec.encoder,
+    decoder = httpCodec.decoder,
   }, timeout))
 
   -- Perform the websocket handshake
