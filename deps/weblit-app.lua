@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/weblit-app"
-  version = "3.2.0"
+  version = "3.2.1"
   dependencies = {
     'creationix/coro-net@3.0.0',
     'luvit/http-codec@3.0.0',
@@ -27,7 +27,7 @@ local server = require('weblit-server').newServer(router.run)
 -- Forward router methods from app instance
 local serverMeta = {}
 function serverMeta:__index(name)
-  if type(router[name] == "function") then
+  if type(router[name]) == "function" then
     return function(...)
       router[name](...)
       return self
