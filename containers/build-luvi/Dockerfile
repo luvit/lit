@@ -5,7 +5,4 @@ WORKDIR /luvi
 ENV GENERATOR Ninja
 RUN make regular-shared
 RUN make test
-RUN curl https://lit.luvit.io/packages/luvit/lit/latest.zip > lit.zip
-RUN build/luvi lit.zip -- make lit.zip lit build/luvi
-RUN ./lit -v
-CMD ash
+RUN build/luvi -v || true
