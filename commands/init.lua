@@ -11,14 +11,14 @@ return function ()
   local config = core.config
 
   local function getOutput()
-    local output = prompt("Output to package.lua (1), or a init.lua (2)?")
+    local output = prompt("Output to package.lua (1), init.lua (2), or lit-package.json (3)?")
     -- response was blank, run again
     if not output then
       return getOutput()
     end
     -- fail on any other options
-    if not output:match('[1-2]') then
-      log("Error", "You must select a valid option. [1 or 2]")
+    if not output:match('[1-3]') then
+      log("Error", "You must select a valid option. [1, 2, or 3]")
       return getOutput()
     else
       if output == "1" then
@@ -27,6 +27,9 @@ return function ()
       elseif output == "2" then
         output = "init.lua"
         log("Creating", "init.lua")
+      elseif output == "3" then
+        output = "lit-package.json"
+        log("Creating", "lit-package.json")
       end
     end
     return output
@@ -111,6 +114,34 @@ return function ()
   }
   ]]
     data = sprintf(package, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
+elseif output == "lit-package.json" then
+    local package = [[
+  {
+    "name": %q,
+    "version": %q,
+    "description": %q,
+    "tags": %s,
+    "license": %q,
+    "author": {
+		"name": %q,
+		"email": %q
+	},
+    "homepage": %q,
+    "dependencies": {},
+    "files": [
+      "**.lua",
+      "!test*"
+    ]
+  }
+  ]]
+
+    local function toJsonArray(luaTableString)
+        luaTableString = luaTableString:gsub("{", "[")
+        luaTableString = luaTableString:gsub("}", "]")
+        return luaTableString
+    end
+
+    data = sprintf(package, projectName, projectVersion, projectDescription, toJsonArray(projectTags), projectLicense, authorName, authorEmail, projectHomepage)
   end
 
   -- give us a preview
