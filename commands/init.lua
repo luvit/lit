@@ -127,7 +127,7 @@ elseif output == "lit-package.json" then
 		"email": %q
 	},
     "homepage": %q,
-    "dependencies": {},
+    "dependencies": [],
     "files": [
       "**.lua",
       "!test*"
