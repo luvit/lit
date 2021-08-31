@@ -415,6 +415,24 @@ README](./libs/README) to get you started.
 [luvit]: https://github.com/luvit/luvit/
 [luvi]:https://github.com/luvit/luvi/
 
+## Development
+
+When working on Lit, `luvi` can be used to run `lit` from source without building by using the command at the root of the `lit` source directory:
+
+```
+luvi .
+```
+or
+```
+luvi . -- args
+```
+
+For example, if you were working on something to do with the `lit serve` command, your changes could be tested with:
+
+```
+luvi . -- serve
+```
+
 ## Running Tests
 
 Tests for the Lit libraries can be run via luvi:
