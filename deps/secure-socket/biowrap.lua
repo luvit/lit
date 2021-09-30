@@ -51,13 +51,12 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
       local success, result = ssl:getpeerverification()
       socket:read_stop()
       if not success and result then
-        local errorString
         for i=1, #result do
           if not result[i].preverify_ok then
-            errorString = result[i].error_string
+            handshakeComplete("Error verifying peer: " .. result[i].error_string)
+            break
           end
         end
-        handshakeComplete("Error verifying peer: " .. errorString)
       end
       handshakeComplete(nil, ssocket)
     end
