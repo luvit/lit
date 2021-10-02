@@ -37,8 +37,6 @@ local aliases = {
 	["-h"] = "help"
 }
 
-local Lit = {}
-
 local CLI = {}
 
 function CLI:Run()
@@ -142,7 +140,5 @@ function CLI:ExecuteCommandHandler(command)
 	local commandHandler = "./commands/" .. command .. ".lua"
 	require(commandHandler)()
 end
-
-Lit.CLI = CLI
 
 CLI:Run()
