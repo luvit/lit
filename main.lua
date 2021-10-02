@@ -35,9 +35,7 @@ local aliases = { ["-v"] = "version", ["-h"] = "help" }
 local commandLine = {}
 
 function commandLine.run()
-  coroutine.wrap(function()
-    commandLine.processUserInput()
-  end)()
+  coroutine.wrap(commandLine.processUserInput)()
   uv.run()
 end
 
