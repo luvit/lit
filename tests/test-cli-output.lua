@@ -20,8 +20,7 @@ for command, fixturesFile in pairs(commands) do
 	temporaryFile:close()
 
 	local expectedOutput = io.open("tests/fixtures/cli-output/" .. fixturesFile, "r"):read("*all")
-	assert(consoleOutput == expectedOutput, "CLI output mismatch for command: lit" .. "\n\t" .. consoleOutput)
-
+	assert(consoleOutput == expectedOutput, "CLI output mismatch\n\nCommand:" .. command .. "\n\nOutput:\n\n" .. consoleOutput)
 	-- Teardown
 	os.execute("rm lit-output.txt")
 end
