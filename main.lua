@@ -36,23 +36,23 @@ local commandLine = {}
 
 function commandLine.run()
   coroutine.wrap(function()
-    self.processUserInput()
+    commandLine.processUserInput()
   end)()
   uv.run()
 end
 
 function commandLine.processUserInput()
-  local command = self.processArguments()
+  local command = commandLine.processArguments()
   local success, errorMessage = xpcall(function()
-    self.executeCommand(command)
+    commandLine.executeCommand(command)
   end, debug.traceback)
 
   if not success then
-    self.reportFailure(errorMessage)
+    commandLine.reportFailure(errorMessage)
     return
   end
 
-  self.reportSuccess()
+  commandLine.reportSuccess()
 end
 
 function commandLine.processArguments()
@@ -65,33 +65,33 @@ function commandLine.processArguments()
 end
 
 function commandLine.executeCommand(command)
-  self.outputVersionInfo()
+  commandLine.outputVersionInfo()
 
   if command == "version" then
     -- Since the version is always printed, there's nothing left to do
-    self.exitWithCode(EXIT_SUCCESS)
+    commandLine.exitWithCode(EXIT_SUCCESS)
   end
 
-  if self.isValidCommand(command) then
+  if commandLine.isValidCommand(command) then
     log("command", table.concat(args, " "), "highlight")
-    self.executeCommandHandler(command)
+    commandLine.executeCommandHandler(command)
   else
     log("invalid command", command, "failure")
-    self.executeCommandHandler("help")
-    self.reportFailure("Invalid Command: " .. command)
+    commandLine.executeCommandHandler("help")
+    commandLine.reportFailure("Invalid Command: " .. command)
   end
 end
 
 function commandLine.reportSuccess()
   log("done", "success", "success")
   print()
-  self.exitWithCode(EXIT_SUCCESS)
+  commandLine.exitWithCode(EXIT_SUCCESS)
 end
 
 function commandLine.reportFailure(errorMessage)
   log("fail", errorMessage, "failure")
   print()
-  self.exitWithCode(EXIT_FAILURE)
+  commandLine.exitWithCode(EXIT_FAILURE)
 end
 
 function commandLine.outputVersionInfo()
