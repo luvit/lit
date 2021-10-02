@@ -4,7 +4,8 @@ local commands = {
 	["luvi ."] = "lit.txt",
 	["luvi . -- help"] = "lit-help.txt",
 	["luvi . -- version"] = "lit-version.txt",
-	["luvi . -- ls"] = "lit-ls.txt"
+	["luvi . -- ls"] = "lit-ls.txt",
+	["luvi . -- asdf"] = "invalid-command.txt",
 	-- The others can't be tested in this fashion (and I guess it isn't necessary; if the CLI breaks all of the above should fail)
 }
 
