@@ -14,9 +14,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
---]]
-
-local bundle = require("luvi").bundle
+--]] local bundle = require("luvi").bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
 -- Upvalues
@@ -32,113 +30,102 @@ _G.p = require("pretty-print").prettyPrint
 local EXIT_SUCCESS = 0
 local EXIT_FAILURE = -1
 
-local aliases = {
-	["-v"] = "version",
-	["-h"] = "help"
-}
+local aliases = { ["-v"] = "version", ["-h"] = "help" }
 
 local CLI = {}
 
 function CLI:Run()
-	coroutine.wrap(
-		function()
-			self:ProcessUserInput()
-		end
-	)()
-	uv.run()
+  coroutine.wrap(function()
+    self:ProcessUserInput()
+  end)()
+  uv.run()
 end
 
 function CLI:ProcessUserInput()
-	local command = self:ProcessArguments()
-	local success, errorMessage =
-		xpcall(
-		function()
-			self:ExecuteCommand(command)
-		end,
-		debug.traceback
-	)
+  local command = self:ProcessArguments()
+  local success, errorMessage = xpcall(function()
+    self:ExecuteCommand(command)
+  end, debug.traceback)
 
-	if not success then
-		self:ReportFailure(errorMessage)
-		return
-	end
+  if not success then
+    self:ReportFailure(errorMessage)
+    return
+  end
 
-	self:ReportSuccess()
+  self:ReportSuccess()
 end
 
 function CLI:ProcessArguments()
-	local command = args[1] or "help"
-	if command:sub(1, 2) == "--" then
-		command = command:sub(3)
-	end
-	command = aliases[command] or command
-	return command
+  local command = args[1] or "help"
+  if command:sub(1, 2) == "--" then
+    command = command:sub(3)
+  end
+  command = aliases[command] or command
+  return command
 end
 
 function CLI:ExecuteCommand(command)
-	self:OutputVersionInfo()
+  self:OutputVersionInfo()
 
-	if command == "version" then
-		-- Since the version is always printed, there's nothing left to do
-		self:ExitWithCode(EXIT_SUCCESS)
-	end
+  if command == "version" then
+    -- Since the version is always printed, there's nothing left to do
+    self:ExitWithCode(EXIT_SUCCESS)
+  end
 
-	if self:IsValidCommand(command) then
-		log("command", table.concat(args, " "), "highlight")
-		self:ExecuteCommandHandler(command)
-	else
-		log("invalid command", command, "failure")
-		self:ExecuteCommandHandler("help")
-		self:ReportFailure("Invalid Command: " .. command)
-	end
+  if self:IsValidCommand(command) then
+    log("command", table.concat(args, " "), "highlight")
+    self:ExecuteCommandHandler(command)
+  else
+    log("invalid command", command, "failure")
+    self:ExecuteCommandHandler("help")
+    self:ReportFailure("Invalid Command: " .. command)
+  end
 end
 
 function CLI:ReportSuccess()
-	log("done", "success", "success")
-	print()
-	self:ExitWithCode(EXIT_SUCCESS)
+  log("done", "success", "success")
+  print()
+  self:ExitWithCode(EXIT_SUCCESS)
 end
 
 function CLI:ReportFailure(errorMessage)
-	log("fail", errorMessage, "failure")
-	print()
-	self:ExitWithCode(EXIT_FAILURE)
+  log("fail", errorMessage, "failure")
+  print()
+  self:ExitWithCode(EXIT_FAILURE)
 end
 
 function CLI:OutputVersionInfo()
-	log("lit version", version)
-	log("luvi version", require("luvi").version)
+  log("lit version", version)
+  log("luvi version", require("luvi").version)
 end
 
 function CLI:ExitWithCode(exitCode)
-	uv.walk(
-		function(handle)
-			if handle then
-				local function close()
-					if not handle:is_closing() then
-						handle:close()
-					end
-				end
-				if handle.shutdown then
-					handle:shutdown(close)
-				else
-					close()
-				end
-			end
-		end
-	)
-	uv.run()
-	os.exit(exitCode)
+  uv.walk(function(handle)
+    if handle then
+      local function close()
+        if not handle:is_closing() then
+          handle:close()
+        end
+      end
+      if handle.shutdown then
+        handle:shutdown(close)
+      else
+        close()
+      end
+    end
+  end)
+  uv.run()
+  os.exit(exitCode)
 end
 
 function CLI:IsValidCommand(command)
-	local commandHandler = "./commands/" .. command .. ".lua"
-	return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
+  local commandHandler = "./commands/" .. command .. ".lua"
+  return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
 end
 
 function CLI:ExecuteCommandHandler(command)
-	local commandHandler = "./commands/" .. command .. ".lua"
-	require(commandHandler)()
+  local commandHandler = "./commands/" .. command .. ".lua"
+  require(commandHandler)()
 end
 
 CLI:Run()
