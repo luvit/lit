@@ -32,30 +32,30 @@ local EXIT_FAILURE = -1
 
 local aliases = { ["-v"] = "version", ["-h"] = "help" }
 
-local CLI = {}
+local commandLine = {}
 
-function CLI:Run()
+function commandLine.run()
   coroutine.wrap(function()
-    self:ProcessUserInput()
+    self.processUserInput()
   end)()
   uv.run()
 end
 
-function CLI:ProcessUserInput()
-  local command = self:ProcessArguments()
+function commandLine.processUserInput()
+  local command = self.processArguments()
   local success, errorMessage = xpcall(function()
-    self:ExecuteCommand(command)
+    self.executeCommand(command)
   end, debug.traceback)
 
   if not success then
-    self:ReportFailure(errorMessage)
+    self.reportFailure(errorMessage)
     return
   end
 
-  self:ReportSuccess()
+  self.reportSuccess()
 end
 
-function CLI:ProcessArguments()
+function commandLine.processArguments()
   local command = args[1] or "help"
   if command:sub(1, 2) == "--" then
     command = command:sub(3)
@@ -64,42 +64,42 @@ function CLI:ProcessArguments()
   return command
 end
 
-function CLI:ExecuteCommand(command)
-  self:OutputVersionInfo()
+function commandLine.executeCommand(command)
+  self.outputVersionInfo()
 
   if command == "version" then
     -- Since the version is always printed, there's nothing left to do
-    self:ExitWithCode(EXIT_SUCCESS)
+    self.exitWithCode(EXIT_SUCCESS)
   end
 
-  if self:IsValidCommand(command) then
+  if self.isValidCommand(command) then
     log("command", table.concat(args, " "), "highlight")
-    self:ExecuteCommandHandler(command)
+    self.executeCommandHandler(command)
   else
     log("invalid command", command, "failure")
-    self:ExecuteCommandHandler("help")
-    self:ReportFailure("Invalid Command: " .. command)
+    self.executeCommandHandler("help")
+    self.reportFailure("Invalid Command: " .. command)
   end
 end
 
-function CLI:ReportSuccess()
+function commandLine.reportSuccess()
   log("done", "success", "success")
   print()
-  self:ExitWithCode(EXIT_SUCCESS)
+  self.exitWithCode(EXIT_SUCCESS)
 end
 
-function CLI:ReportFailure(errorMessage)
+function commandLine.reportFailure(errorMessage)
   log("fail", errorMessage, "failure")
   print()
-  self:ExitWithCode(EXIT_FAILURE)
+  self.exitWithCode(EXIT_FAILURE)
 end
 
-function CLI:OutputVersionInfo()
+function commandLine.outputVersionInfo()
   log("lit version", version)
   log("luvi version", require("luvi").version)
 end
 
-function CLI:ExitWithCode(exitCode)
+function commandLine.exitWithCode(exitCode)
   uv.walk(function(handle)
     if handle then
       local function close()
@@ -118,14 +118,14 @@ function CLI:ExitWithCode(exitCode)
   os.exit(exitCode)
 end
 
-function CLI:IsValidCommand(command)
+function commandLine.isValidCommand(command)
   local commandHandler = "./commands/" .. command .. ".lua"
   return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
 end
 
-function CLI:ExecuteCommandHandler(command)
+function commandLine.executeCommandHandler(command)
   local commandHandler = "./commands/" .. command .. ".lua"
   require(commandHandler)()
 end
 
-CLI:Run()
+commandLine.run()
