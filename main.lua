@@ -15,71 +15,134 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 --]]
-
-local bundle = require('luvi').bundle
+-- Convoluted boostrapping?
+local bundle = require("luvi").bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
-local uv = require('uv')
-require('snapshot')
+-- Upvalues
+local uv = require("uv")
+local version = require("./package").version
+local log = require("log").log
+require("snapshot")
+
+-- Global setup
+_G.p = require("pretty-print").prettyPrint -- TBD: Can't this be removed? Luvi already injects the same global AFAIK
+
+-- Settings
+local EXIT_SUCCESS = 0
+local EXIT_FAILURE = -1
+
 local aliases = {
-  ["-v"] = "version",
-  ["-h"] = "help",
+	["-v"] = "version",
+	["-h"] = "help"
 }
 
-local function exit(status)
-  uv.walk(function(handle)
-    if handle then
-      local function close()
-        if not handle:is_closing() then handle:close() end
-      end
-      if handle.shutdown then
-        handle:shutdown(close)
-      else
-        close()
-      end
-    end
-  end)
-  uv.run()
-  os.exit(status)
+local Lit = {}
+
+local CLI = {}
+
+function CLI:Run()
+	coroutine.wrap(
+		function()
+			self:ProcessUserInput()
+		end
+	)()
+	uv.run()
 end
 
-_G.p = require('pretty-print').prettyPrint
-local version = require('./package').version
-coroutine.wrap(function ()
-  local log = require('log').log
-  local command = args[1] or "help"
-  if command:sub(1, 2) == "--" then
-    command = command:sub(3)
-  end
-  command = aliases[command] or command
-  local invalid = false
-  local success, err = xpcall(function ()
-    log("lit version", version)
-    log("luvi version", require('luvi').version)
-    if command == "version" then exit(0) end
-    local path = "./commands/" .. command .. ".lua"
-    if bundle.stat(path:sub(3)) then
-      log("command", table.concat(args, " "), "highlight")
-    else
-      invalid = command
-      log("invalid command", command, "failure")
-      command = "help"
-      path = "./commands/" .. command .. ".lua"
-    end
-    require(path)()
-  end, debug.traceback)
-  if invalid then
-    success = false
-    err = "Invalid Command: " .. invalid
-  end
-  if success then
-    log("done", "success", "success")
-    print()
-    exit(0)
-  else
-    log("fail", err, "failure")
-    print()
-    exit(-1)
-  end
-end)()
-uv.run()
+function CLI:ProcessUserInput()
+	local command = self:ProcessArguments()
+	local success, errorMessage =
+		xpcall(
+		function()
+			self:ExecuteCommand(command)
+		end,
+		debug.traceback
+	)
+
+	if not success then
+		self:ReportFailure(errorMessage)
+		return
+	end
+
+	self:ReportSuccess()
+end
+
+function CLI:ProcessArguments()
+	local command = args[1] or "help"
+	if command:sub(1, 2) == "--" then
+		command = command:sub(3)
+	end
+	command = aliases[command] or command
+	return command
+end
+
+function CLI:ExecuteCommand(command)
+	self:OutputVersionInfo()
+
+	if command == "version" then
+		-- Since the version is always printed, there's nothing left to do
+		self:ExitWithCode(EXIT_SUCCESS)
+	end
+
+	if self:IsValidCommand(command) then
+		log("command", table.concat(args, " "), "highlight")
+		self:ExecuteCommandHandler(command)
+	else
+		log("invalid command", command, "failure")
+		self:ExecuteCommandHandler("help")
+		self:ReportFailure("Invalid Command: " .. command)
+	end
+end
+
+function CLI:ReportSuccess()
+	log("done", "success", "success")
+	print()
+	self:ExitWithCode(EXIT_SUCCESS)
+end
+
+function CLI:ReportFailure(errorMessage)
+	log("fail", errorMessage, "failure")
+	print()
+	self:ExitWithCode(EXIT_FAILURE)
+end
+
+function CLI:OutputVersionInfo()
+	log("lit version", version)
+	log("luvi version", require("luvi").version)
+end
+
+function CLI:ExitWithCode(exitCode)
+	uv.walk(
+		function(handle)
+			if handle then
+				local function close()
+					if not handle:is_closing() then
+						handle:close()
+					end
+				end
+				if handle.shutdown then
+					handle:shutdown(close)
+				else
+					close()
+				end
+			end
+		end
+	)
+	uv.run()
+	os.exit(exitCode)
+end
+
+function CLI:IsValidCommand(command)
+	local commandHandler = "./commands/" .. command .. ".lua"
+	return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
+end
+
+function CLI:ExecuteCommandHandler(command)
+	local commandHandler = "./commands/" .. command .. ".lua"
+	require(commandHandler)()
+end
+
+Lit.CLI = CLI
+
+CLI:Run()
