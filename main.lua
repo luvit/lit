@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 --]]
--- Convoluted boostrapping?
+
 local bundle = require("luvi").bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
@@ -26,7 +26,7 @@ local log = require("log").log
 require("snapshot")
 
 -- Global setup
-_G.p = require("pretty-print").prettyPrint -- TBD: Can't this be removed? Luvi already injects the same global AFAIK
+_G.p = require("pretty-print").prettyPrint
 
 -- Settings
 local EXIT_SUCCESS = 0
