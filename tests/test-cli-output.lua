@@ -1,8 +1,11 @@
 -- This can hardly be called a proper test, but it should help refactoring the CLI functionality (no logic should be changed)
 
 local commands = {
-	["luvi ."] = "lit.txt", -- lit (without arguments)
-	["luvi . -- help"] = "lit-help.txt" -- lit help
+	["luvi ."] = "lit.txt",
+	["luvi . -- help"] = "lit-help.txt",
+	["luvi . -- version"] = "lit-version.txt",
+	["luvi . -- ls"] = "lit-ls.txt"
+	-- The others can't be tested in this fashion (and I guess it isn't necessary; if the CLI breaks all of the above should fail)
 }
 
 for command, fixturesFile in pairs(commands) do
