@@ -38,21 +38,20 @@ local commandLine = {}
 
 function commandLine.run()
   coroutine.wrap(commandLine.processUserInput)()
-  uv.run()
+  return uv.run()
 end
 
 function commandLine.processUserInput()
   local command = commandLine.processArguments()
   local success, errorMessage = xpcall(function()
-    commandLine.executeCommand(command)
+    return commandLine.executeCommand(command)
   end, debug.traceback)
 
   if not success then
-    commandLine.reportFailure(errorMessage)
-    return
+    return commandLine.reportFailure(errorMessage)
   end
 
-  commandLine.reportSuccess()
+  return commandLine.reportSuccess()
 end
 
 function commandLine.processArguments()
@@ -69,7 +68,7 @@ function commandLine.executeCommand(command)
 
   if command == "version" then
     -- Since the version is always printed, there's nothing left to do
-    commandLine.exitWithCode(EXIT_SUCCESS)
+    return commandLine.exitWithCode(EXIT_SUCCESS)
   end
 
   local commandHandler = "./commands/" .. command .. ".lua"
@@ -86,13 +85,13 @@ end
 function commandLine.reportSuccess()
   log("done", "success", "success")
   print()
-  commandLine.exitWithCode(EXIT_SUCCESS)
+  return commandLine.exitWithCode(EXIT_SUCCESS)
 end
 
 function commandLine.reportFailure(errorMessage)
   log("fail", errorMessage, "failure")
   print()
-  commandLine.exitWithCode(EXIT_FAILURE)
+  return commandLine.exitWithCode(EXIT_FAILURE)
 end
 
 function commandLine.outputVersionInfo()
@@ -116,7 +115,7 @@ function commandLine.exitWithCode(exitCode)
     end
   end)
   uv.run()
-  os.exit(exitCode)
+  return os.exit(exitCode)
 end
 
 function commandLine.isValidCommand(commandHandler)
@@ -124,7 +123,7 @@ function commandLine.isValidCommand(commandHandler)
 end
 
 function commandLine.executeCommandHandler(commandHandler)
-  require(commandHandler)()
+  return require(commandHandler)()
 end
 
 commandLine.run()
