@@ -70,12 +70,13 @@ function commandLine.executeCommand(command)
     commandLine.exitWithCode(EXIT_SUCCESS)
   end
 
-  if commandLine.isValidCommand(command) then
+  local commandHandler = "./commands/" .. command .. ".lua"
+  if commandLine.isValidCommand(commandHandler) then
     log("command", table.concat(args, " "), "highlight")
-    commandLine.executeCommandHandler(command)
+    commandLine.executeCommandHandler(commandHandler)
   else
     log("invalid command", command, "failure")
-    commandLine.executeCommandHandler("help")
+    commandLine.executeCommandHandler("./commands/help.lua")
     commandLine.reportFailure("Invalid Command: " .. command)
   end
 end
@@ -116,13 +117,11 @@ function commandLine.exitWithCode(exitCode)
   os.exit(exitCode)
 end
 
-function commandLine.isValidCommand(command)
-  local commandHandler = "./commands/" .. command .. ".lua"
+function commandLine.isValidCommand(commandHandler)
   return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
 end
 
-function commandLine.executeCommandHandler(command)
-  local commandHandler = "./commands/" .. command .. ".lua"
+function commandLine.executeCommandHandler(commandHandler)
   require(commandHandler)()
 end
 
