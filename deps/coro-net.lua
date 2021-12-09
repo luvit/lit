@@ -4,6 +4,7 @@
   dependencies = {
     "creationix/coro-channel@3.0.0",
     "creationix/coro-wrapper@3.0.0",
+    "luvit/secure-socket"
   }
   optionalDependencies = {
     "luvit/secure-socket@1.0.0"
