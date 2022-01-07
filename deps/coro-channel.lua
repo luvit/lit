@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "3.0.3"
+  version = "3.0.4"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams."
   tags = {"coro", "adapter"}
@@ -120,14 +120,21 @@ end
 
 local function makeWrite(socket, closer)
 
+  -- states to track when we should yield and resume
+  local hasYielded, hasReturned, returnedValue
   local function wait()
     local thread = coroutine.running()
     return function (err)
-      assertResume(thread, err)
+      if hasYielded then
+        assertResume(thread, err)
+      else
+        hasReturned, returnedValue = true, err
+      end
     end
   end
 
   local function write(chunk)
+    hasYielded, hasReturned, returnedValue = false, false, nil
     if closer.written then
       return nil, "already shutdown"
     end
@@ -151,8 +158,14 @@ local function makeWrite(socket, closer)
       closer.check()
       return nil, err
     end
-    err = coroutine.yield()
-    return not err, err
+
+    if hasReturned then
+      return not returnedValue, returnedValue
+    else
+      hasYielded = true
+      err = coroutine.yield()
+      return not err, err
+    end
   end
 
   return write
