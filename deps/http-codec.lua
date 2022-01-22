@@ -251,6 +251,8 @@ local function decoder()
       if #chunk - index > 8192 then
         error("chunk-size header too large")
       end
+
+      return
     end
 
     -- we ignore chunk extensions
