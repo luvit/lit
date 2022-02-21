@@ -116,11 +116,11 @@ end
 
 -- TODO: implement git protocol over https, to be used in case `git` cli isn't available
 -- TODO: implement someway to specify a branch/tag when fetching
--- TODO: implement handling git submodules
+-- TODO: implement handling git submodules, or shall we not?
 local function resolveGitDep(url)
   -- fetch the repo tree, don't include any tags
   log("fetching", colorize("highlight", url))
-  local _, stderr, code = exec("git", "fetch", "--no-tags", "--depth=1", "--recurse-submodules", url)
+  local _, stderr, code = exec("git", "fetch", "--no-tags", "--depth=1", url)
 
   -- was the fetch successful?
   if code ~= 0 then
