@@ -24,7 +24,10 @@ local colorize = require('pretty-print').colorize
 local queryGit = require('pkg').queryGit
 local normalize = require('semver').normalize
 
-local gitSchemes = {
+local processDeps
+local db, deps
+
+local GIT_SCHEMES = {
   "^https?://", -- over http/s protocol
   "^ssh://", -- over ssh protocol
   "^git://", -- over git protocol
@@ -32,12 +35,9 @@ local gitSchemes = {
   "^[^:]+:", -- over ssh protocol
 }
 
-local processDeps
-local db, deps
-
 local function isGit(dep)
-  for i = 1, #gitSchemes do
-    if dep:match(gitSchemes[i]) then
+  for i = 1, #GIT_SCHEMES do
+    if dep:match(GIT_SCHEMES[i]) then
       return true
     end
   end
@@ -127,14 +127,14 @@ local function resolveGitDep(url)
     if stderr:match("^ENOENT") then
       error("Cannot find git. Please make sure git is installed and available.")
     else
-      error(stderr:gsub("\n$", ""))
+      error((stderr:gsub("\n$", "")))
     end
   end
 
   -- load the fetched module tree
   local raw = db.storage.read("FETCH_HEAD")
   local hash = raw:match("^(.-)\t\t.-\n$")
-  assert(hash and #hash ~= 0, "Attempt to retrive FETCH_HEAD")
+  assert(hash and #hash ~= 0, "Unable to retrieve FETCH_HEAD\n" .. raw)
   hash = db.loadAs("commit", hash).tree
 
   -- query module's metadata, and match author/name
