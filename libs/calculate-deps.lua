@@ -25,7 +25,7 @@ local queryGit = require('pkg').queryGit
 local normalize = require('semver').normalize
 
 local processDeps
-local db, deps
+local db, deps, configs
 
 local GIT_SCHEMES = {
   "^https?://", -- over http/s protocol
@@ -120,7 +120,8 @@ end
 local function resolveGitDep(url)
   -- fetch the repo tree, don't include any tags
   log("fetching", colorize("highlight", url))
-  local _, stderr, code = exec("git", "fetch", "--no-tags", "--depth=1", url)
+  local _, stderr, code = exec("git", "--git-dir=" .. configs.database,
+    "fetch", "--no-tags", "--depth=1", url)
 
   -- was the fetch successful?
   if code ~= 0 then
@@ -139,7 +140,8 @@ local function resolveGitDep(url)
 
   -- query module's metadata, and match author/name
   local meta, kind
-  meta, kind, hash = assert(queryGit(db, hash))
+  meta, kind, hash = queryGit(db, hash)
+  assert(meta, "Unable to find a valid package")
   local author, name = meta.name:match("^([^/]+)/(.*)$")
 
   -- check for installed packages and their version
@@ -176,10 +178,10 @@ function processDeps(dependencies)
   end
 end
 
-return function (gitDb, depsMap, newDeps)
+return function (gitDb, depsMap, newDeps, core)
   -- assign gitDb and depsMap to upvalue to be visible everywhere
   -- then start processing newDeps
-  db, deps = gitDb, depsMap
+  db, deps, configs = gitDb, depsMap, core.config
   processDeps(newDeps)
 
   -- collect all deps names and log them

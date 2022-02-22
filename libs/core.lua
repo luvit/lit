@@ -533,7 +533,7 @@ local function makeCore(config)
 
   function core.installList(path, newDeps)
     local deps = getInstalled(gfs, path)
-    calculateDeps(core.db, deps, newDeps)
+    calculateDeps(core.db, deps, newDeps, core)
     installDepsFs(core.db, gfs, path, deps, true)
     return deps
   end
