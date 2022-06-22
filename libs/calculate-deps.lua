@@ -28,11 +28,11 @@ local processDeps
 local db, deps, configs
 
 local GIT_SCHEMES = {
-  "^https?://", -- over http/s protocol
-  "^ssh://", -- over ssh protocol
-  "^git://", -- over git protocol
-  "^ftps?://", -- over ftp/s protocol
-  "^[^:]+:", -- over ssh protocol
+  "^https?://", -- over http/s
+  "^ssh://", -- over ssh
+  "^git://", -- over git
+  "^ftps?://", -- over ftp/s
+  "^[^:]+:", -- over ssh
 }
 
 local function isGit(dep)
@@ -178,10 +178,10 @@ function processDeps(dependencies)
   end
 end
 
-return function (gitDb, depsMap, newDeps, core)
-  -- assign gitDb and depsMap to upvalue to be visible everywhere
+return function (core, depsMap, newDeps)
+  -- assign gitDb and depsMap as upvalues to be visible everywhere
   -- then start processing newDeps
-  db, deps, configs = gitDb, depsMap, core.config
+  db, deps, configs = core.db, depsMap, core.config
   processDeps(newDeps)
 
   -- collect all deps names and log them
