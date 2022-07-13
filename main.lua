@@ -16,21 +16,96 @@ limitations under the License.
 
 --]]
 
-local bundle = require('luvi').bundle
+local bundle = require("luvi").bundle
 loadstring(bundle.readfile("luvit-loader.lua"), "bundle:luvit-loader.lua")()
 
-local uv = require('uv')
-require('snapshot')
-local aliases = {
-  ["-v"] = "version",
-  ["-h"] = "help",
-}
+-- Upvalues
+local uv = require("uv")
+local version = require("./package").version
+local log = require("log").log
+require("snapshot")
 
-local function exit(status)
+-- Global setup
+_G.p = require("pretty-print").prettyPrint
+
+-- Settings
+local EXIT_SUCCESS = 0
+local EXIT_FAILURE = -1
+
+local aliases = { ["-v"] = "version", ["-h"] = "help" }
+
+local commandLine = {}
+
+function commandLine.run()
+  coroutine.wrap(commandLine.processUserInput)()
+  return uv.run()
+end
+
+function commandLine.processUserInput()
+  local command = commandLine.processArguments()
+  local success, errorMessage = xpcall(function()
+    return commandLine.executeCommand(command)
+  end, debug.traceback)
+
+  if not success then
+    return commandLine.reportFailure(errorMessage)
+  end
+
+  return commandLine.reportSuccess()
+end
+
+function commandLine.processArguments()
+  local command = args[1] or "help"
+  if command:sub(1, 2) == "--" then
+    command = command:sub(3)
+  end
+  command = aliases[command] or command
+  return command
+end
+
+function commandLine.executeCommand(command)
+  commandLine.outputVersionInfo()
+
+  if command == "version" then
+    -- Since the version is always printed, there's nothing left to do
+    return commandLine.exitWithCode(EXIT_SUCCESS)
+  end
+
+  local commandHandler = "./commands/" .. command .. ".lua"
+  if commandLine.isValidCommand(commandHandler) then
+    log("command", table.concat(args, " "), "highlight")
+    commandLine.executeCommandHandler(commandHandler)
+  else
+    log("invalid command", command, "failure")
+    commandLine.executeCommandHandler("./commands/help.lua")
+    commandLine.reportFailure("Invalid Command: " .. command)
+  end
+end
+
+function commandLine.reportSuccess()
+  log("done", "success", "success")
+  print()
+  return commandLine.exitWithCode(EXIT_SUCCESS)
+end
+
+function commandLine.reportFailure(errorMessage)
+  log("fail", errorMessage, "failure")
+  print()
+  return commandLine.exitWithCode(EXIT_FAILURE)
+end
+
+function commandLine.outputVersionInfo()
+  log("lit version", version)
+  log("luvi version", require("luvi").version)
+end
+
+function commandLine.exitWithCode(exitCode)
   uv.walk(function(handle)
     if handle then
       local function close()
-        if not handle:is_closing() then handle:close() end
+        if not handle:is_closing() then
+          handle:close()
+        end
       end
       if handle.shutdown then
         handle:shutdown(close)
@@ -40,46 +115,15 @@ local function exit(status)
     end
   end)
   uv.run()
-  os.exit(status)
+  return os.exit(exitCode)
 end
 
-_G.p = require('pretty-print').prettyPrint
-local version = require('./package').version
-coroutine.wrap(function ()
-  local log = require('log').log
-  local command = args[1] or "help"
-  if command:sub(1, 2) == "--" then
-    command = command:sub(3)
-  end
-  command = aliases[command] or command
-  local invalid = false
-  local success, err = xpcall(function ()
-    log("lit version", version)
-    log("luvi version", require('luvi').version)
-    if command == "version" then exit(0) end
-    local path = "./commands/" .. command .. ".lua"
-    if bundle.stat(path:sub(3)) then
-      log("command", table.concat(args, " "), "highlight")
-    else
-      invalid = command
-      log("invalid command", command, "failure")
-      command = "help"
-      path = "./commands/" .. command .. ".lua"
-    end
-    require(path)()
-  end, debug.traceback)
-  if invalid then
-    success = false
-    err = "Invalid Command: " .. invalid
-  end
-  if success then
-    log("done", "success", "success")
-    print()
-    exit(0)
-  else
-    log("fail", err, "failure")
-    print()
-    exit(-1)
-  end
-end)()
-uv.run()
+function commandLine.isValidCommand(commandHandler)
+  return bundle.stat(commandHandler:sub(3)) -- A command is valid if a script handler for it exists
+end
+
+function commandLine.executeCommandHandler(commandHandler)
+  return require(commandHandler)()
+end
+
+commandLine.run()
