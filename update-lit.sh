@@ -36,7 +36,7 @@ while test $# -gt 0; do
 		echo ' ';
 		cecho 'options:';
 		cecho '-h, --help                             Show help.';
-		cecho '-l, -last, --lastest                   Download lastest lit/luvi/luvit releases from github (by default get-lit.sh downloads a bit outdated version, due to manual update).';
+		cecho '-l, -last, --lastest                   Download lastest lit/luvi/luvit releases from github (by default updater works with versions get-lit.sh that updates manually).';
 		cecho '-lit-ver XXX, --lit-version YYY        Specify an lit version.';
 		cecho '-luvi-ver XXX, --luvi-version YYY      Specify an luvit version.';
 		exit 0;
