@@ -22,11 +22,25 @@ while test $# -gt 0; do
 			break;
 		;;
 		-lit-ver|--lit-version )
-			LIT_VERSION=$2;
+			if [ "$2" = 'latest' ]; then
+				cecho 'Checking the lit version...'
+				LIT_VERSION=$(curl https://api.github.com/repos/luvit/lit/tags | grep -o -P '(?<=\"name\": \").*(?=\",)' | head -1);
+				cecho "Lastest lit release: $LIT_VERSION";
+			else
+				LIT_VERSION=$2;
+			fi
+
 			shift 2;
 		;;
 		-luvi-ver|--luvi-version )
-			LUVI_VERSION=$2;
+			if [ "$2" = 'latest' ]; then
+				cecho 'Checking the luvi version...'
+				LUVI_VERSION=$(curl https://api.github.com/repos/luvit/luvi/releases/latest | grep -o -P '(?<=\"tag_name\": \"v).*(?=\",)');
+				cecho "Lastest luvi release: $LUVI_VERSION";
+			else
+				LUVI_VERSION=$2;
+			fi
+
 			shift 2;
 		;;
 		-h|--help)
