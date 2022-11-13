@@ -10,14 +10,14 @@ cecho() {
 
 while test $# -gt 0; do
 	case "$1" in
-		-l|-last|--lastest )
+		-l|-last|--latest )
 			cecho 'Checking the lit version...';
 			LIT_VERSION=$(curl https://api.github.com/repos/luvit/lit/tags | grep -o -P '(?<=\"name\": \").*(?=\",)' | head -1);
-			cecho "Lastest lit release: $LIT_VERSION";
+			cecho "Latest lit release: $LIT_VERSION";
 
 			cecho 'Checking the luvi version...';
 			LUVI_VERSION=$(curl https://api.github.com/repos/luvit/luvi/releases/latest | grep -o -P '(?<=\"tag_name\": \"v).*(?=\",)');
-			cecho "Lastest luvi release: $LUVI_VERSION";
+			cecho "Latest luvi release: $LUVI_VERSION";
 
 			break;
 		;;
@@ -25,7 +25,7 @@ while test $# -gt 0; do
 			if [ "$2" = 'latest' ]; then
 				cecho 'Checking the lit version...';
 				LIT_VERSION=$(curl https://api.github.com/repos/luvit/lit/tags | grep -o -P '(?<=\"name\": \").*(?=\",)' | head -1);
-				cecho "Lastest lit release: $LIT_VERSION";
+				cecho "Latest lit release: $LIT_VERSION";
 			else
 				LIT_VERSION=$2;
 			fi
@@ -36,7 +36,7 @@ while test $# -gt 0; do
 			if [ "$2" = 'latest' ]; then
 				cecho 'Checking the luvi version...';
 				LUVI_VERSION=$(curl https://api.github.com/repos/luvit/luvi/releases/latest | grep -o -P '(?<=\"tag_name\": \"v).*(?=\",)');
-				cecho "Lastest luvi release: $LUVI_VERSION";
+				cecho "Latest luvi release: $LUVI_VERSION";
 			else
 				LUVI_VERSION=$2;
 			fi
@@ -50,7 +50,7 @@ while test $# -gt 0; do
 			echo ' ';
 			cecho 'options:';
 			cecho '-h, --help                             Show help.';
-			cecho '-l, -last, --lastest                   Download lastest lit/luvi/luvit releases from github (by default updater works with versions get-lit.sh that updates manually).';
+			cecho '-l, -last, --latest                    Download latest lit/luvi/luvit releases from github (by default updater works with versions get-lit.sh that updates manually).';
 			cecho '-lit-ver XXX, --lit-version YYY        Specify an lit version.';
 			cecho '-luvi-ver XXX, --luvi-version YYY      Specify an luvit version.';
 			exit 0;
