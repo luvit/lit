@@ -5,17 +5,17 @@ cecho() {
 	# background \033[38;2;RRR;GGG;BBBm
 	# clear      \033[0m
 
-	echo -e "\033[38;2;50;210;255m$1\033[0m";
+	echo "\033[38;2;50;210;255m$1\033[0m";
 }
 
 while test $# -gt 0; do
 	case "$1" in
 		-l|-last|--lastest )
-			cecho 'Checking the lit version...'
+			cecho 'Checking the lit version...';
 			LIT_VERSION=$(curl https://api.github.com/repos/luvit/lit/tags | grep -o -P '(?<=\"name\": \").*(?=\",)' | head -1);
 			cecho "Lastest lit release: $LIT_VERSION";
 
-			cecho 'Checking the luvi version...'
+			cecho 'Checking the luvi version...';
 			LUVI_VERSION=$(curl https://api.github.com/repos/luvit/luvi/releases/latest | grep -o -P '(?<=\"tag_name\": \"v).*(?=\",)');
 			cecho "Lastest luvi release: $LUVI_VERSION";
 
@@ -23,7 +23,7 @@ while test $# -gt 0; do
 		;;
 		-lit-ver|--lit-version )
 			if [ "$2" = 'latest' ]; then
-				cecho 'Checking the lit version...'
+				cecho 'Checking the lit version...';
 				LIT_VERSION=$(curl https://api.github.com/repos/luvit/lit/tags | grep -o -P '(?<=\"name\": \").*(?=\",)' | head -1);
 				cecho "Lastest lit release: $LIT_VERSION";
 			else
@@ -34,7 +34,7 @@ while test $# -gt 0; do
 		;;
 		-luvi-ver|--luvi-version )
 			if [ "$2" = 'latest' ]; then
-				cecho 'Checking the luvi version...'
+				cecho 'Checking the luvi version...';
 				LUVI_VERSION=$(curl https://api.github.com/repos/luvit/luvi/releases/latest | grep -o -P '(?<=\"tag_name\": \"v).*(?=\",)');
 				cecho "Lastest luvi release: $LUVI_VERSION";
 			else
@@ -44,16 +44,16 @@ while test $# -gt 0; do
 			shift 2;
 		;;
 		-h|--help)
-		cecho 'luvit-update - a update tool for lit/luvi/luvit';
-		echo ' ';
-		cecho 'luvit-update [options] [arguments]';
-		echo ' ';
-		cecho 'options:';
-		cecho '-h, --help                             Show help.';
-		cecho '-l, -last, --lastest                   Download lastest lit/luvi/luvit releases from github (by default updater works with versions get-lit.sh that updates manually).';
-		cecho '-lit-ver XXX, --lit-version YYY        Specify an lit version.';
-		cecho '-luvi-ver XXX, --luvi-version YYY      Specify an luvit version.';
-		exit 0;
+			cecho 'luvit-update - a update tool for lit/luvi/luvit';
+			echo ' ';
+			cecho 'luvit-update [options] [arguments]';
+			echo ' ';
+			cecho 'options:';
+			cecho '-h, --help                             Show help.';
+			cecho '-l, -last, --lastest                   Download lastest lit/luvi/luvit releases from github (by default updater works with versions get-lit.sh that updates manually).';
+			cecho '-lit-ver XXX, --lit-version YYY        Specify an lit version.';
+			cecho '-luvi-ver XXX, --luvi-version YYY      Specify an luvit version.';
+			exit 0;
 		;;
 		*)
 			break;
@@ -62,16 +62,16 @@ while test $# -gt 0; do
 done;
 
 if [ ! $LIT_VERSION ] || [ ! $LUVI_VERSION ]; then
-	cecho 'Request versions from get-lit.sh';
+	cecho 'Request versions from get-lit.sh (may a bit outdated since it is supported manually)';
 	GET_LIT=$(curl 'https://raw.githubusercontent.com/luvit/lit/master/get-lit.sh');
 
-	if [ !$LIT_VERSION ]; then
+	if [ ! $LIT_VERSION ]; then
 		LIT_VERSION=$(cecho "$GET_LIT" | grep -o -P '(?<=\${LIT_VERSION:-).*(?=})');
-		cecho "Lit release: $LIT_VERSION (may a bit outdated)";
+		cecho "Actual lit release: $LIT_VERSION";
 	fi
-	if [ !$LUVI_VERSION ]; then
+	if [ ! $LUVI_VERSION ]; then
 		LUVI_VERSION=$(cecho "$GET_LIT" | grep -o -P '(?<=\${LUVI_VERSION:-).*(?=})');
-		cecho "Luvi release: $LUVI_VERSION (may a bit outdated)";
+		cecho "Actual luvi release: $LUVI_VERSION";
 	fi
 fi
 
@@ -82,41 +82,55 @@ update() {
 
 	rm lit 2> /dev/null & rm luvi 2> /dev/null & rm luvit 2> /dev/null;
 
-	# Download Files
-	cecho "Downloading $LUVI_URL to luvi"
-	curl -L -f -o luvi $LUVI_URL
-	chmod +x luvi
-	cecho "Downloading $LIT_URL to lit.zip"
-	curl -L -f -o lit.zip $LIT_URL
-	# Create lit using lit
-	./luvi lit.zip -- make lit.zip lit luvi
-	# Cleanup
-	rm -f lit.zip
-	# Create luvit using lit
+	cecho "Downloading $LUVI_URL to luvi";
+	curl -L -f -o luvi $LUVI_URL;
+
+	cecho "Downloading $LIT_URL to lit.zip";
+	curl -L -f -o lit.zip $LIT_URL;
+
+	chmod +x luvi;
+	./luvi lit.zip -- make lit.zip lit luvi;
 	./lit make lit://luvit/luvit luvit luvi
+
+	rm -f lit.zip
 
 	exit 0;
 }
 
-if ! command -v lit > /dev/null
+LIT_EXECUTABLE=$(realpath './lit');
+if [ ! -x "$LIT_EXECUTABLE" ]; then
+    LIT_EXECUTABLE='lit';
+fi
+
+if ! command -v "$LIT_EXECUTABLE" > /dev/null
 then
 	cecho '  Lit is not installed';
 	update;
 fi
 
-if ! command -v luvi > /dev/null
+LUVI_EXECUTABLE=$(realpath './luvi');
+if [ ! -x "$LUVI_EXECUTABLE" ]; then
+    LUVI_EXECUTABLE='luvi';
+fi
+
+if ! command -v "$LUVI_EXECUTABLE" > /dev/null
 then
 	cecho '  Luvi is not installed';
 	update;
 fi
 
-if ! command -v luvit > /dev/null
+LUVIT_EXECUTABLE=$(realpath './luvit');
+if [ ! -x "$LUVIT_EXECUTABLE" ]; then
+    LUVIT_EXECUTABLE='luvit';
+fi
+
+if ! command -v "$LUVIT_EXECUTABLE" > /dev/null
 then
 	cecho '  Luvit is not installed';
 	update;
 fi
 
-LIT_VERSION_CUR=$(lit -v | grep -m1 -Po 'lit version:\s\K.*');
+LIT_VERSION_CUR=$($LIT_EXECUTABLE -v | grep -m1 -Po 'lit version:\s\K.*');
 cecho "Installed version of lit: $LIT_VERSION_CUR";
 
 if [ "$LIT_VERSION" != "$LIT_VERSION_CUR" ]; then
@@ -125,7 +139,7 @@ if [ "$LIT_VERSION" != "$LIT_VERSION_CUR" ]; then
 	update;
 fi
 
-LUVI_VERSION_CUR=$(luvi -v | grep -m1 -Po 'luvi v\K.*');
+LUVI_VERSION_CUR=$($LUVI_EXECUTABLE -v | grep -m1 -Po 'luvi v\K.*');
 cecho "Installed version of luvi: $LUVI_VERSION_CUR";
 
 if [ "$LUVI_VERSION" != "$LUVI_VERSION_CUR" ]; then
