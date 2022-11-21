@@ -1,11 +1,15 @@
 #!/bin/bash
 
 cecho() {
-	# foreground \033[48;2;RRR;GGG;BBBm
-	# background \033[38;2;RRR;GGG;BBBm
-	# clear      \033[0m
+        # foreground \033[48;2;RRR;GGG;BBBm
+        # background \033[38;2;RRR;GGG;BBBm
+        # clear      \033[0m
 
-	echo "\033[38;2;50;210;255m$1\033[0m";
+        if [ -z ${BASH_VERSION} ]; then # bash interpreter
+                echo "\033[38;2;50;210;255m$1\033[0m";
+        else # sh interpreter
+                echo -e "\033[38;2;50;210;255m$1\033[0m";
+        fi
 }
 
 while test $# -gt 0; do
