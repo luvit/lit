@@ -115,6 +115,7 @@ local function connect(options)
     if not secureSocket then secureSocket = require('secure-socket') end
     dsocket, err = secureSocket(socket, options.tls)
     if not dsocket then
+      if socket then socket:close() end
       return nil, err
     end
   else
