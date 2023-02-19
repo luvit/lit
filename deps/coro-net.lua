@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-net"
-  version = "3.3.0"
+  version = "3.3.1"
   dependencies = {
     "creationix/coro-channel@3.0.0",
     "creationix/coro-wrapper@3.0.0",
@@ -106,7 +106,10 @@ local function connect(options)
     socket:connect(options.path, makeCallback(options.timeout))
   end
   success, err = coroutine.yield()
-  if not success then return nil, err end
+  if not success then
+    if socket then socket:close() end
+    return nil, err
+  end
   local dsocket
   if options.tls then
     if not secureSocket then secureSocket = require('secure-socket') end
