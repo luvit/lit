@@ -107,7 +107,7 @@ local function connect(options)
   end
   success, err = coroutine.yield()
   if not success then
-    if socket then socket:close() end
+    socket:close()
     return nil, err
   end
   local dsocket
@@ -115,7 +115,7 @@ local function connect(options)
     if not secureSocket then secureSocket = require('secure-socket') end
     dsocket, err = secureSocket(socket, options.tls)
     if not dsocket then
-      if socket then socket:close() end
+      socket:close()
       return nil, err
     end
   else
