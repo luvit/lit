@@ -1,5 +1,5 @@
 
-$LUVI_VERSION = "2.12.0"
+$LUVI_VERSION = "2.14.0"
 $LIT_VERSION = "3.8.5"
 # Environment variables take precedence
 if (test-path env:LUVI_VERSION) { $LUVI_VERSION = $env:LUVI_VERSION }
