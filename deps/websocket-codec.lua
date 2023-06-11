@@ -183,8 +183,8 @@ end
 
 -- Make a client handshake connection
 local function handshake(options, request)
-  -- Generate 20 bytes of pseudo-random data
-  local key = concat({rand4(), rand4(), rand4(), rand4(), rand4()})
+  -- Generate 16 bytes of pseudo-random data
+  local key = concat({rand4(), rand4(), rand4(), rand4()})
   key = base64(key)
   local host = options.host
   local path = options.path or "/"
