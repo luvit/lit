@@ -158,13 +158,6 @@ local function newServer(run)
 
     print("Weblit server listening at:")
 
-    for i = 1, #bindings do
-      local options = bindings[i]
-      if options.host then
-        show(options)
-      end
-    end
-
     local ips = {}
     for i = 1, #bindings do
       local options = bindings[i]
