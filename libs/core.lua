@@ -148,7 +148,7 @@ local function makeCore(config)
     end
     if meta.dependencies and kind == "tree" then
       local deps = {}
-      calculateDeps(core.db, deps, meta.dependencies)
+      calculateDeps(core, deps, meta.dependencies)
       meta.snapshot = installDeps(core.db, hash, deps, false)
       log("snapshot hash", meta.snapshot)
     end
@@ -424,7 +424,7 @@ local function makeCore(config)
     local kind, hash = assert(import(core.db, zfs, source, rules, true))
     assert(kind == "tree", "Only tree packages are supported for now")
     local deps = getInstalled(zfs, source)
-    calculateDeps(core.db, deps, meta.dependencies)
+    calculateDeps(core, deps, meta.dependencies)
     hash = installDeps(core.db, hash, deps, true)
     return makeZip(hash, target, luvi_source)
   end
@@ -491,7 +491,7 @@ local function makeCore(config)
     end
 
     local deps = {}
-    calculateDeps(core.db, deps, meta.dependencies)
+    calculateDeps(core, deps, meta.dependencies)
     local tagObj = db.loadAs("tag", hash)
     if tagObj.type ~= "tree" then
       error("Only tags pointing to trees are currently supported for make")
@@ -533,7 +533,7 @@ local function makeCore(config)
 
   function core.installList(path, newDeps)
     local deps = getInstalled(gfs, path)
-    calculateDeps(core.db, deps, newDeps)
+    calculateDeps(core, deps, newDeps)
     installDepsFs(core.db, gfs, path, deps, true)
     return deps
   end
