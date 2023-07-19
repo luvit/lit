@@ -1,0 +1,61 @@
+name: Release Tagged Versions
+
+on:
+  push:
+    tags:
+      - '*' # Push events to every tag not containing / (that's all of them...)
+
+jobs:
+  build:
+    name: Build Lit for Windows (x64)
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+        with:
+          path: lit
+          submodules: true
+
+      # This is somewhat complicated, but we want to avoid redundancy
+      # Since the required Luvi version is stored in package.lua
+      # extracting it using any Lua interpreter seems more sane than storing it elsewhere
+      # or trying to parse it using shell commands to get at the relevant information
+      - name: Install Luvit runtime # The version doesn't really matter, since it isn't used in the build process directly
+        run: curl https://github.com/truemedian/luvit-bin/releases/download/2021-09-26/luvit-bin-Windows-x86_64.zip --fail --location --output luvit-bin.zip && dir && Expand-Archive luvit-bin.zip && dir
+
+      - name: Determine the pinned Luvi version
+        # It's much easier extracting it using Luvit as a helper, though we could parse the package metadata directly
+        run: cd lit && ../luvit-bin/luvit.exe .github/get-pinned-luvi-version.lua > REQUIRED_LUVI_VERSION && cat REQUIRED_LUVI_VERSION
+
+      - name: Fetch Luvi bundler
+        run: git clone --recursive https://github.com/luvit/luvi.git
+
+      - name: Check out the pinned Luvi version
+        # It's an abomination, but I haven't found a better way
+        run: dir && cd luvi && dir && iex "git checkout $(cat ../lit/REQUIRED_LUVI_VERSION)"
+
+      - name: Make Luvi executable
+        run: cd luvi && ./make.bat
+
+      - name: Create zip archive
+        uses: papeloto/action-zip@v1
+        with:
+          files: lit
+          dest: lit.zip
+
+      - name: Make Lit executable
+        shell: cmd
+        run: cd luvi && luvi.exe ../lit.zip --output ../lit.exe
+
+      # We don't want to deploy a faulty release, so this should fail if the executable is broken
+      - name: Verify the build
+        # This should only cover the CLI functionality, with the internal logic being tested separately (on commit, not release)
+        run: luvit-bin/luvit.exe lit/tests/run-smoke-tests.lua lit.exe
+
+      - name: Publish new release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: lit.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
