@@ -48,6 +48,10 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
 
   local function handshake(callback)
     if ssl:handshake() then
+      local cert = ssl:peer()
+      if not cert:check_host(servername) then
+        return error("The server hostname does not match the certificate's domain")
+      end
       local success, result = ssl:getpeerverification()
       socket:read_stop()
       if not success and result then

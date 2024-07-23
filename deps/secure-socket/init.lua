@@ -33,8 +33,10 @@ return function (socket, options, callback)
     thread = coroutine.running()
   end
   bioWrap(ctx, options.server, socket, callback or function (err, ssocket)
-    return assertResume(thread, ssocket, err)
-end, options.servername)
+    if coroutine.status(thread) == 'suspended' then
+      return assertResume(thread, ssocket, err)
+    end
+  end, options.servername)
   if not callback then
     return coroutine.yield()
   end
