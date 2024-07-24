@@ -7,8 +7,8 @@ require('tap')(function (test)
     for name, endpoint in pairs(endpoints) do
       coroutine.wrap(function()
         -- TODO: do we want to match against the error message?
-        local connecionSucceeded = pcall(http.getConnection, endpoints.expired, 443, true)
-        if connecionSucceeded then
+        local connectionSucceeded = pcall(http.getConnection, endpoints.expired, 443, true)
+        if connectionSucceeded then
           error(string.format('a bad ceritifcate was accepted as trusted: %s - https://%s', name, endpoint))
         end
       end)()
@@ -18,15 +18,15 @@ require('tap')(function (test)
   local function expectConnection(endpoints)
     for name, endpoint in pairs(endpoints) do
       coroutine.wrap(function()
-        local connecionSucceeded, err = pcall(http.getConnection, endpoints.expired, 443, true)
-        if not connecionSucceeded then
+        local connectionSucceeded, err = pcall(http.getConnection, endpoints.expired, 443, true)
+        if not connectionSucceeded then
           error(string.format('a good certificate was rejected as untrusted: %s - https://%s - %s', name, endpoint, err))
         end
       end)()
     end
   end
 
-  test('Certificate Validation ', function ()
+  test('Certificate Validation', function ()
     local endpoints = {
       expired = 'expired.badssl.com',
       wrong_host = 'wrong.host.badssl.com',
