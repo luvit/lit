@@ -17,6 +17,12 @@ limitations under the License.
 --]]
 local openssl = require('openssl')
 
+local function closeSocket(socket)
+  if not socket:is_closing() then
+    socket:close()
+  end
+end
+
 -- writeCipher is called when ssl needs something written on the socket
 -- handshakeComplete is called when the handhake is complete and it's safe
 -- onPlain is called when plaintext comes out.
@@ -54,10 +60,21 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
         for i=1, #result do
           if not result[i].preverify_ok then
             handshakeComplete("Error verifying peer: " .. result[i].error_string)
-            break
+            return closeSocket(socket)
           end
         end
       end
+
+      local cert = ssl:peer()
+      if not cert then
+        handshakeComplete("The peer did not provide a certificate")
+        return closeSocket(socket)
+      end
+      if not cert:check_host(servername) then
+        handshakeComplete("The server hostname does not match the certificate's domain")
+        return closeSocket(socket)
+      end
+
       handshakeComplete(nil, ssocket)
     end
     return flush(callback)
