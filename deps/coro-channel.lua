@@ -121,15 +121,16 @@ end
 local function makeWrite(socket, closer)
 
   local hasYielded, hasReturned
-  local success, err
+  local success, err, cbErr
   local function wait()
     local thread = coroutine.running()
-    return function (cb_err)
+    hasYielded, hasReturned = nil, nil
+    return function (err)
       if hasYielded then
         hasYielded = false
-        assertResume(thread, cb_err)
+        assertResume(thread, err)
       else
-        err = cb_err
+        cbErr = err
         hasReturned = true
       end
     end
@@ -151,9 +152,9 @@ local function makeWrite(socket, closer)
       end
       if not hasReturned then
         hasYielded = true
-        err = coroutine.yield()
+        cbErr = coroutine.yield()
       end
-      return not err, err
+      return not cbErr, cbErr
     end
 
     success, err = socket:write(chunk, wait())
@@ -164,9 +165,9 @@ local function makeWrite(socket, closer)
     end
     if not hasReturned then
       hasYielded = true
-      err = coroutine.yield()
+      cbErr = coroutine.yield()
     end
-    return not err, err
+    return not cbErr, cbErr
   end
 
   return write
