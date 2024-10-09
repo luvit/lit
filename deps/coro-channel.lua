@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "creationix/coro-channel"
-  version = "3.0.3"
+  version = "3.0.4"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams."
   tags = {"coro", "adapter"}
@@ -120,10 +120,19 @@ end
 
 local function makeWrite(socket, closer)
 
+  local hasYielded, hasReturned
+  local success, err, cbErr
   local function wait()
     local thread = coroutine.running()
+    hasYielded, hasReturned = nil, nil
     return function (err)
-      assertResume(thread, err)
+      if hasYielded then
+        hasYielded = false
+        assertResume(thread, err)
+      else
+        cbErr = err
+        hasReturned = true
+      end
     end
   end
 
@@ -137,22 +146,28 @@ local function makeWrite(socket, closer)
     if chunk == nil then
       closer.written = true
       closer.check()
-      local success, err = socket:shutdown(wait())
+      success, err = socket:shutdown(wait())
       if not success then
         return nil, err
       end
-      err = coroutine.yield()
-      return not err, err
+      if not hasReturned then
+        hasYielded = true
+        cbErr = coroutine.yield()
+      end
+      return not cbErr, cbErr
     end
 
-    local success, err = socket:write(chunk, wait())
+    success, err = socket:write(chunk, wait())
     if not success then
       closer.errored = err
       closer.check()
       return nil, err
     end
-    err = coroutine.yield()
-    return not err, err
+    if not hasReturned then
+      hasYielded = true
+      cbErr = coroutine.yield()
+    end
+    return not cbErr, cbErr
   end
 
   return write
