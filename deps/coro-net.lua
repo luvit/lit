@@ -1,9 +1,9 @@
 --[[lit-meta
-  name = "creationix/coro-net"
+  name = "luvit/coro-net"
   version = "3.3.1"
   dependencies = {
-    "creationix/coro-channel@3.0.0",
-    "creationix/coro-wrapper@3.0.0",
+    "luvit/coro-channel@3.0.0",
+    "luvit/coro-wrapper@3.0.0",
   }
   optionalDependencies = {
     "luvit/secure-socket@1.0.0"

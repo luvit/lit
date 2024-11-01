@@ -1,8 +1,8 @@
 --[[lit-meta
-  name = "creationix/coro-http"
+  name = "luvit/coro-http"
   version = "3.2.3"
   dependencies = {
-    "creationix/coro-net@3.3.0",
+    "luvit/coro-net@3.3.0",
     "luvit/http-codec@3.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"

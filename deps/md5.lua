@@ -1,5 +1,5 @@
 --[[lit-meta
-  name = "creationix/md5"
+  name = "luvit/md5"
   version = "1.0.2-1"
   homepage = "https://github.com/kikito/md5.lua"
   description = "MD5 computation in Lua (5.1-3, LuaJIT)"

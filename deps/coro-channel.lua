@@ -1,5 +1,5 @@
 --[[lit-meta
-  name = "creationix/coro-channel"
+  name = "luvit/coro-channel"
   version = "3.0.4"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams."
