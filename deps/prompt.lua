@@ -1,5 +1,5 @@
 --[[lit-meta
-  name = "creationix/prompt"
+  name = "luvit/prompt"
   version = "2.0.1"
   dependencies = {
     "luvit/readline@2.0.0"

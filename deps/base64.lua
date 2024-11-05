@@ -1,5 +1,5 @@
 --[[lit-meta
-  name = "creationix/base64"
+  name = "luvit/base64"
   description = "A pure lua implemention of base64 using bitop"
   tags = {"crypto", "base64", "bitop"}
   version = "2.0.0"

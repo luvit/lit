@@ -1,5 +1,5 @@
 --[[lit-meta
-  name = "creationix/coro-wrapper"
+  name = "luvit/coro-wrapper"
   version = "3.1.0"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-wrapper.lua"
   description = "An adapter for applying decoders to coro-streams."

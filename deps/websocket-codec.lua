@@ -1,10 +1,10 @@
 --[[lit-meta
-  name = "creationix/websocket-codec"
+  name = "luvit/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
   version = "3.0.2"
   dependencies = {
-    "creationix/base64@2.0.0",
-    "creationix/sha1@1.0.0",
+    "luvit/base64@2.0.0",
+    "luvit/sha1@1.0.0",
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/websocket-codec.lua"
   tags = {"http", "websocket", "codec"}

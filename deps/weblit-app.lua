@@ -2,7 +2,7 @@
   name = "creationix/weblit-app"
   version = "3.2.1"
   dependencies = {
-    'creationix/coro-net@3.0.0',
+    'luvit/coro-net@3.0.0',
     'luvit/http-codec@3.0.0',
     'luvit/querystring@2.0.0',
     'creationix/weblit-server@3.0.0',

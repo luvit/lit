@@ -2,7 +2,7 @@
   name = "creationix/weblit-server"
   version = "3.1.3"
   dependencies = {
-    'creationix/coro-net@3.3.0',
+    'luvit/coro-net@3.3.0',
     'luvit/http-codec@3.0.0'
   }
   description = "Weblit is a webapp framework designed around routes and middleware layers."
