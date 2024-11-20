@@ -28,6 +28,7 @@ Response automatic values:
 ]]
 
 local date = require('os').date
+local unpack = unpack or table.unpack
 
 local success, parent = pcall(require, '../package')
 local serverName = success and (parent.name .. " v" .. parent.version)

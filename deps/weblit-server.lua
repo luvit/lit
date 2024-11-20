@@ -15,6 +15,7 @@
 local uv = require('uv')
 local createServer = require('coro-net').createServer
 local httpCodec = require('http-codec')
+local unpack = unpack or table.unpack
 
 -- Provide a nice case insensitive interface to headers.
 local headerMeta = {}

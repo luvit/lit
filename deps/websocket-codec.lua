@@ -1,7 +1,7 @@
 --[[lit-meta
   name = "luvit/websocket-codec"
   description = "A codec implementing websocket framing and helpers for handshakeing"
-  version = "3.0.2"
+  version = "3.0.3"
   dependencies = {
     "luvit/base64@2.0.0",
     "luvit/sha1@1.0.0",
@@ -30,6 +30,7 @@ local gsub = string.gsub
 local concat = table.concat
 local floor = math.floor
 local random = math.random
+local unpack = unpack or table.unpack
 
 local function rand4()
   -- Generate 32 bits of pseudo random data

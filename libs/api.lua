@@ -84,6 +84,7 @@ local ffi = require('ffi')
 local fs = require('coro-fs')
 local metrics = require('metrics')
 local uv = require('uv')
+local unpack = unpack or table.unpack
 
 local function hex_to_char(x)
   return string.char(tonumber(x, 16))

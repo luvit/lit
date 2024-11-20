@@ -21,6 +21,8 @@ local log = require('log').log
 local pathJoin = require('luvi').path.join
 local modes = require('git').modes
 local colorize = require('pretty-print').colorize
+local unpack = unpack or table.unpack
+local loadstring = loadstring or load
 
 local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
 

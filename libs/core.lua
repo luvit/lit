@@ -54,6 +54,7 @@ local exportZip = require('export-zip')
 local digest = require('openssl').digest.digest
 local request = require('coro-http').request
 local makeAutoConfig = require('autoconfig')
+local unpack = unpack or table.unpack
 
 local quotepattern = '(['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..'])'
 local function escape(str)

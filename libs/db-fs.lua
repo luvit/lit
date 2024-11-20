@@ -20,6 +20,7 @@ local git = require('git')
 local listToMap = git.listToMap
 local modeToType = git.modes.toType
 local modes = git.modes
+local unpack = unpack or table.unpack
 
 return function (db, root)
   local cache = {}
