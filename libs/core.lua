@@ -70,6 +70,13 @@ local function run(...)
   end
 end
 
+local isWindows
+if _G.jit then
+  isWindows = _G.jit.os == "Windows"
+else
+  isWindows = not not package.path:match("\\")
+end
+
 -- Takes a time struct with a date and time in UTC and converts it into
 -- seconds since Unix epoch (0:00 1 Jan 1970 UTC).
 -- Trickier than you'd think because os.time assumes the struct is in local time.
@@ -182,11 +189,16 @@ local function makeCore(config)
     local version = semver.normalize(meta and meta.version or luvi.version)
     local template = meta and meta.url or defaultTemplate
     local arch
-    if jit.os == "Windows" then
-      if jit.arch == "x64" then
+    if isWindows then
+      local info = uv.os_uname()
+      if info.machine == 'amd64' then
         arch = "Windows-amd64.exe"
       else
-        arch = "Windows-ia32.exe"
+        if semver.gte(version, '2.15.0') then
+          arch = "Windows-x86.exe" -- the new name scheme
+        else
+          arch = "Windows-ia32.exe"
+        end
       end
     else
       arch = run("uname", "-s") .. "_" .. run("uname", "-m")
@@ -203,7 +215,7 @@ local function makeCore(config)
     if template == defaultTemplate and flavor == "regular" and version == semver.normalize(luvi.version) then
       local exe = uv.exepath()
       local stdout = exec(exe, "-v")
-      if jit.os == "Windows" then
+      if isWindows then
         stdout = stdout:gsub('.exe','')
       end
       local iversion = stdout:match("luvi version: v(%d+%.%d+%.%d+)")
@@ -368,7 +380,7 @@ local function makeCore(config)
   end
 
   local function makeZip(rootHash, target, luvi_source)
-    if jit.os == "Windows" and (not target:match('%.exe$')) then
+    if isWindows and (not target:match('%.exe$')) then
       target = target..'.exe'
     end
 
@@ -402,7 +414,7 @@ local function makeCore(config)
 
   local function defaultTarget(meta)
     local target = meta.target or meta.name:match("[^/]+$")
-    if jit.os == "Windows" then
+    if isWindows then
       target = target .. ".exe"
     end
     return target

@@ -1,7 +1,7 @@
 local jsonStringify = require('json').stringify
 local uv = require('uv')
 local scandir = require('coro-fs').scandir
-local ffi = require('ffi')
+local exists = require('coro-fs').exists
 
 return function (_, res)
   local handles = {}
@@ -22,10 +22,10 @@ return function (_, res)
   local memoryUsed = 1024 * collectgarbage("count")
 
   -- Count file descriptors
-  local path = ({
-    Linux = "/proc/self/fd",
-    OSX = "/dev/fd"
-  })[ffi.os]
+  local path = "/proc/self/fd"
+  if not exists(path) then
+    path = "/dev/fd"
+  end
   local entries = 0
   local iter = scandir(path)
   for _ in iter do

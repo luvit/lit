@@ -27,6 +27,7 @@ else
 end
 
 local getenv = require('os').getenv
+local loadstring = loadstring or load
 
 local isWindows
 if _G.jit then
@@ -139,10 +140,51 @@ local function pathJoin(...)
   return path
 end
 
-local function loader(dir, path, bundleOnly)
+local function loader(path, fullPath)
+  local useBundle = fullPath:sub(1, 7) == "bundle:"
+  if useBundle then
+    fullPath = fullPath:sub(8)
+  end
+  if useBundle then
+    local key = "bundle:" .. fullPath
+    if package.loaded[key] then
+      return package.loaded[key]
+    end
+    local code = bundle.readfile(fullPath)
+    local module = loadstring(code, key)(key)
+    package.loaded[key] = module
+    return module
+  end
+  fullPath = uv.fs_realpath(fullPath)
+  if package.loaded[fullPath] then
+    return package.loaded[fullPath]
+  end
+  local module = assert(loadfile(fullPath))(fullPath)
+  package.loaded[fullPath] = module
+  return module
+end
+
+local cwd = uv.cwd()
+local function searcher(path)
+  local level, caller = 3
+  -- Loop past any C functions to get to the real caller
+  -- This avoids pcall(require, "path") getting "=C" as the source
+  repeat
+    caller = debug.getinfo(level, "S").source
+    level = level + 1
+  until caller ~= "=[C]"
+
+  local dir
   local errors = {}
   local fullPath
-  local useBundle = bundleOnly
+  local useBundle = false
+  if string.sub(caller, 1, 1) == "@" then
+    dir = pathJoin(cwd, caller:sub(2), "..")
+  elseif string.sub(caller, 1, 7) == "bundle:" then
+    useBundle = true
+    dir = pathJoin(caller:sub(8), "..")
+  end
+
   local function try(tryPath)
     local prefix = useBundle and "bundle:" or ""
     local fileStat = useBundle and bundle.stat or uv.fs_stat
@@ -191,47 +233,26 @@ local function loader(dir, path, bundleOnly)
     -- Module require
   end
   if useBundle then
-    local key = "bundle:" .. fullPath
-    return function ()
-      if package.loaded[key] then
-        return package.loaded[key]
-      end
-      local code = bundle.readfile(fullPath)
-      local module = loadstring(code, key)(key)
-      package.loaded[key] = module
-      return module
-    end, key
-  end
-  fullPath = uv.fs_realpath(fullPath)
-  return function ()
-    if package.loaded[fullPath] then
-      return package.loaded[fullPath]
+    if bundle.stat(fullPath) then
+      return loader, 'bundle:' .. fullPath
     end
-    local module = assert(loadfile(fullPath))(fullPath)
-    package.loaded[fullPath] = module
-    return module
+  else
+    if uv.fs_access(fullPath) then
+      return loader, fullPath
+    end
   end
 end
 
 -- Register as a normal lua package loader.
-local cwd = uv.cwd()
-table.insert(package.loaders, 1, function (path)
+if package.loaders then
+  table.insert(package.loaders, 1, function (path)
+    local loader_fn, loader_data = searcher(path)
+    if not loader_fn then
+      return nil
+    end
 
-  -- Ignore built-in libraries with this loader.
-  if path:match("^[a-z]+$") and package.preload[path] then
-    return
-  end
-
-  local level, caller = 3
-  -- Loop past any C functions to get to the real caller
-  -- This avoids pcall(require, "path") getting "=C" as the source
-  repeat
-    caller = debug.getinfo(level, "S").source
-    level = level + 1
-  until caller ~= "=[C]"
-  if string.sub(caller, 1, 1) == "@" then
-    return loader(pathJoin(cwd, caller:sub(2), ".."), path)
-  elseif string.sub(caller, 1, 7) == "bundle:" then
-    return loader(pathJoin(caller:sub(8), ".."), path, true)
-  end
-end)
+    return loader(path, loader_data)
+  end)
+else
+  table.insert(package.searchers, 1, searcher)
+end
