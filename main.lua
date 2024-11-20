@@ -37,14 +37,10 @@ local aliases = { ["-v"] = "version", ["-h"] = "help" }
 local commandLine = {}
 
 function commandLine.run()
-  coroutine.wrap(commandLine.processUserInput)()
-  return uv.run()
-end
-
-function commandLine.processUserInput()
   local command = commandLine.processArguments()
   local success, errorMessage = xpcall(function()
-    return commandLine.executeCommand(command)
+    coroutine.wrap(commandLine.executeCommand)(command)
+    return uv.run()
   end, debug.traceback)
 
   if not success then
