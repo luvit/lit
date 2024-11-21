@@ -24,7 +24,8 @@ local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('codec').makeRemote
 local deframe = require('git').deframe
-local decodeTag = require('git').decoders.tag
+local decoders = require('git').decoders
+local decodeTag = decoders.tag
 local verifySignature = require('verify-signature')
 
 local function connectRemote(url, timeout)
@@ -139,6 +140,12 @@ return function(db, url, timeout)
     if raw then return raw end
     db.fetch({hash})
     return assert(db.offlineLoad(hash))
+  end
+
+  function db.offlineLoadAny(hash)
+    local raw = assert(db.offlineLoad(hash), "no such hash")
+    local kind, value = deframe(raw)
+    return kind, decoders[kind](value)
   end
 
   function db.fetch(list)
