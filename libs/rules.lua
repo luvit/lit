@@ -16,13 +16,21 @@ limitations under the License.
 
 --]]
 
-local ffi = require('ffi')
 local log = require('log').log
 local pathJoin = require('luvi').path.join
 local modes = require('git').modes
 local colorize = require('pretty-print').colorize
+local unpack = unpack or table.unpack
+local loadstring = loadstring or load
 
 local quotepattern = '['..("%^$().[]*+-?"):gsub("(.)", "%%%1")..']'
+
+local native_os, native_arch
+do
+  local info = require('luv').os_uname()
+  native_os = info.sysname
+  native_arch = info.machine
+end
 
 -- When importing into the db to publish, we want to include binaries for all
 -- platforms, but when installing to disk or zip app bundle, we want native only.
@@ -30,7 +38,7 @@ local patterns = {
   -- Rough translation of (Linux|Windows|OSX|BSD) and (x86|x64|arm)
   -- This is more liberal than it needs to be, but works mostly in practice.
   all = {"[LWOB][iS][nXD][uxdows]*", "[xa][86r][64m]"},
-  native = {ffi.os, ffi.arch},
+  native = {native_os, native_arch},
 }
 
 local function compileFilter(rootPath, rules, nativeOnly)

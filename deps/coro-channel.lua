@@ -1,6 +1,6 @@
 --[[lit-meta
   name = "luvit/coro-channel"
-  version = "3.0.4"
+  version = "3.0.5"
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-channel.lua"
   description = "An adapter for wrapping uv streams as coro-streams."
   tags = {"coro", "adapter"}
@@ -8,7 +8,7 @@
   author = { name = "Tim Caswell" }
 ]]
 
--- local p = require('pretty-print').prettyPrint
+local unpack = unpack or table.unpack
 
 local function assertResume(thread, ...)
   local success, err = coroutine.resume(thread, ...)

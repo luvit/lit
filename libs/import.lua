@@ -20,6 +20,7 @@ local pathJoin = require('luvi').path.join
 local isAllowed = require('rules').isAllowed
 local compileFilter = require('rules').compileFilter
 local modes = require('git').modes
+local loadstring = loadstring or load
 
 -- Import a fs path into the database
 return function (db, fs, rootpath, rules, nativeOnly)

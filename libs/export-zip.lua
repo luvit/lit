@@ -19,6 +19,7 @@ limitations under the License.
 local miniz = require('miniz')
 local modes = require('git').modes
 local log = require('log').log
+local loadstring = loadstring or load
 
 -- Create a zip from a hash optionally compiling lua files to bytecode.
 return function (db, rootHash, compileLua)
