@@ -217,7 +217,7 @@ local function searcher(path)
   if string.sub(path, 1, 1) == "." then
     -- Relative require
     if not try(pathJoin(dir, path)) then
-      return table.concat(errors)
+      return nil, table.concat(errors)
     end
   else
     while true do
@@ -226,7 +226,7 @@ local function searcher(path)
         break
       end
       if dir == pathJoin(dir, "..") then
-        return table.concat(errors)
+        return nil, table.concat(errors)
       end
       dir = pathJoin(dir, "..")
     end
@@ -234,11 +234,11 @@ local function searcher(path)
   end
   if useBundle then
     if bundle.stat(fullPath) then
-      return loader, 'bundle:' .. fullPath
+      return 'bundle:' .. fullPath, loader
     end
   else
     if uv.fs_access(fullPath) then
-      return loader, fullPath
+      return fullPath, loader
     end
   end
 end
@@ -246,12 +246,14 @@ end
 -- Register as a normal lua package loader.
 if package.loaders then
   table.insert(package.loaders, 1, function (path)
-    local loader_fn, loader_data = searcher(path)
-    if not loader_fn then
-      return nil
+    local loader_data, loader_fn = searcher(path)
+    if type(loader_fn) == "function" then
+      return function(name)
+        return loader_fn(name, loader_data)
+      end
+    else
+      return loader_fn
     end
-
-    return loader(path, loader_data)
   end)
 else
   table.insert(package.searchers, 1, searcher)
