@@ -33,6 +33,15 @@ local semver = require('semver')
 local pathJoin = require('luvi').path.join
 local listToMap = require('git').listToMap
 local jsonParse = require('json').parse
+local load = load
+if not load then
+  function load(code, name, mode, env)
+    local fn, err = loadstring(code, name)
+    if not fn then return fn, err end
+    if env then setfenv(fn, env) end
+    return fn
+  end
+end
 
 local function evalModule(data, name)
   -- Match multiline lua comments that start with `lit-meta`
@@ -41,21 +50,19 @@ local function evalModule(data, name)
     local term = "]" .. data:sub(a + 3, b - 9) .."]"
     local c = data:find(term, b + 1, true)
     if c then
-      local fn, err = loadstring(data:sub(b + 1, c - 1), name)
-      assert(not err, err)
       local env = {}
-      setfenv(fn, env)
+      local fn, err = load(data:sub(b + 1, c - 1), name, "t", env)
+      assert(not err, err)
       assert(pcall(fn))
       return env
     end
   end
-  local fn, err = loadstring(data, name)
-  if not fn then return nil, err end
   local exports = {}
   local module = { exports = exports }
-  setfenv(fn, {
+  local fn, err = load(data, name, 't', {
     exports = exports,
   })
+  if not fn then return nil, err end
   local success, ret = pcall(fn)
 
   local meta = success and type(ret) == "table" and ret or module.exports

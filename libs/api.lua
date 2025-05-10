@@ -84,6 +84,7 @@ local ffi = require('ffi')
 local fs = require('coro-fs')
 local metrics = require('metrics')
 local uv = require('uv')
+local unpack = unpack or table.unpack
 
 local function hex_to_char(x)
   return string.char(tonumber(x, 16))
@@ -173,19 +174,15 @@ local function collectStats()
     return entries
   end
 
-  local howToDetermineFDs = {
-    Linux = function() return countFDs("/proc/self/fd") end,
-    OSX = function() return countFDs("/dev/fd") end,
-    Other = function() return -1 end
-  }
-
-  local os = ffi.os
-  if howToDetermineFDs[os] == nil then
-    os = "Other"
+  local numFDs = -1
+  if fs.exists("/proc/self/fd") then
+    numFDs = countFDs("/proc/self/fd")
+  elseif fs.exists("/dev/fd") then
+    numFDs = countFDs("/dev/fd")
   end
 
   metrics.set("lua.mem.used", memoryUsed)
-  metrics.set("lua.fds.used", howToDetermineFDs[os]())
+  metrics.set("lua.fds.used", numFDs)
   return metrics.all()
 end
 

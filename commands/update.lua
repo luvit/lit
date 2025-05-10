@@ -1,3 +1,4 @@
+
 return function ()
   local log = require('log').log
   local core = require('core')()
@@ -18,6 +19,13 @@ return function ()
       error("Expected 200 response from " .. url .. ", but got " .. head.code)
     end
     return body
+  end
+
+  local isWindows
+  if _G.jit then
+    isWindows = _G.jit.os == "Windows"
+  else
+    isWindows = not not package.path:match("\\")
   end
 
   -- Returns current version, latest version and latest compat version.
@@ -63,7 +71,7 @@ return function ()
       local stdout = exec(target, "-v")
       if not stdout:match("^lit version:") then
         target = pathJoin(target, "..", "lit")
-        if jit.os == "Windows" then
+        if isWindows then
           target = target .. ".exe"
         end
       end
@@ -107,7 +115,7 @@ return function ()
 
   do
     local luvitPath = pathJoin(uv.exepath(), "..", "luvit")
-    if jit.os == "Windows" then
+    if isWindows then
       luvitPath = luvitPath .. ".exe"
     end
     if uv.fs_stat(luvitPath) then
@@ -123,14 +131,14 @@ return function ()
 
   do
     local target = pathJoin(uv.exepath(), "..", "luvi")
-    if jit.os == "Windows" then
+    if isWindows then
       target = target .. ".exe"
     end
     local new, old
     local toupdate = require('luvi').version
     if uv.fs_stat(target) then
       local stdout = exec(target, "-v")
-      if jit.os == "Windows" then
+      if isWindows then
         stdout = stdout:gsub("luvi.exe ","luvi ")
       end
       local version = stdout:match("luvi (v[^ \r\n]+)")

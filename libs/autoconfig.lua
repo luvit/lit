@@ -21,7 +21,7 @@ local fs = require('coro-fs')
 local env = require('env')
 
 local prefix
-if require('ffi').os == "Windows" then
+if package.config:sub(1,1) == '\\' and env.get('APPDATA') then
   prefix = env.get("APPDATA") .. "\\"
 else
   prefix = env.get("HOME") .. "/."

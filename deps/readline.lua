@@ -17,7 +17,7 @@ limitations under the License.
 --]]
 --[[lit-meta
   name = "luvit/readline"
-  version = "2.2.0"
+  version = "2.2.1"
   dependencies = {
     "luvit/ustring@2.0.0",
   }
@@ -29,6 +29,7 @@ limitations under the License.
 ]]
 
 -- Heavily inspired by ljlinenoise : <http://fperrad.github.io/ljlinenoise/>
+local unpack = unpack or table.unpack
 
 local ustring = require "ustring"
 local emptyline = ustring.new()
@@ -300,7 +301,7 @@ end
 local keyHandlers =
 {
   -- Enter
-  {{13}, function(self)
+  {{10, 13}, function(self)
     local history = self.history
     local line = self.line
     -- Only record new history if it's non-empty and new

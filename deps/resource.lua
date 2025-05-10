@@ -23,7 +23,7 @@ limitations under the License.
   homepage = "https://github.com/luvit/luvit/blob/master/deps/resource.lua"
   description = "Utilities for loading relative resources"
   dependencies = {
-    "creationix/pathjoin@2.0.0"
+    "luvit/pathjoin@2.0.0"
   }
   tags = {"luvit", "relative", "resource"}
 ]]

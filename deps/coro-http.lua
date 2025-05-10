@@ -1,8 +1,8 @@
 --[[lit-meta
-  name = "creationix/coro-http"
-  version = "3.2.3"
+  name = "luvit/coro-http"
+  version = "3.2.4"
   dependencies = {
-    "creationix/coro-net@3.3.0",
+    "luvit/coro-net@3.3.0",
     "luvit/http-codec@3.0.0"
   }
   homepage = "https://github.com/luvit/lit/blob/master/deps/coro-http.lua"
@@ -14,6 +14,7 @@
 
 local httpCodec = require('http-codec')
 local net = require('coro-net')
+local unpack = unpack or table.unpack
 
 local function createServer(host, port, onConnect)
   return net.createServer({

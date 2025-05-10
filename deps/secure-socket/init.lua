@@ -34,7 +34,7 @@ return function (socket, options, callback)
   end
   bioWrap(ctx, options.server, socket, callback or function (err, ssocket)
     return assertResume(thread, ssocket, err)
-end, options.servername)
+  end, options.servername)
   if not callback then
     return coroutine.yield()
   end

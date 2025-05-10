@@ -22,6 +22,7 @@ local digest = require('openssl').digest.digest
 local githubQuery = require('github-request')
 local jsonParse = require('json').parse
 local verifySignature = require('verify-signature')
+local unpack = unpack or table.unpack
 
 local function split(line)
   local args = {}
