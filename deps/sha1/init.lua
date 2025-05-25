@@ -22,7 +22,7 @@ local tohex = bit.tohex
 
 local byte = string.byte
 local concat = table.concat
-local floor = table.floor
+local floor = math.floor
 
 local hasFFi, ffi = pcall(require, "ffi")
 local newBlock = hasFFi and function ()
