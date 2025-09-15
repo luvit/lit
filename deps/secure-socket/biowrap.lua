@@ -65,14 +65,16 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
         end
       end
 
-      local cert = ssl:peer()
-      if not cert then
-        handshakeComplete("The peer did not provide a certificate")
-        return closeSocket(socket)
-      end
-      if not cert:check_host(servername) then
-        handshakeComplete("The server hostname does not match the certificate's domain")
-        return closeSocket(socket)
+      if not isServer then
+        local cert = ssl:peer()
+        if not cert then
+          handshakeComplete("The peer did not provide a certificate")
+          return closeSocket(socket)
+        end
+        if not cert:check_host(servername) then
+          handshakeComplete("The server hostname does not match the certificate's domain")
+          return closeSocket(socket)
+        end
       end
 
       handshakeComplete(nil, ssocket)
