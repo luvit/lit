@@ -22,9 +22,10 @@ Package Metadata Commands
 
 These commands work with packages metadata.
 
-pkg.query(fs, path) -> meta, path           - Query an on-disk path for package info.
-pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
-pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
+pkg.query(fs, path) -> meta, path            - Query an on-disk path for package info.
+pkg.queryDb(db, path) -> meta, kind, hash    - Query an in-db hash for package info.
+plg.queryGit(db, path) -> meta, kind, hash   - Query an in-db hash fetched with `git fetch` for package info.
+pky.normalize(meta) -> author, tag, version  - Extract and normalize pkg info
 ]]
 
 local isFile = require('git').modes.isFile
@@ -174,6 +175,46 @@ local function queryDb(db, hash)
   return meta, kind, hash
 end
 
+local function queryGit(db, hash)
+  local method = db.offlineLoadAny or db.load -- is rdb loaded?
+  local kind, value = method(hash)
+  if not kind then
+    error("Attempt to load the fetched tree")
+  elseif kind ~= "tree" then
+    error("Illegal kind: " .. kind)
+  end
+
+  local tree = listToMap(value)
+  local path = "tree:" .. hash
+  local entry = tree["package.lua"]
+  if entry then
+    path = path .. "/package.lua"
+  elseif tree["init.lua"] then
+    entry = tree["init.lua"]
+    path = path .. "/init.lua"
+  else
+    -- check if the tree only contains a single lua file, and treat it as a package.
+    -- since in most git hosting services you won't have blob-pointing tag,
+    -- this has to make some assumption (or otherwise not support it)
+    -- in this case, it makes the assumption that a single-file package's repo
+    -- only has a single lua file
+    for name, meta in pairs(tree) do
+      if name:sub(-4) == ".lua" and isFile(meta.mode) then
+        if entry then -- it contains more than a single lua file
+          return nil, "ENOENT: No package.lua or init.lua in tree:" .. hash
+        end
+        entry = tree[name]
+        path = "blob:" .. entry.hash
+        kind = "blob"
+        hash = entry.hash
+      end
+    end
+  end
+
+  local meta = evalModule(db.loadAs("blob", entry.hash), path)
+  return meta, kind, hash
+end
+
 local function normalize(meta)
   local author, tag = meta.name:match("^([^/]+)/(.*)$")
   return author, tag, semver.normalize(meta.version)
@@ -183,5 +224,6 @@ end
 return {
   query = query,
   queryDb = queryDb,
+  queryGit = queryGit,
   normalize = normalize,
 }
