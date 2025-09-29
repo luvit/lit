@@ -81,35 +81,35 @@ return function ()
 
   if output == "init.lua" then
     local init = [=[
-  --[[lit-meta
-    name = %q
-    version = %q
-    dependencies = {}
-    description = %q
-    tags = %s
-    license = %q
-    author = { name = %q, email = %q }
-    homepage = %q
-  ]]
-  ]=]
+--[[lit-meta
+  name = %q
+  version = %q
+  dependencies = {}
+  description = %q
+  tags = %s
+  license = %q
+  author = { name = %q, email = %q }
+  homepage = %q
+]]
+]=]
     data = sprintf(init, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
   elseif output == "package.lua" then
     local package = [[
-  return {
-    name = %q,
-    version = %q,
-    description = %q,
-    tags = %s,
-    license = %q,
-    author = { name = %q, email = %q },
-    homepage = %q,
-    dependencies = {},
-    files = {
-      "**.lua",
-      "!test*"
-    }
+return {
+  name = %q,
+  version = %q,
+  description = %q,
+  tags = %s,
+  license = %q,
+  author = { name = %q, email = %q },
+  homepage = %q,
+  dependencies = {},
+  files = {
+    "**.lua",
+    "!test*"
   }
-  ]]
+}
+]]
     data = sprintf(package, projectName, projectVersion, projectDescription, projectTags, projectLicense, authorName, authorEmail, projectHomepage)
   end
 
@@ -119,8 +119,14 @@ return function ()
   local message = "Enter to continue"
   local finish = prompt("Is this ok?", message)
 
-  if finish == message then
-    local data, err = fs.writeFile(cwd .. "/" .. output, data)
+  local output_path = pathJoin(cwd, output)
+  local confirm = message
+  if fs.stat(output_path) then
+    confirm = prompt("Output file already exists. Are you sure you want to overwrite it?", message)
+  end
+
+  if finish == message and confirm == message then
+    local _, err = fs.writeFile(output_path, data)
     if err == nil then
       log("Complete", "Created a new " .. output .. " file.")
     else
