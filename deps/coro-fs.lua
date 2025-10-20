@@ -243,8 +243,8 @@ function fs.chroot(base)
   function chroot.rmrf(path)
     return fs.rmrf(resolve(path))
   end
-  function chroot.scandir(path, iter)
-    return fs.scandir(resolve(path), iter)
+  function chroot.scandir(path)
+    return fs.scandir(resolve(path))
   end
   function chroot.readFile(path)
     return fs.readFile(resolve(path))
