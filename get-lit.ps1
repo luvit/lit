@@ -1,6 +1,6 @@
 
-$LUVI_VERSION = "2.14.0"
-$LIT_VERSION = "3.8.5"
+$LUVI_VERSION = "2.15.0"
+$LIT_VERSION = "3.9.0"
 # Environment variables take precedence
 if (test-path env:LUVI_VERSION) { $LUVI_VERSION = $env:LUVI_VERSION }
 if (test-path env:LIT_VERSION) { $LIT_VERSION = $env:LIT_VERSION }
@@ -14,7 +14,7 @@ if (test-path env:LUVI_ARCH) {
     $LUVI_ARCH = "Windows-ia32"
   }
 }
-$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"
+$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-$LUVI_ARCH-luajit-regular.exe"
 $LIT_URL = "https://lit.luvit.io/packages/luvit/lit/v$LIT_VERSION.zip"
 
 function Download-File {
