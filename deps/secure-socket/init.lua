@@ -32,9 +32,9 @@ return function (socket, options, callback)
   if not callback then
     thread = coroutine.running()
   end
-  bioWrap(ctx, options.server, socket, callback or function (err, ssocket)
+  bioWrap(ctx, socket, options, callback or function (err, ssocket)
     return assertResume(thread, ssocket, err)
-  end, options.servername)
+  end)
   if not callback then
     return coroutine.yield()
   end
