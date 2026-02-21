@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
-LUVI_VERSION=${LUVI_VERSION:-2.14.0}
-LIT_VERSION=${LIT_VERSION:-3.8.5}
+LUVI_VERSION=${LUVI_VERSION:-2.15.0}
+LIT_VERSION=${LIT_VERSION:-3.9.0}
 
 LUVI_ARCH=`uname -s`_`uname -m`
 LUVI_URL="https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH"
