@@ -1,3 +1,5 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $LUVI_VERSION = "2.15.0"
 $LIT_VERSION = "3.9.0"
@@ -11,10 +13,20 @@ if (test-path env:LUVI_ARCH) {
   if ([System.Environment]::Is64BitProcess) {
     $LUVI_ARCH = "Windows-amd64"
   } else {
-    $LUVI_ARCH = "Windows-x86"
+    $LUVI_ARCH = "Windows-ia32"
   }
 }
-$LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-$LUVI_ARCH-luajit-regular.exe"
+if ([version]"2.15.0" -le [version]$LUVI_VERSION) {
+    if ($LUVI_ARCH -eq "Windows-i386") {
+        $LUVI_ARCH = "Windows-x86"
+    }
+    $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-$LUVI_ARCH-luajit-regular.exe"
+} else {
+    if ($LUVI_ARCH -eq "Windows-x86") {
+        $LUVI_ARCH = "Windows-ia32"
+    }
+    $LUVI_URL = "https://github.com/luvit/luvi/releases/download/v$LUVI_VERSION/luvi-regular-$LUVI_ARCH.exe"
+}
 $LIT_URL = "https://lit.luvit.io/packages/luvit/lit/v$LIT_VERSION.zip"
 
 function Download-File {
