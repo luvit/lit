@@ -112,7 +112,6 @@ function commandLine.exitWithCode(exitCode)
       end
     end
   end)
-  uv.run()
   return os.exit(exitCode)
 end
 
