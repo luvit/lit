@@ -5,11 +5,11 @@ LUVI_PREFIX=${LUVI_PREFIX:-${PWD}}
 
 LUVI_OS=${LUVI_OS:-"$(uname -s)"}
 LUVI_ARCH=${LUVI_ARCH:-"$(uname -m)"}
-LUVI_ENGINE=${LUVI_ENGINE:-luajit}
+LUVI_ENGINE=${LUVI_ENGINE:-"luajit"}
 
-LUVI_VERSION=${LUVI_VERSION:-2.15.0}
-LIT_VERSION=${LIT_VERSION:-3.8.5}
-LUVIT_VERSION=${LUVIT_VERSION:-latest}
+LUVI_VERSION=${LUVI_VERSION:-"2.15.0"}
+LIT_VERSION=${LIT_VERSION:-"3.9.0"}
+LUVIT_VERSION=${LUVIT_VERSION:-"latest"}
 
 _lit_zip="${LUVI_PREFIX}/lit.zip"
 _luvit_zip="${LUVI_PREFIX}/luvit.zip"
@@ -53,7 +53,9 @@ download() {
 
 # check if version $1 is greater than or equal to $2
 version_gte() {
-    [ "$(printf '%s\n' "$@" | sort -V | head -n 1)" != "$1" ] || [ "$1" = "$2" ]
+    local v1="${1#v}"
+    local v2="${2#v}"
+    [ "$(printf '%s\n' "${v1}" "${v2}" | sort -V | head -n 1)" != "$v1" ] || [ "$v1" = "$v2" ]
 }
 
 # allow selecting latest, but real versions need a v prefix
@@ -65,12 +67,20 @@ _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-
 _lit_url="https://lit.luvit.io/packages/luvit/lit/${LIT_VERSION}.zip"
 _luvit_url="https://lit.luvit.io/packages/luvit/luvit/${LUVIT_VERSION}.zip"
 
-if [ "${LUVI_VERSION}" = "latest" ] || version_gte "${LUVI_VERSION}" "2.15.0"; then # select the new release format
+if [ "${LUVI_VERSION}" = "latest" ]; then # select the latest endpoint
+    _luvi_url="https://github.com/luvit/luvi/releases/latest/download/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular"
+elif version_gte "${LUVI_VERSION}" "2.15.0"; then # select the new release format
     _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular"
 fi
 
 echo "[+] Installing luvit, lit and luvi to ${LUVI_PREFIX}"
 trap 'echo "[#] Cancelling installation"; cleanup 1' INT TERM
+
+# lit 3.9.0 and newer require luvi >= 2.15.0
+if version_gte "${LIT_VERSION}" "3.9.0" && ! version_gte "${LUVI_VERSION}" "2.15.0"; then
+    echo "[!] Incompatible luvi version, lit ${LIT_VERSION} requires luvi 2.15.0 or newer"
+    cleanup 1
+fi
 
 # Download Luvi, and the sources for Lit and Luvit
 
