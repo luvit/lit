@@ -144,8 +144,6 @@ local function loader(path, fullPath)
   local useBundle = fullPath:sub(1, 7) == "bundle:"
   if useBundle then
     fullPath = fullPath:sub(8)
-  end
-  if useBundle then
     local key = "bundle:" .. fullPath
     if package.loaded[key] then
       return package.loaded[key]
