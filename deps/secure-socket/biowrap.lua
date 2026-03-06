@@ -132,6 +132,9 @@ return function (ctx, isServer, socket, handshakeComplete, servername, buffer)
   function ssocket.close(_, ...)
     return socket:close(...)
   end
+  function ssocket.close_reset(_, ...)
+    return socket:close_reset(...)
+  end
   function ssocket.unref(_, ...)
     return socket:unref(...)
   end
