@@ -23,7 +23,6 @@ local function closeSocket(socket)
   end
 end
 
--- writeCipher is called when ssl needs something written on the socket
 -- handshakeComplete is called when the handhake is complete and it's safe
 -- onPlain is called when plaintext comes out.
 -- buffer is the data that will be read before any data that the stream receives.
