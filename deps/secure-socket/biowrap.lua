@@ -110,7 +110,13 @@ return function (ctx, isServer, socket, handshakeComplete, servername, buffer)
 
   -- When requested to write plain data, encrypt it and write to socket
   function ssocket.write(_, plain, callback)
-    ssl:write(plain)
+    if type(plain) == "string" then
+      ssl:write(plain)
+    else
+      for i=1, #plain do
+        ssl:write(plain[i])
+      end
+    end
     return flush(callback)
   end
 
