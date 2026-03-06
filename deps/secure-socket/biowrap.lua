@@ -25,8 +25,8 @@ end
 
 -- handshakeComplete is called when the handhake is complete and it's safe
 -- onPlain is called when plaintext comes out.
--- buffer is the data that will be read before any data that the stream receives.
-return function (ctx, isServer, socket, handshakeComplete, servername, buffer)
+-- initialData is the data that will be read before any data that the stream receives.
+return function (ctx, isServer, socket, handshakeComplete, servername, initialData)
 
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
   local ssl = ctx:ssl(bin, bout, isServer)
@@ -111,7 +111,7 @@ return function (ctx, isServer, socket, handshakeComplete, servername, buffer)
   -- When requested to write plain data, encrypt it and write to socket
   function ssocket.write(_, plain, callback)
     if type(plain) == "table" then
-      for i=1, #plain do
+      for i in ipairs(plain) do
         ssl:write(plain[i])
       end
     else
@@ -143,8 +143,8 @@ return function (ctx, isServer, socket, handshakeComplete, servername, buffer)
   end
 
   handshake()
-  if buffer then
-    onCipher(nil, buffer)
+  if initialData then
+    onCipher(nil, initialData)
   end
   socket:read_start(onCipher)
 
