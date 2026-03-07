@@ -53,7 +53,7 @@ local function loadBundle(path)
     return package.loaded[key]
   end
   local code = bundle.readfile(path)
-  local module = loadstring(code, key)(key)
+  local module = assert(loadstring(code, key))(key)
   package.loaded[key] = module
   return module
 end
