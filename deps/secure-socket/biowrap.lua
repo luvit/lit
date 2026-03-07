@@ -111,8 +111,8 @@ return function (ctx, isServer, socket, handshakeComplete, servername, initialDa
   -- When requested to write plain data, encrypt it and write to socket
   function ssocket.write(_, plain, callback)
     if type(plain) == "table" then
-      for i in ipairs(plain) do
-        ssl:write(plain[i])
+      for _, chunk in ipairs(plain) do
+        ssl:write(chunk)
       end
     else
       ssl:write(plain)
@@ -143,9 +143,9 @@ return function (ctx, isServer, socket, handshakeComplete, servername, initialDa
   end
 
   handshake()
+  socket:read_start(onCipher)
   if initialData then
     onCipher(nil, initialData)
   end
-  socket:read_start(onCipher)
 
 end
