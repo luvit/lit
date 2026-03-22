@@ -142,12 +142,6 @@ return function(db, url, timeout)
     return assert(db.offlineLoad(hash))
   end
 
-  function db.offlineLoadAny(hash)
-    local raw = assert(db.offlineLoad(hash), "no such hash")
-    local kind, value = deframe(raw)
-    return kind, decoders[kind](value)
-  end
-
   function db.fetch(list)
     local refs = {}
     repeat

@@ -115,13 +115,12 @@ local function resolveDep(alias, dep)
 end
 
 -- TODO: implement git protocol over https, to be used in case `git` cli isn't available
--- TODO: implement someway to specify a branch/tag when fetching
 -- TODO: implement handling git submodules, or shall we not?
-local function resolveGitDep(url)
+local function resolveGitDep(url, ref)
   -- fetch the repo tree, don't include any tags
   log("fetching", colorize("highlight", url))
   local _, stderr, code = exec("git", "--git-dir=" .. configs.database,
-    "fetch", "--no-tags", "--depth=1", url)
+    "fetch", "--no-tags", "--depth=1", url, ref)
 
   -- was the fetch successful?
   if code ~= 0 then
@@ -132,16 +131,14 @@ local function resolveGitDep(url)
     end
   end
 
-  -- load the fetched module tree
+  -- load the fetched reference
   local raw = db.storage.read("FETCH_HEAD")
-  local hash = raw:match("^(.-)\t\t.-\n$")
-  assert(hash and #hash ~= 0, "Unable to retrieve FETCH_HEAD\n" .. raw)
-  hash = db.loadAs("commit", hash).tree
+  local headHash = raw:match("^(.-)\t")
+  assert(headHash and #headHash ~= 0, "Unable to retrieve FETCH_HEAD\n" .. raw)
 
-  -- query module's metadata, and match author/name
-  local meta, kind
-  meta, kind, hash = queryGit(db, hash)
-  assert(meta, "Unable to find a valid package")
+  -- query module's metadata, and parse the name
+  local meta, kind, hash = queryGit(db, headHash)
+  assert(meta, "Unable to find a valid package: " .. tostring(kind))
   local author, name = meta.name:match("^([^/]+)/(.*)$")
 
   -- check for installed packages and their version
@@ -153,10 +150,10 @@ local function resolveGitDep(url)
     return
   end
 
-  -- create a ref/tags/author/name/version pointing to module's tree
+  -- create a ref/tags/{author}/{name}/{version} pointing to module's tree
   db.write(author, name, meta.version, hash)
 
-  -- mark the dep for installation
+  -- mark the dependency for installation
   meta.db = db
   meta.hash = hash
   meta.kind = kind
@@ -171,7 +168,8 @@ function processDeps(dependencies)
   -- iterate through dependencies and resolve each entry
   for alias, dep in pairs(dependencies) do
     if isGit(dep) then
-      resolveGitDep(dep)
+      local url, ref = dep:match('([^#]+)#?(.*)')
+      resolveGitDep(url, ref)
     else
       resolveDep(alias, dep)
     end
