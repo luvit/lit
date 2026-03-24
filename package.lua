@@ -35,6 +35,7 @@ return {
   files = {
     "commands/README",
     "**.lua",
-    "!test*"
+    "!test*",
+    "!containers*",
   }
 }
