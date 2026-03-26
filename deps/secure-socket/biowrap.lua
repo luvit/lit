@@ -23,10 +23,10 @@ local function closeSocket(socket)
   end
 end
 
--- writeCipher is called when ssl needs something written on the socket
 -- handshakeComplete is called when the handhake is complete and it's safe
 -- onPlain is called when plaintext comes out.
-return function (ctx, isServer, socket, handshakeComplete, servername)
+-- initialData is the data that will be read before any data that the stream receives.
+return function (ctx, isServer, socket, handshakeComplete, servername, initialData)
 
   local bin, bout = openssl.bio.mem(8192), openssl.bio.mem(8192)
   local ssl = ctx:ssl(bin, bout, isServer)
@@ -110,7 +110,13 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
 
   -- When requested to write plain data, encrypt it and write to socket
   function ssocket.write(_, plain, callback)
-    ssl:write(plain)
+    if type(plain) == "table" then
+      for _, chunk in ipairs(plain) do
+        ssl:write(chunk)
+      end
+    else
+      ssl:write(plain)
+    end
     return flush(callback)
   end
 
@@ -126,6 +132,9 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
   function ssocket.close(_, ...)
     return socket:close(...)
   end
+  function ssocket.close_reset(_, ...)
+    return socket:close_reset(...)
+  end
   function ssocket.unref(_, ...)
     return socket:unref(...)
   end
@@ -135,5 +144,8 @@ return function (ctx, isServer, socket, handshakeComplete, servername)
 
   handshake()
   socket:read_start(onCipher)
+  if initialData then
+    onCipher(nil, initialData)
+  end
 
 end
