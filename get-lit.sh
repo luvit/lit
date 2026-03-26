@@ -6,6 +6,7 @@ LUVI_PREFIX=${LUVI_PREFIX:-${PWD}}
 LUVI_OS=${LUVI_OS:-"$(uname -s)"}
 LUVI_ARCH=${LUVI_ARCH:-"$(uname -m)"}
 LUVI_ENGINE=${LUVI_ENGINE:-"luajit"}
+LUVI_FLAVOR=${LUVI_FLAVOR:-"regular"}
 
 LUVI_VERSION=${LUVI_VERSION:-"2.15.0"}
 LIT_VERSION=${LIT_VERSION:-"3.9.0"}
@@ -63,14 +64,14 @@ version_gte() {
 [ "${LIT_VERSION}" != "latest" ] && LIT_VERSION="v${LIT_VERSION}"
 [ "${LUVIT_VERSION}" != "latest" ] && LUVIT_VERSION="v${LUVIT_VERSION}"
 
-_luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-regular-${LUVI_OS}_${LUVI_ARCH}"
+_luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_FLAVOR}-${LUVI_OS}_${LUVI_ARCH}"
 _lit_url="https://lit.luvit.io/packages/luvit/lit/${LIT_VERSION}.zip"
 _luvit_url="https://lit.luvit.io/packages/luvit/luvit/${LUVIT_VERSION}.zip"
 
 if [ "${LUVI_VERSION}" = "latest" ]; then # select the latest endpoint
-    _luvi_url="https://github.com/luvit/luvi/releases/latest/download/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular"
+    _luvi_url="https://github.com/luvit/luvi/releases/latest/download/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-${LUVI_FLAVOR}"
 elif version_gte "${LUVI_VERSION}" "2.15.0"; then # select the new release format
-    _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular"
+    _luvi_url="https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-${LUVI_FLAVOR}"
 fi
 
 echo "[+] Installing luvit, lit and luvi to ${LUVI_PREFIX}"

@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $LUVI_PREFIX = if ($env:LUVI_PREFIX) { $env:LUVI_PREFIX } else { $PWD }
 $LUVI_ENGINE = if ($env:LUVI_ENGINE) { $env:LUVI_ENGINE } else { "luajit" }
 $LUVI_VERSION = if ($env:LUVI_VERSION) { $env:LUVI_VERSION } else { "2.15.0" }
+$LUVI_FLAVOR = if ($env:LUVI_FLAVOR) { $env:LUVI_FLAVOR } else { "regular" }
 $LIT_VERSION = if ($env:LIT_VERSION) { $env:LIT_VERSION } else { "3.9.0" }
 $LUVIT_VERSION = if ($env:LUVIT_VERSION) { $env:LUVIT_VERSION } else { "latest" }
 
@@ -98,13 +99,13 @@ if ($LIT_VERSION -ne "latest") { $LIT_VERSION = "v${LIT_VERSION}" }
 if ($LUVIT_VERSION -ne "latest") { $LUVIT_VERSION = "v${LUVIT_VERSION}" }
 
 if (${LUVI_VERSION} -eq "latest") {
-  $luvi_url = "https://github.com/luvit/luvi/releases/latest/download/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular${exe_suffix}"
+  $luvi_url = "https://github.com/luvit/luvi/releases/latest/download/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-${LUVI_FLAVOR}${exe_suffix}"
 }
 elseif (VersionGTE $LUVI_VERSION "2.15.0") {
-  $luvi_url = "https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-regular${exe_suffix}"
+  $luvi_url = "https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_OS}-${LUVI_ARCH}-${LUVI_ENGINE}-${LUVI_FLAVOR}${exe_suffix}"
 }
 else {
-  $luvi_url = "https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-regular-${LUVI_OS}_${LUVI_ARCH}${exe_suffix}"
+  $luvi_url = "https://github.com/luvit/luvi/releases/download/${LUVI_VERSION}/luvi-${LUVI_FLAVOR}-${LUVI_OS}_${LUVI_ARCH}${exe_suffix}"
 }
 $lit_url = "https://lit.luvit.io/packages/luvit/lit/${LIT_VERSION}.zip"
 $luvit_url = "https://lit.luvit.io/packages/luvit/luvit/${LUVIT_VERSION}.zip"
