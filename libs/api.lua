@@ -175,9 +175,9 @@ local function collectStats()
   end
 
   local numFDs = -1
-  if fs.exists("/proc/self/fd") then
+  if fs.access("/proc/self/fd") then
     numFDs = countFDs("/proc/self/fd")
-  elseif fs.exists("/dev/fd") then
+  elseif fs.access("/dev/fd") then
     numFDs = countFDs("/dev/fd")
   end
 
