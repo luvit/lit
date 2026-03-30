@@ -1,7 +1,8 @@
 local args = {...}
 return function ()
 
-  local uv = require 'uv'
+  local env = require('env')
+  local uv = require('uv')
   local log = require('log').log
   local makeRemote = require('codec').makeRemote
   local core = require('core')()
@@ -13,12 +14,12 @@ return function ()
   local handleRequest = require('api')(db, args[2])
 
   local app = require('weblit-app')
-  require 'weblit-websocket'
+  require('weblit-websocket')
 
-  -- Listen on port 4822
+  -- Bind the server instance
   app.bind({
-    host = "0.0.0.0",
-    port = 4822,
+    host = env.get("LIT_SERVE_HOST") or "0.0.0.0",
+    port = tonumber(env.get("LIT_SERVE_PORT")) or 4822,
   })
 
   -- Log requests
@@ -43,8 +44,8 @@ return function ()
 
   app.use(require('weblit-auto-headers'))
 
-  .route({ method = "GET", path = "/snapshots"}, require('snapshots'))
-  .route({ method = "GET", path = "/stats"}, require('stats'))
+  .route({ method = "GET", path = "/snapshots" }, require('snapshots'))
+  .route({ method = "GET", path = "/stats" }, require('stats'))
 
   -- Handle websocket clients
   app.websocket({
