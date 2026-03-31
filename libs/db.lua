@@ -78,16 +78,20 @@ return function (rootPath)
     return match, assert(db.read(author, name, match))
   end
 
-  function db.read(author, name, version)
+  function db.tagRef(author, name, version, isSnapshot)
     version = normalize(version)
-    local ref = string.format("refs/tags/%s/%s/v%s", author, name, version)
+    local refDir = isSnapshot and "snapshots" or "tags"
+    return string.format("refs/%s/%s/%s/v%s", refDir, author, name, version)
+  end
+
+  function db.read(author, name, version, isSnapshot)
+    local ref = db.tagRef(author, name, version, isSnapshot)
     return db.getRef(ref)
   end
 
-  function db.write(author, name, version, hash)
-    version = normalize(version)
+  function db.write(author, name, version, hash, isSnapshot)
     assertHash(hash)
-    local ref = string.format("refs/tags/%s/%s/v%s", author, name, version)
+    local ref = db.tagRef(author, name, version, isSnapshot)
     storage.write(ref, hash .. "\n")
   end
 
