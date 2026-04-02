@@ -8,6 +8,7 @@ Lit CLI Commands
  lit serve prefix            Start a lit package server (upstream or proxy).
                              `prefix` is the protocol and host.
                              EG: lit serve https://lit.luvit.io
+
 Local configuration
 -------------------
  lit auth username           Verify local private key and set username.
@@ -31,3 +32,14 @@ Organization Management
  lit claim org               Claim github org of which you are a public member.
  lit share org user          Add collaborator who can push to this lit org.
  lit unclaim org             Remove yourself from a lit organization.
+
+Lit Environment Variables
+================
+ LIT_CONFIG                  Defines the path to the lit config file,
+                             on Windows this defaults to `$APPDATA\litconfig`
+                             on Unix it defaults to `$HOME/.litconfig`.
+ LIT_SERVE_HOST              Tells `lit serve` to listen on this host address,
+                             default value is `0.0.0.0`.
+ LIT_SERVE_PORT              Tells `lit serve` to listen on this port,
+                             default value is `4822`.
+ GITHUB_TOKEN                Use a user token to bypass Github query ratelimits.
