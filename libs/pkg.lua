@@ -22,9 +22,10 @@ Package Metadata Commands
 
 These commands work with packages metadata.
 
-pkg.query(fs, path) -> meta, path           - Query an on-disk path for package info.
-pkg.queryDb(db, path) -> meta, kind         - Query an in-db hash for package info.
-pky.normalize(meta) -> author, tag, version - Extract and normalize pkg info
+pkg.query(fs, path) -> meta, path            - Query an on-disk path for package info.
+pkg.queryDb(db, hash) -> meta, kind, hash    - Query an in-db hash for package info.
+pkg.queryGit(db, hash) -> meta, kind, hash   - Query an in-db hash fetched with `git fetch` for package info.
+pkg.normalize(meta) -> author, tag, version  - Extract and normalize pkg info
 ]]
 
 local isFile = require('git').modes.isFile
@@ -135,7 +136,54 @@ local function query(fs, path)
   return clean, packagePath
 end
 
+local function handleTag(db, obj)
+  -- Use metadata in tag message if found skipping evaluation
+  local actualKind, hash = obj.type, obj.object
+  local meta = jsonParse(obj.message)
+  if meta then
+    return meta, actualKind, hash, true
+  end
+  -- Otherwise search root tree or blob
+  obj = db.loadAs(actualKind, hash)
+  if actualKind == "tag" then
+    -- Handle nested tags
+    return handleTag(db, obj)
+  end
+  return obj, actualKind, hash
+end
+
+local defaultEntries = {"package.lua", "init.lua"}
+local function handleTree(hash, tree)
+  local path = "tree:" .. hash
+  for _, name in ipairs(defaultEntries) do
+    if tree[name] then
+      return tree[name].hash, path .. "/" .. name
+    end
+  end
+  return nil, 'ENOENT: No package.lua or init.lua in tree:' .. hash
+end
+
+local function handleSingleFileTree(hash, tree)
+  local foundName, foundEntry
+  for name, meta in pairs(tree) do
+    if name:sub(-4) == ".lua" and isFile(meta.mode) then
+      if foundName then
+        -- it contains more than a single lua file which we can't process
+        foundName, foundEntry = nil, nil
+        break
+      end
+      foundName = name
+      foundEntry = tree[name]
+    end
+  end
+  if not foundName then
+    return nil, 'ENOENT: No unique single-file module in tree:' .. hash
+  end
+  return foundEntry.hash
+end
+
 local function queryDb(db, hash)
+  -- TODO: refactor to use handleTag/handleTree
   local kind, value = db.loadAny(hash)
   if kind == "tag" then
     hash = value.object
@@ -174,6 +222,62 @@ local function queryDb(db, hash)
   return meta, kind, hash
 end
 
+local function queryGit(db, hash)
+  local kind, value = db.loadAny(hash)
+  if not kind then
+    error("Unable to load the fetched tree")
+  end
+
+  -- Handle tags
+  -- if the tag contains the meta in its message simply use that
+  -- otherwise resolve to the pointed object so we can search it
+  if kind == "tag" then
+    local isMeta
+    value, kind, hash, isMeta = handleTag(db, value)
+    if isMeta then
+      return value, kind, hash
+    end
+  end
+  -- Handle commits
+  -- we simply want the tree of the commit to search
+  if kind == "commit" then
+    kind = "tree"
+    hash = value.tree
+    value = db.loadAs("tree", hash)
+  end
+
+  -- Handle tree/blob
+  local module, path
+  if kind == "tree" then
+    local tree = listToMap(value)
+    local moduleHash, modulePath = handleTree(hash, tree) -- Search for package.lua/init.lua
+    if not moduleHash then
+      moduleHash = handleSingleFileTree(hash, tree) -- As a last resort, search if the tree has a single unique Lua file
+      if moduleHash then
+        kind, hash = "blob", moduleHash
+        modulePath = "blob:" .. moduleHash
+      end
+    end
+    module = db.loadAs("blob", moduleHash)
+    path = modulePath
+  elseif kind == "blob" then
+    module = value
+    path = "blob:" .. hash
+  else
+    error("Illegal kind: " .. kind)
+  end
+
+  if not module then
+    return nil, 'repository is not a valid Lit package'
+  end
+
+  local meta, err = evalModule(module, path)
+  if not meta then
+    return nil, 'unable to evaluate module: ' .. tostring(err)
+  end
+  return meta, kind, hash
+end
+
 local function normalize(meta)
   local author, tag = meta.name:match("^([^/]+)/(.*)$")
   return author, tag, semver.normalize(meta.version)
@@ -183,5 +287,6 @@ end
 return {
   query = query,
   queryDb = queryDb,
+  queryGit = queryGit,
   normalize = normalize,
 }
