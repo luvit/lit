@@ -17,234 +17,193 @@ limitations under the License.
 ]]
 
 local hasLuvi, luvi = pcall(require, 'luvi')
-local uv, bundle
-
-if hasLuvi then
-  uv = require('uv')
-  bundle = luvi.bundle
-else
-  uv = require('luv')
+if not hasLuvi then
+  return error('luvit-loader does not support non-luvi environments')
 end
+local uv = require('uv')
 
-local getenv = require('os').getenv
 local loadstring = loadstring or load
+local bundle = luvi.bundle
+local pathJoin = luvi.path.join
+local cwd = uv.cwd()
 
-local isWindows
-if _G.jit then
-  isWindows = _G.jit.os == "Windows"
-else
-  isWindows = not not package.path:match("\\")
-end
+local moduleDirs = {"deps", "libs"}
 
-local tmpBase = isWindows and (getenv("TMP") or uv.cwd()) or
-                              (getenv("TMPDIR") or '/tmp')
-local binExt = isWindows and ".dll" or ".so"
-
-local getPrefix, splitPath, joinParts
-if isWindows then
-  -- Windows aware path utilities
-  function getPrefix(path)
-    return path:match("^%a:\\") or
-           path:match("^/") or
-           path:match("^\\+")
-  end
-  function splitPath(path)
-    local parts = {}
-    for part in string.gmatch(path, '([^/\\]+)') do
-      table.insert(parts, part)
-    end
-    return parts
-  end
-  function joinParts(prefix, parts, i, j)
-    if not prefix then
-      return table.concat(parts, '/', i, j)
-    elseif prefix ~= '/' then
-      return prefix .. table.concat(parts, '\\', i, j)
-    else
-      return prefix .. table.concat(parts, '/', i, j)
-    end
-  end
-else
-  -- Simple optimized versions for UNIX systems
-  function getPrefix(path)
-    return path:match("^/")
-  end
-  function splitPath(path)
-    local parts = {}
-    for part in string.gmatch(path, '([^/]+)') do
-      table.insert(parts, part)
-    end
-    return parts
-  end
-  function joinParts(prefix, parts, i, j)
-    if prefix then
-      return prefix .. table.concat(parts, '/', i, j)
-    end
-    return table.concat(parts, '/', i, j)
+--- Detects if the given path is a bundle path and returns the path part only,
+--- otherwise returns the given path unmodified.
+---@return boolean isBundle
+---@return string path
+---@nodiscard
+local function stripBundle(path)
+  local bundleMatch, stripped = path:match('^(@?bundle:)(.*)')
+  if bundleMatch then
+    return true, stripped
+  else
+    return false, path
   end
 end
 
-local function pathJoin(...)
-  local inputs = {...}
-  local l = #inputs
-
-  -- Find the last segment that is an absolute path
-  -- Or if all are relative, prefix will be nil
-  local i = l
-  local prefix
-  while true do
-    prefix = getPrefix(inputs[i])
-    if prefix or i <= 1 then break end
-    i = i - 1
+--- Load a module using luvi's bundle. 
+--- The module path must not prefix `bundle:`.
+---@return any module
+---@nodiscard
+local function loadBundle(path)
+  local key = 'bundle:' .. path -- differentiate bundled modules from others
+  if package.loaded[key] then
+    return package.loaded[key]
   end
-
-  -- If there was one, remove its prefix from its segment
-  if prefix then
-    inputs[i] = inputs[i]:sub(#prefix)
-  end
-
-  -- Split all the paths segments into one large list
-  local parts = {}
-  while i <= l do
-    local sub = splitPath(inputs[i])
-    for j = 1, #sub do
-      parts[#parts + 1] = sub[j]
-    end
-    i = i + 1
-  end
-
-  -- Evaluate special segments in reverse order.
-  local skip = 0
-  local reversed = {}
-  for idx = #parts, 1, -1 do
-    local part = parts[idx]
-    if part ~= '.' then
-      if part == '..' then
-        skip = skip + 1
-      elseif skip > 0 then
-        skip = skip - 1
-      else
-        reversed[#reversed + 1] = part
-      end
-    end
-  end
-
-  -- Reverse the list again to get the correct order
-  parts = reversed
-  for idx = 1, #parts / 2 do
-    local j = #parts - idx + 1
-    parts[idx], parts[j] = parts[j], parts[idx]
-  end
-
-  local path = joinParts(prefix, parts)
-  return path
-end
-
-local function loader(path, fullPath)
-  local useBundle = fullPath:sub(1, 7) == "bundle:"
-  if useBundle then
-    fullPath = fullPath:sub(8)
-    local key = "bundle:" .. fullPath
-    if package.loaded[key] then
-      return package.loaded[key]
-    end
-    local code = bundle.readfile(fullPath)
-    local module = loadstring(code, key)(key)
-    package.loaded[key] = module
-    return module
-  end
-  fullPath = uv.fs_realpath(fullPath)
-  if package.loaded[fullPath] then
-    return package.loaded[fullPath]
-  end
-  local module = assert(loadfile(fullPath))(fullPath)
-  package.loaded[fullPath] = module
+  local code = bundle.readfile(path)
+  local module = assert(loadstring(code, key))(key)
+  package.loaded[key] = module
   return module
 end
 
-local cwd = uv.cwd()
-local function searcher(path)
-  local level, caller = 3
-  -- Loop past any C functions to get to the real caller
-  -- This avoids pcall(require, "path") getting "=C" as the source
+--- Load a module using loadfile on the real filesystem.
+---@return any module
+---@nodiscard
+local function loadFile(path)
+  local realPath = uv.fs_realpath(path)
+  if package.loaded[realPath] then
+    return package.loaded[realPath]
+  end
+  local module = assert(loadfile(realPath))(realPath)
+  package.loaded[realPath] = module
+  return module
+end
+
+--- A Lua 5.2 style package loader, accepts the module name and its full path.
+---@param name string
+---@param path string
+---@return any module
+---@nodiscard
+local function loader(name, path)
+  local useBundle, stripped = stripBundle(path)
+  if useBundle then
+    return loadBundle(stripped)
+  else
+    return loadFile(path)
+  end
+end
+
+--- Attempt to search path for a module.
+--- Returns the full path to the found module, or nil + errors.
+---@return string? foundModule
+---@return string? errors
+---@nodiscard
+local function searchPath(path, useBundle)
+  local prefix = useBundle and "bundle:" or ""
+  local fileStat = useBundle and bundle.stat or uv.fs_stat
+  local errors = {}
+
+  -- is it a full path to a file module?
+  local newPath = path
+  local stat = fileStat(newPath)
+  if stat and stat.type == "file" then
+    return newPath
+  end
+  errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
+
+  -- is it a path to a Lua file module?
+  newPath = path .. ".lua"
+  stat = fileStat(newPath)
+  if stat and stat.type == "file" then
+    return newPath
+  end
+  errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
+
+  -- is it a path to a directory with init.lua?
+  newPath = pathJoin(path, "init.lua")
+  stat = fileStat(newPath)
+  if stat and stat.type == "file" then
+    return newPath
+  end
+  errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
+
+  -- we couldn't find anything
+  return nil, table.concat(errors)
+end
+
+-- Recursively search for a module in deps/libs `moduleDirs` directories
+-- until we reach the filesystem root, `../deps`, `../../deps`, etc.
+---@param dir string # the search starting position
+---@param name string
+---@param useBundle boolean?
+---@return string? path
+---@return string? error
+---@nodiscard
+local function searchModule(dir, name, useBundle)
+  local errors = {}
+  local res, err
+  while true do
+    for _, v in ipairs(moduleDirs) do
+      res, err = searchPath(pathJoin(dir, v, name), useBundle)
+      if res then
+        return res
+      end
+      errors[#errors + 1] = err
+    end
+    if dir == pathJoin(dir, "..") then
+      return nil, table.concat(errors)
+    end
+    dir = pathJoin(dir, "..")
+  end
+end
+
+--- A Lua 5.2 style package searcher that supports Luvit's require paths and luvi's bundles.
+---@param name string
+---@return fun(name: string, path: string) | nil loader
+---@return string pathOrError
+---@nodiscard
+local function searcher(name)
+  -- Find the caller.
+  -- Loops past any C functions to get to the real caller,
+  -- to avoid pcall(require, "path") getting "=C" as the source.
+  local level, caller = 3, nil
   repeat
     caller = debug.getinfo(level, "S").source
     level = level + 1
   until caller ~= "=[C]"
+  local useBundle, strippedCaller = stripBundle(caller)
 
-  local dir
-  local errors = {}
-  local fullPath
-  local useBundle = false
-  if string.sub(caller, 1, 1) == "@" then
+  -- Get the directory relative to the caller
+  local dir = ''
+  if useBundle then
+    dir = pathJoin(strippedCaller, "..")
+  elseif string.sub(caller, 1, 1) == "@" then
     dir = pathJoin(cwd, caller:sub(2), "..")
-  elseif string.sub(caller, 1, 7) == "bundle:" then
-    useBundle = true
-    dir = pathJoin(caller:sub(8), "..")
   end
 
-  local function try(tryPath)
-    local prefix = useBundle and "bundle:" or ""
-    local fileStat = useBundle and bundle.stat or uv.fs_stat
-
-    local newPath = tryPath
-    local stat = fileStat(newPath)
-    if stat and stat.type == "file" then
-      fullPath = newPath
-      return true
-    end
-    errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
-
-    newPath = tryPath .. ".lua"
-    stat = fileStat(newPath)
-    if stat and stat.type == "file" then
-      fullPath = newPath
-      return true
-    end
-    errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
-
-    newPath = pathJoin(tryPath, "init.lua")
-    stat = fileStat(newPath)
-    if stat and stat.type == "file" then
-      fullPath = newPath
-      return true
-    end
-    errors[#errors + 1] = "\n\tno file '" .. prefix .. newPath .. "'"
-
-  end
-  if string.sub(path, 1, 1) == "." then
+  -- Find the module's full path
+  local fullPath, err
+  if string.sub(name, 1, 1) == "." then
     -- Relative require
-    if not try(pathJoin(dir, path)) then
-      return nil, table.concat(errors)
-    end
+    fullPath, err = searchPath(pathJoin(dir, name), useBundle)
   else
-    while true do
-      if try(pathJoin(dir, "deps", path)) or
-         try(pathJoin(dir, "libs", path)) then
-        break
-      end
-      if dir == pathJoin(dir, "..") then
-        return nil, table.concat(errors)
-      end
-      dir = pathJoin(dir, "..")
-    end
     -- Module require
+    fullPath, err = searchModule(dir, name, useBundle)
   end
+  if not fullPath then
+    return nil, err or 'Module could not be found'
+  end
+
   if useBundle then
     if bundle.stat(fullPath) then
-      return 'bundle:' .. fullPath, loader
+      return loader, 'bundle:' .. fullPath
     end
   else
     if uv.fs_access(fullPath, 'r') then
-      return fullPath, loader
+      return loader, fullPath
     end
   end
+  return nil, 'Module was found but could not be accessed: ' .. tostring(fullPath)
 end
 
--- Register as a normal lua package loader.
+-- Register as a normal lua package searcher/loader.
+-- We insert the loader right after the default preload loader for caching.
 if package.loaders then
-  table.insert(package.loaders, 1, function (path)
-    local loader_data, loader_fn = searcher(path)
+  -- Combine the searcher and loader into one function for Lua 5.1 compat
+  table.insert(package.loaders, 2, function (path)
+    local loader_fn, loader_data = searcher(path)
     if type(loader_fn) == "function" then
       return function(name)
         return loader_fn(name, loader_data)
@@ -254,5 +213,5 @@ if package.loaders then
     end
   end)
 else
-  table.insert(package.searchers, 1, searcher)
+  table.insert(package.searchers, 2, searcher)
 end
