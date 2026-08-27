@@ -16,10 +16,11 @@ local httpCodec = require('http-codec')
 local net = require('coro-net')
 local unpack = unpack or table.unpack
 
-local function createServer(host, port, onConnect)
+local function createServer(host, port, onConnect, tls)
   return net.createServer({
     host = host,
     port = port,
+    tls = tls,
     encoder = httpCodec.encoder,
     decoder = httpCodec.decoder,
   }, function (read, write, socket)
