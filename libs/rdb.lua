@@ -24,7 +24,8 @@ local httpCodec = require('http-codec')
 local websocketCodec = require('websocket-codec')
 local makeRemote = require('codec').makeRemote
 local deframe = require('git').deframe
-local decodeTag = require('git').decoders.tag
+local decoders = require('git').decoders
+local decodeTag = decoders.tag
 local verifySignature = require('verify-signature')
 
 local function connectRemote(url, timeout)
